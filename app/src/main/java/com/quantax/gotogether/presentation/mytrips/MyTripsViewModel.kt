@@ -1,0 +1,65 @@
+package com.quantax.gotogether.presentation.mytrips
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.data.repository.TripRepository
+import com.quantax.gotogether.domain.model.Trip
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
+
+data class MyTripsState(
+    val trips: List<Trip> = emptyList(),
+    val isLoading: Boolean = false,
+    val error: String? = null
+)
+
+class MyTripsViewModel : ViewModel() {
+    private val repository = TripRepository()
+    private val auth = FirebaseAuth.getInstance()
+
+    private val _state = MutableStateFlow(MyTripsState())
+    val state: StateFlow<MyTripsState> = _state.asStateFlow()
+
+    fun loadMyTrips() {
+        val user = auth.currentUser
+        if (user == null) {
+            _state.value = _state.value.copy(error = "User not logged in")
+            return
+        }
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true, error = null)
+            val result = repository.getUserTrips(user.uid)
+            
+            if (result.isSuccess) {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    trips = result.getOrDefault(emptyList())
+                )
+            } else {
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = result.exceptionOrNull()?.message ?: "Failed to load your trips"
+                )
+            }
+        }
+    }
+
+    fun deleteTrip(tripId: String) {
+        viewModelScope.launch {
+            val result = repository.deleteTrip(tripId)
+            if (result.isSuccess) {
+                // Remove from local state
+                val updatedTrips = _state.value.trips.filter { it.id != tripId }
+                _state.value = _state.value.copy(trips = updatedTrips)
+            } else {
+                _state.value = _state.value.copy(
+                    error = result.exceptionOrNull()?.message ?: "Failed to delete trip"
+                )
+            }
+        }
+    }
+}

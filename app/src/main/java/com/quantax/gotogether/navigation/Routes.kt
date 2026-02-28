@@ -1,0 +1,20 @@
+package com.quantax.gotogether.navigation
+
+sealed class Routes(val route: String) {
+    data object Splash : Routes("splash")
+    data object Onboarding : Routes("onboarding")
+    data object Register : Routes("register")
+    data object SignIn : Routes("sign_in")
+    data object Otp : Routes("otp")
+    data object Main : Routes("main")
+    data object Home : Routes("home")
+    data object CreateTrip : Routes("create_trip")
+    data object Profile : Routes("profile")
+    data object EditProfile : Routes("edit_profile")
+    data object Notifications : Routes("notifications")
+    data object MyTrips : Routes("my_trips")
+    data object Messages : Routes("messages")
+    data object TripDetail : Routes("trip_detail/{tripId}") {
+        fun createRoute(tripId: String) = "trip_detail/$tripId"
+    }
+}

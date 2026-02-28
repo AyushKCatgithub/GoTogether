@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "235702067834",
+    "firebase_url": "https://gotogether-7dd42-default-rtdb.firebaseio.com",
+    "project_id": "gotogether-7dd42",
+    "storage_bucket": "gotogether-7dd42.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:235702067834:android:c934ec93e8d17767cc91c3",
+        "android_client_info": {
+          "package_name": "com.quantax.gotogether"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "235702067834-hetsqcl18gri9psh91fuausr6qrr1qvg.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.quantax.gotogether",
+            "certificate_hash": "1e1c7ba7c9ba6adca88027047028f8b91e4e233c"
+          }
+        },
+        {
+          "client_id": "235702067834-t74liqkkq9b25ic1i54v1rm4i7umarmn.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAlKgTjstjHVJajF58OI-Hz6rUZOr6CUhc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "235702067834-t74liqkkq9b25ic1i54v1rm4i7umarmn.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
