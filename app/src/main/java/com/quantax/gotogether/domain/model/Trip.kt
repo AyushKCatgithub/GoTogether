@@ -17,5 +17,6 @@ data class Trip(
     val interests: List<String> = emptyList(),
     val description: String = "",
     val imageUrl: String? = null,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    val members: List<String> = emptyList()
 )

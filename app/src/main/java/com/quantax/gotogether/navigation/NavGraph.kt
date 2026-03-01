@@ -119,6 +119,9 @@ fun GoTogetherNavGraph(
                 onNavigateToMessages = {
                     navController.navigate(Routes.Messages.route)
                 },
+                onNavigateToChatroom = { chatroomId ->
+                    navController.navigate(Routes.Chatroom.createRoute(chatroomId))
+                },
                 onSignOut = {
                     navController.navigate(Routes.Register.route) {
                         popUpTo(Routes.Main.route) { inclusive = true }
@@ -128,7 +131,12 @@ fun GoTogetherNavGraph(
         }
 
         composable(Routes.Messages.route) {
-            MessagesScreen()
+            MessagesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToChatroom = { chatroomId ->
+                    navController.navigate(Routes.Chatroom.createRoute(chatroomId))
+                }
+            )
         }
 
         composable(Routes.CreateTrip.route) {
@@ -154,6 +162,22 @@ fun GoTogetherNavGraph(
             val tripId = backStackEntry.arguments?.getString("tripId") ?: ""
             TripDetailScreen(
                 tripId = tripId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                },
+                onNavigateToChatroom = { chatroomId ->
+                    navController.navigate(Routes.Chatroom.createRoute(chatroomId))
+                }
+            )
+        }
+
+        composable(
+            Routes.Chatroom.route,
+            arguments = listOf(navArgument("chatroomId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val chatroomId = backStackEntry.arguments?.getString("chatroomId") ?: ""
+            com.quantax.gotogether.presentation.chat.ChatroomScreen(
+                chatroomId = chatroomId,
                 onNavigateBack = {
                     navController.popBackStack()
                 }

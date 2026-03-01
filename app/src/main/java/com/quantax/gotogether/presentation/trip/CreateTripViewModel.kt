@@ -34,6 +34,7 @@ data class CreateTripState(
 class CreateTripViewModel : ViewModel() {
     private val repository = TripRepository()
     private val userProfileRepository = UserProfileRepository()
+    private val chatRepository = com.quantax.gotogether.data.repository.ChatRepository()
     private val authManager = AuthManager()
     private val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
@@ -138,11 +139,26 @@ class CreateTripViewModel : ViewModel() {
                 groupSize = currentState.groupSize,
                 interests = currentState.interests,
                 description = currentState.description,
-                imageUrl = finalImageUrl
+                imageUrl = finalImageUrl,
+                members = listOf(currentUser.uid)
             )
 
             val result = repository.createTrip(trip)
-            if (result.isSuccess) {
+            val tripId = result.getOrNull()
+            if (tripId != null) {
+                // Auto-create chatroom for the newly created trip
+                val chatroom = com.quantax.gotogether.domain.model.Chatroom(
+                    id = tripId,
+                    tripTitle = trip.title,
+                    tripImageUrl = finalImageUrl,
+                    hostId = currentUser.uid,
+                    memberIds = listOf(currentUser.uid),
+                    lastMessage = "Trip chat started. Say hello!",
+                    lastMessageTimestamp = System.currentTimeMillis(),
+                    lastMessageSenderName = "System"
+                )
+                chatRepository.createChatroom(chatroom)
+                
                 _state.value = currentState.copy(isLoading = false, isSuccess = true)
             } else {
                 _state.value = currentState.copy(

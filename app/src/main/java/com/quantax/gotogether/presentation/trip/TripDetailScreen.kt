@@ -1,7 +1,5 @@
 package com.quantax.gotogether.presentation.trip
 
-import com.quantax.gotogether.ui.theme.*
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
@@ -23,33 +21,46 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
+import com.quantax.gotogether.domain.model.JoinRequest
 import com.quantax.gotogether.domain.model.Trip
 import com.quantax.gotogether.ui.theme.*
-import com.quantax.gotogether.presentation.home.HomeViewModel
-import com.quantax.gotogether.presentation.home.HomeState
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun TripDetailScreen(
     tripId: String,
     onNavigateBack: () -> Unit,
-    viewModel: HomeViewModel = viewModel()
+    onNavigateToChatroom: (String) -> Unit = {},
+    viewModel: TripDetailViewModel = viewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    
-    // Find the trip from the loaded trips
-    val trip = when (val s = state) {
-        is HomeState.Success -> s.trips.find { it.id == tripId }
-        else -> null
+    val trip by viewModel.trip.collectAsState()
+    val isLoading by viewModel.isLoading.collectAsState()
+    val isHost by viewModel.isHost.collectAsState()
+    val requestStatus by viewModel.requestStatus.collectAsState()
+    val actionMessage by viewModel.actionMessage.collectAsState()
+
+    val snackbarHostState = remember { SnackbarHostState() }
+
+    LaunchedEffect(tripId) {
+        viewModel.loadTrip(tripId)
+    }
+
+    LaunchedEffect(actionMessage) {
+        actionMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            viewModel.clearActionMessage()
+        }
     }
 
     Scaffold(
         containerColor = GoTogetherTheme.colors.background,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = { Text("Trip Details", fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary) },
@@ -62,7 +73,7 @@ fun TripDetailScreen(
             )
         }
     ) { paddingValues ->
-        if (trip == null) {
+        if (isLoading && trip == null) {
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -75,7 +86,8 @@ fun TripDetailScreen(
                     Text("Loading trip details...", color = GoTogetherTheme.colors.textSecondary)
                 }
             }
-        } else {
+        } else if (trip != null) {
+            val t = trip!!
             Column(
                 modifier = Modifier
                     .fillMaxSize()
@@ -90,7 +102,7 @@ fun TripDetailScreen(
                 ) {
                     SubcomposeAsyncImage(
                         model = ImageRequest.Builder(LocalContext.current)
-                            .data(trip.imageUrl)
+                            .data(t.imageUrl)
                             .crossfade(true)
                             .build(),
                         contentDescription = "Trip Image",
@@ -148,15 +160,15 @@ fun TripDetailScreen(
                             .padding(20.dp)
                     ) {
                         Text(
-                            text = "${trip.startingLocation} to ${trip.destination}",
+                            text = "${t.startingLocation} to ${t.destination}",
                             fontSize = 22.sp,
                             fontWeight = FontWeight.Bold,
-                            color = GoTogetherTheme.colors.textPrimary,
+                            color = Color.White,
                             lineHeight = 28.sp
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "${trip.startDate} - ${trip.endDate}",
+                            text = "${t.startDate} - ${t.endDate}",
                             fontSize = 14.sp,
                             color = Color.White.copy(alpha = 0.85f),
                             fontWeight = FontWeight.Medium
@@ -182,7 +194,7 @@ fun TripDetailScreen(
                     ) {
                         SubcomposeAsyncImage(
                             model = ImageRequest.Builder(LocalContext.current)
-                                .data(trip.hostImageUrl ?: "https://ui-avatars.com/api/?name=${trip.hostName}&background=E8632B&color=fff&size=80")
+                                .data(t.hostImageUrl ?: "https://ui-avatars.com/api/?name=${t.hostName}&background=E8632B&color=fff&size=80")
                                 .crossfade(true)
                                 .build(),
                             contentDescription = "Host Avatar",
@@ -206,8 +218,8 @@ fun TripDetailScreen(
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Text(
-                                        trip.hostName.take(1).uppercase(),
-                                        color = GoTogetherTheme.colors.textPrimary,
+                                        t.hostName.take(1).uppercase(),
+                                        color = Color.White,
                                         fontWeight = FontWeight.Bold
                                     )
                                 }
@@ -216,13 +228,13 @@ fun TripDetailScreen(
                         Spacer(modifier = Modifier.width(14.dp))
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Hosted by ${trip.hostName}",
+                                text = if (isHost) "You're the Host" else "Hosted by ${t.hostName}",
                                 color = GoTogetherTheme.colors.textPrimary,
                                 fontWeight = FontWeight.SemiBold,
                                 fontSize = 16.sp
                             )
                             Spacer(modifier = Modifier.height(4.dp))
-                            if (trip.hostVerified) {
+                            if (t.hostVerified) {
                                 Row(
                                     modifier = Modifier
                                         .background(VerifiedCyan.copy(alpha = 0.12f), RoundedCornerShape(50))
@@ -252,7 +264,7 @@ fun TripDetailScreen(
                     )
                     Spacer(modifier = Modifier.height(12.dp))
                     Text(
-                        text = trip.description.ifBlank { "No description provided." },
+                        text = t.description.ifBlank { "No description provided." },
                         fontSize = 15.sp,
                         color = GoTogetherTheme.colors.textPrimary,
                         lineHeight = 24.sp
@@ -269,27 +281,27 @@ fun TripDetailScreen(
                     TripInfoRow(
                         icon = Icons.Default.AttachMoney,
                         label = "Budget",
-                        value = trip.budgetRange.ifBlank { "Not specified" }
+                        value = t.budgetRange.ifBlank { "Not specified" }
                     )
                     TripInfoRow(
                         icon = Icons.Default.LocationOn,
                         label = "From",
-                        value = trip.startingLocation.ifBlank { "Not specified" }
+                        value = t.startingLocation.ifBlank { "Not specified" }
                     )
                     TripInfoRow(
                         icon = Icons.Default.Flag,
                         label = "To",
-                        value = trip.destination.ifBlank { "Not specified" }
+                        value = t.destination.ifBlank { "Not specified" }
                     )
                     TripInfoRow(
                         icon = Icons.Default.Groups,
                         label = "Group Size",
-                        value = "${trip.joinedCount}/${trip.groupSize} travelers"
+                        value = "${t.joinedCount}/${t.groupSize} travelers"
                     )
                 }
 
                 // Interests
-                if (trip.interests.isNotEmpty()) {
+                if (t.interests.isNotEmpty()) {
                     Spacer(modifier = Modifier.height(20.dp))
                     Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                         Text(
@@ -303,7 +315,7 @@ fun TripDetailScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            trip.interests.forEach { tag ->
+                            t.interests.forEach { tag ->
                                 Box(
                                     modifier = Modifier
                                         .background(
@@ -324,15 +336,15 @@ fun TripDetailScreen(
                 Spacer(modifier = Modifier.height(24.dp))
                 Column(modifier = Modifier.padding(horizontal = 16.dp)) {
                     Text(
-                        text = "Travelers Joining (${trip.joinedCount})",
+                        text = "Travelers Joining (${t.joinedCount})",
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Bold,
                         color = GoTogetherTheme.colors.textPrimary
                     )
                     Spacer(modifier = Modifier.height(12.dp))
-                    if (trip.joinedCount > 0) {
+                    if (t.joinedCount > 0) {
                         Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
-                            repeat(minOf(trip.joinedCount, 5)) { idx ->
+                            repeat(minOf(t.joinedCount, 5)) { idx ->
                                 Box(
                                     modifier = Modifier
                                         .size(40.dp)
@@ -352,7 +364,7 @@ fun TripDetailScreen(
                                 ) {
                                     Text(
                                         "${idx + 1}",
-                                        color = GoTogetherTheme.colors.textPrimary,
+                                        color = Color.White,
                                         fontSize = 14.sp,
                                         fontWeight = FontWeight.Bold
                                     )
@@ -361,7 +373,7 @@ fun TripDetailScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = "${trip.joinedCount} people have already joined this trip.",
+                            text = "${t.joinedCount} people have already joined this trip.",
                             color = GoTogetherTheme.colors.textSecondary,
                             fontSize = 13.sp
                         )
@@ -376,17 +388,62 @@ fun TripDetailScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Request to Join Button
-                Button(
-                    onClick = { /* TODO */ },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .height(56.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Text("Request to Join", color = GoTogetherTheme.colors.textOnPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                // Action Buttons Area
+                if (isHost || requestStatus == JoinRequest.STATUS_APPROVED) {
+                    Button(
+                        onClick = { onNavigateToChatroom(t.id) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Open Trip Chat", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    }
+                } else {
+                    // "Request to Join" flow for non-hosts
+                    Button(
+                        onClick = { viewModel.requestToJoin() },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp)
+                            .height(56.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = if (requestStatus == JoinRequest.STATUS_PENDING) GoTogetherTheme.colors.surfaceVariant else GoTogetherOrange,
+                            disabledContainerColor = GoTogetherTheme.colors.surfaceVariant
+                        ),
+                        shape = RoundedCornerShape(16.dp),
+                        enabled = requestStatus == "NONE" && !isLoading
+                    ) {
+                        if (isLoading) {
+                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
+                        } else {
+                            Text(
+                                text = when (requestStatus) {
+                                    JoinRequest.STATUS_PENDING -> "Request Pending"
+                                    JoinRequest.STATUS_DENIED -> "Request Denied"
+                                    else -> "Request to Join"
+                                },
+                                color = if (requestStatus == JoinRequest.STATUS_PENDING) GoTogetherTheme.colors.textSecondary else Color.White,
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                    
+                    if (requestStatus == JoinRequest.STATUS_PENDING) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = "Waiting for host approval.",
+                            color = GoTogetherTheme.colors.textSecondary,
+                            fontSize = 13.sp,
+                            modifier = Modifier.fillMaxWidth(),
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(32.dp))

@@ -54,4 +54,14 @@ class TripRepository {
             Result.failure(e)
         }
     }
+
+    suspend fun getTripById(tripId: String): Result<Trip?> {
+        return try {
+            val snapshot = tripsCollection.document(tripId).get().await()
+            val trip = snapshot.toObject(Trip::class.java)
+            Result.success(trip)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

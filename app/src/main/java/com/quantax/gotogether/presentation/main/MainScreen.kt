@@ -32,6 +32,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.collectAsState
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -52,6 +53,7 @@ import com.quantax.gotogether.presentation.home.HomeScreen
 import com.quantax.gotogether.presentation.profile.ProfileScreen
 import com.quantax.gotogether.presentation.mytrips.MyTripsScreen
 import com.quantax.gotogether.presentation.notifications.NotificationsScreen
+import com.quantax.gotogether.presentation.notifications.NotificationsViewModel
 
 data class BottomNavItem(
     val label: String,
@@ -74,11 +76,15 @@ fun MainScreen(
     onNavigateToEditProfile: () -> Unit,
     onNavigateToTripDetail: (String) -> Unit,
     onNavigateToMessages: () -> Unit,
+    onNavigateToChatroom: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
+    
+    val notificationsViewModel: NotificationsViewModel = androidx.lifecycle.viewmodel.compose.viewModel()
+    val unreadCount by notificationsViewModel.unreadCount.collectAsState()
 
     Scaffold(
         containerColor = GoTogetherTheme.colors.background
@@ -98,7 +104,10 @@ fun MainScreen(
                     )
                 }
                 composable(Routes.Notifications.route) {
-                    NotificationsScreen()
+                    NotificationsScreen(
+                        viewModel = notificationsViewModel,
+                        onNavigateToChatroom = onNavigateToChatroom
+                    )
                 }
                 composable(Routes.MyTrips.route) {
                     MyTripsScreen(
@@ -153,12 +162,29 @@ fun MainScreen(
                                 }
                             }
                     ) {
-                        Icon(
-                            imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                            contentDescription = item.label,
-                            tint = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.textSecondary,
-                            modifier = Modifier.padding(bottom = 2.dp)
-                        )
+                        if (item.route == Routes.Notifications.route && unreadCount > 0) {
+                            BadgedBox(
+                                badge = {
+                                    Badge(containerColor = GoTogetherOrange) {
+                                        Text(text = unreadCount.toString(), color = Color.White)
+                                    }
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = item.label,
+                                    tint = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.textSecondary,
+                                    modifier = Modifier.padding(bottom = 2.dp)
+                                )
+                            }
+                        } else {
+                            Icon(
+                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                contentDescription = item.label,
+                                tint = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.textSecondary,
+                                modifier = Modifier.padding(bottom = 2.dp)
+                            )
+                        }
                         Text(
                             text = item.label,
                             fontSize = 11.sp,
