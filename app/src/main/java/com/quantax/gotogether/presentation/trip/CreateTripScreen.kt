@@ -34,8 +34,12 @@ import coil.compose.AsyncImage
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.draw.clip
 import com.quantax.gotogether.presentation.trip.CreateTripViewModel
+import com.quantax.gotogether.presentation.components.LocationSearchDialog
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.*
+import java.text.SimpleDateFormat
+import java.util.Date
+import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -57,6 +61,12 @@ fun CreateTripScreen(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri -> viewModel.onImageSelected(uri) }
     )
+
+    // Dialog States
+    var showingLocationPickerFor by remember { mutableStateOf<String?>(null) }
+    var showingDatePicker by remember { mutableStateOf(false) }
+    
+    val dateRangePickerState = rememberDateRangePickerState()
 
     Scaffold(
         topBar = {
@@ -88,79 +98,111 @@ fun CreateTripScreen(
             )
 
             // Starting Location
-            OutlinedTextField(
-                value = state.startingLocation,
-                onValueChange = viewModel::onStartingLocationChange,
-                label = { Text("Starting Location", color = GoTogetherTheme.colors.textSecondary) },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GoTogetherOrange,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                    unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                    unfocusedContainerColor = GoTogetherTheme.colors.card,
-                    focusedContainerColor = GoTogetherTheme.colors.card,
-                    cursorColor = GoTogetherOrange
-                ),
-                shape = RoundedCornerShape(20.dp)
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = state.startingLocation,
+                    onValueChange = { },
+                    readOnly = true,
+                    enabled = false,
+                    placeholder = { Text("Starting Location", color = GoTogetherTheme.colors.textSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledBorderColor = Color.Transparent,
+                        disabledTextColor = GoTogetherTheme.colors.textPrimary,
+                        disabledContainerColor = GoTogetherTheme.colors.card,
+                        disabledPlaceholderColor = GoTogetherTheme.colors.textSecondary,
+                        disabledLeadingIconColor = GoTogetherTheme.colors.textSecondary
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { showingLocationPickerFor = "start" }
+                )
+            }
 
             // Destination
-            OutlinedTextField(
-                value = state.destination,
-                onValueChange = viewModel::onDestinationChange,
-                label = { Text("Destination", color = GoTogetherTheme.colors.textSecondary) },
-                modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = GoTogetherOrange,
-                    unfocusedBorderColor = Color.Transparent,
-                    focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                    unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                    unfocusedContainerColor = GoTogetherTheme.colors.card,
-                    focusedContainerColor = GoTogetherTheme.colors.card,
-                    cursorColor = GoTogetherOrange
-                ),
-                shape = RoundedCornerShape(20.dp)
-            )
+            Box(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = state.destination,
+                    onValueChange = { },
+                    readOnly = true,
+                    enabled = false,
+                    placeholder = { Text("Destination", color = GoTogetherTheme.colors.textSecondary) },
+                    modifier = Modifier.fillMaxWidth(),
+                    leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledBorderColor = Color.Transparent,
+                        disabledTextColor = GoTogetherTheme.colors.textPrimary,
+                        disabledContainerColor = GoTogetherTheme.colors.card,
+                        disabledPlaceholderColor = GoTogetherTheme.colors.textSecondary,
+                        disabledLeadingIconColor = GoTogetherTheme.colors.textSecondary
+                    ),
+                    shape = RoundedCornerShape(20.dp)
+                )
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .clip(RoundedCornerShape(20.dp))
+                        .clickable { showingLocationPickerFor = "destination" }
+                )
+            }
 
             // Travel Dates
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                OutlinedTextField(
-                    value = state.startDate,
-                    onValueChange = viewModel::onStartDateChange,
-                    label = {  Text("Start Date", color = GoTogetherTheme.colors.textSecondary) },
-                    modifier = Modifier.weight(1f),
-                    leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoTogetherOrange,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedContainerColor = GoTogetherTheme.colors.card,
-                        focusedContainerColor = GoTogetherTheme.colors.card,
-                        cursorColor = GoTogetherOrange
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                )
-                OutlinedTextField(
-                    value = state.endDate,
-                    onValueChange = viewModel::onEndDateChange,
-                    label = { Text("End Date", color = GoTogetherTheme.colors.textSecondary) },
-                    modifier = Modifier.weight(1f),
-                    leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoTogetherOrange,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedContainerColor = GoTogetherTheme.colors.card,
-                        focusedContainerColor = GoTogetherTheme.colors.card,
-                        cursorColor = GoTogetherOrange
-                    ),
-                    shape = RoundedCornerShape(20.dp)
-                )
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedTextField(
+                        value = state.startDate,
+                        onValueChange = { },
+                        readOnly = true,
+                        enabled = false,
+                        placeholder = {  Text("Start Date", color = GoTogetherTheme.colors.textSecondary) },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledBorderColor = Color.Transparent,
+                            disabledTextColor = GoTogetherTheme.colors.textPrimary,
+                            disabledContainerColor = GoTogetherTheme.colors.card,
+                            disabledPlaceholderColor = GoTogetherTheme.colors.textSecondary,
+                            disabledLeadingIconColor = GoTogetherTheme.colors.textSecondary
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { showingDatePicker = true }
+                    )
+                }
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedTextField(
+                        value = state.endDate,
+                        onValueChange = { },
+                        readOnly = true,
+                        enabled = false,
+                        placeholder = { Text("End Date", color = GoTogetherTheme.colors.textSecondary) },
+                        modifier = Modifier.fillMaxWidth(),
+                        leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
+                        colors = OutlinedTextFieldDefaults.colors(
+                            disabledBorderColor = Color.Transparent,
+                            disabledTextColor = GoTogetherTheme.colors.textPrimary,
+                            disabledContainerColor = GoTogetherTheme.colors.card,
+                            disabledPlaceholderColor = GoTogetherTheme.colors.textSecondary,
+                            disabledLeadingIconColor = GoTogetherTheme.colors.textSecondary
+                        ),
+                        shape = RoundedCornerShape(20.dp)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable { showingDatePicker = true }
+                    )
+                }
             }
 
             // Budget Range
@@ -347,6 +389,57 @@ fun CreateTripScreen(
                     CircularProgressIndicator(color = GoTogetherTheme.colors.textOnPrimary, modifier = Modifier.size(24.dp))
                 } else {
                     Text("Publish Trip", color = GoTogetherTheme.colors.textOnPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                }
+            }
+            
+            // Render Dialogs
+            if (showingLocationPickerFor != null) {
+                LocationSearchDialog(
+                    onDismissRequest = { showingLocationPickerFor = null },
+                    onLocationSelected = { location ->
+                        if (showingLocationPickerFor == "start") {
+                            viewModel.onStartingLocationChange(location)
+                        } else if (showingLocationPickerFor == "destination") {
+                            viewModel.onDestinationChange(location)
+                        }
+                        showingLocationPickerFor = null
+                    }
+                )
+            }
+            
+            if (showingDatePicker) {
+                DatePickerDialog(
+                    onDismissRequest = { showingDatePicker = false },
+                    confirmButton = {
+                        TextButton(onClick = {
+                            val sdf = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
+                            val startMillis = dateRangePickerState.selectedStartDateMillis
+                            val endMillis = dateRangePickerState.selectedEndDateMillis
+                            
+                            if (startMillis != null) {
+                                viewModel.onStartDateChange(sdf.format(Date(startMillis)))
+                            }
+                            if (endMillis != null) {
+                                viewModel.onEndDateChange(sdf.format(Date(endMillis)))
+                            }
+                            showingDatePicker = false
+                        }) {
+                            Text("Confirm")
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(onClick = { showingDatePicker = false }) {
+                            Text("Cancel")
+                        }
+                    }
+                ) {
+                    DateRangePicker(
+                        state = dateRangePickerState,
+                        title = { Text(text = "Select Trip Dates", modifier = Modifier.padding(16.dp)) },
+                        headline = { Text(text = "Start Date - End Date", modifier = Modifier.padding(horizontal = 16.dp)) },
+                        showModeToggle = false,
+                        modifier = Modifier.padding(8.dp).weight(1f)
+                    )
                 }
             }
         }

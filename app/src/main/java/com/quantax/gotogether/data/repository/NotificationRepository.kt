@@ -26,21 +26,25 @@ class NotificationRepository {
     fun getNotificationsForUser(userId: String): Flow<List<Notification>> = callbackFlow {
         val listener = notificationsCollection
             .whereEqualTo("recipientId", userId)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val notifications = snapshot?.toObjects(Notification::class.java) ?: emptyList()
-                trySend(notifications)
+                trySend(notifications.sortedByDescending { it.timestamp })
             }
         awaitClose { listener.remove() }
     }
 
     suspend fun markAsRead(notificationId: String): Result<Unit> {
         return try {
-            notificationsCollection.document(notificationId).update("isRead", true).await()
+            notificationsCollection.document(notificationId).update(
+                mapOf(
+                    "isRead" to true,
+                    "read" to true
+                )
+            ).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
@@ -49,15 +53,17 @@ class NotificationRepository {
     
     suspend fun markAllAsRead(userId: String): Result<Unit> {
         return try {
-            val unreadNotifications = notificationsCollection
+            val allNotifications = notificationsCollection
                 .whereEqualTo("recipientId", userId)
-                .whereEqualTo("isRead", false)
                 .get()
                 .await()
             
             firestore.runBatch { batch ->
-                for (doc in unreadNotifications.documents) {
-                    batch.update(doc.reference, "isRead", true)
+                for (doc in allNotifications.documents) {
+                    val isRead = doc.getBoolean("isRead") ?: doc.getBoolean("read") ?: false
+                    if (!isRead) {
+                        batch.update(doc.reference, mapOf("isRead" to true, "read" to true))
+                    }
                 }
             }.await()
             

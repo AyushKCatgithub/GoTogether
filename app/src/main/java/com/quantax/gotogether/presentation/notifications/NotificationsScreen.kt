@@ -40,7 +40,6 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel = viewModel(),
     onNavigateToChatroom: (String) -> Unit = {}
 ) {
-    val unreadCount by viewModel.unreadCount.collectAsState()
     val allNotifications by viewModel.allNotifications.collectAsState()
     val isLoading by viewModel.isLoading.collectAsState()
     val actionMessage by viewModel.actionMessage.collectAsState()
@@ -209,7 +208,7 @@ private fun JoinRequestCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             // Action buttons
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 // Deny button
                 IconButton(
                     onClick = onDeny,
@@ -227,6 +226,9 @@ private fun JoinRequestCard(
                         modifier = Modifier.size(20.dp)
                     )
                 }
+
+                Spacer(modifier = Modifier.width(8.dp))
+
                 // Approve button
                 IconButton(
                     onClick = onApprove,

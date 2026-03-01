@@ -11,6 +11,11 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.quantax.gotogether.data.repository.UserProfileRepository
+import com.quantax.gotogether.domain.model.UserProfile
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import java.util.concurrent.TimeUnit
 
 class AuthManager {
@@ -49,12 +54,31 @@ class AuthManager {
                 }
 
             if (authResult.isSuccessful) {
+                ensureProfileExists()
                 Result.success(Unit)
             } else {
                 Result.failure(Exception("Firebase sign-in failed"))
             }
         } catch (e: Exception) {
             Result.failure(e)
+        }
+    }
+
+    private suspend fun ensureProfileExists() {
+        val user = auth.currentUser ?: return
+        val profileRepo = UserProfileRepository()
+
+        val existingProfileResult = profileRepo.getProfile(user.uid)
+        val profile = existingProfileResult.getOrNull()
+
+        if (profile == null) {
+            val newProfile = UserProfile(
+                uid = user.uid,
+                email = user.email ?: "",
+                phone = user.phoneNumber ?: "",
+                name = user.displayName ?: "" // Optionally capture their Google name if present
+            )
+            profileRepo.saveProfile(newProfile)
         }
     }
 
@@ -81,7 +105,10 @@ class AuthManager {
         auth.signInWithCredential(credential)
             .addOnCompleteListener { task ->
                 if (task.isSuccessful) {
-                    onResult(Result.success(Unit))
+                    CoroutineScope(Dispatchers.IO).launch {
+                        ensureProfileExists()
+                        onResult(Result.success(Unit))
+                    }
                 } else {
                     onResult(
                         Result.failure(

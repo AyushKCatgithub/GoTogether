@@ -10,6 +10,7 @@ import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.FormatListBulleted
 import androidx.compose.material.icons.outlined.FormatListBulleted
 import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
@@ -65,7 +66,7 @@ data class BottomNavItem(
 private val bottomNavItems = listOf(
     BottomNavItem("Home", Routes.Home.route, Icons.Filled.Home, Icons.Filled.Home),
     BottomNavItem("Alerts", Routes.Notifications.route, Icons.Filled.Notifications, Icons.Outlined.Notifications),
-    BottomNavItem("My Trips", Routes.MyTrips.route, Icons.Filled.List, Icons.Outlined.FormatListBulleted),
+    BottomNavItem("My Trips", Routes.MyTrips.route, Icons.Filled.FormatListBulleted, Icons.Outlined.FormatListBulleted),
     BottomNavItem("Profile", Routes.Profile.route, Icons.Filled.Person, Icons.Outlined.Person)
 )
 

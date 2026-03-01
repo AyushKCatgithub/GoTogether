@@ -24,7 +24,6 @@ sealed interface NotificationItem {
         override val timestamp: Long = request.timestamp
         override val id: String = request.id
     }
-    
     data class GeneralNotificationItem(val notification: Notification) : NotificationItem {
         override val timestamp: Long = notification.timestamp
         override val id: String = notification.id

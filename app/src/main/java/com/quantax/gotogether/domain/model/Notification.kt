@@ -1,5 +1,7 @@
 package com.quantax.gotogether.domain.model
 
+import com.google.firebase.firestore.PropertyName
+
 data class Notification(
     val id: String = "",
     val recipientId: String = "",
@@ -10,7 +12,7 @@ data class Notification(
     val tripId: String = "",
     val tripTitle: String = "",
     val chatroomId: String = "",
-    val isRead: Boolean = false,
+    @get:PropertyName("isRead") @set:PropertyName("isRead") var isRead: Boolean = false,
     val timestamp: Long = System.currentTimeMillis()
 ) {
     companion object {

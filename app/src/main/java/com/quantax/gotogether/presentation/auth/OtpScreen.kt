@@ -15,9 +15,13 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -27,6 +31,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.foundation.clickable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Brush
@@ -58,6 +63,10 @@ fun OtpScreen(
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
     var codeSent by remember { mutableStateOf(false) }
+
+    val countryCodes = listOf("+91" to "India", "+1" to "USA", "+44" to "UK", "+61" to "Australia", "+81" to "Japan")
+    var selectedCountryCode by remember { mutableStateOf(countryCodes[0].first) }
+    var expandedCountryMenu by remember { mutableStateOf(false) }
 
     val callbacks = remember {
         object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
@@ -139,11 +148,47 @@ fun OtpScreen(
                 OutlinedTextField(
                     value = phoneNumber,
                     onValueChange = { phoneNumber = it },
-                    label = { Text("Phone Number (e.g. +91...)") },
+                    label = { Text("Phone Number") },
                     singleLine = true,
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(12.dp),
+                    leadingIcon = {
+                        Box {
+                            Row(
+                                modifier = Modifier
+                                    .clickable { expandedCountryMenu = true }
+                                    .padding(horizontal = 12.dp, vertical = 8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Text(
+                                    text = selectedCountryCode,
+                                    fontWeight = FontWeight.Bold,
+                                    color = GoTogetherTheme.colors.textPrimary
+                                )
+                                Icon(
+                                    imageVector = Icons.Default.ArrowDropDown,
+                                    contentDescription = "Select Country Code",
+                                    tint = GoTogetherTheme.colors.textSecondary
+                                )
+                            }
+                            DropdownMenu(
+                                expanded = expandedCountryMenu,
+                                onDismissRequest = { expandedCountryMenu = false },
+                                modifier = Modifier.background(GoTogetherTheme.colors.surface)
+                            ) {
+                                countryCodes.forEach { (code, country) ->
+                                    DropdownMenuItem(
+                                        text = { Text("$code ($country)", color = GoTogetherTheme.colors.textPrimary) },
+                                        onClick = {
+                                            selectedCountryCode = code
+                                            expandedCountryMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+                    },
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = GoTogetherOrange,
                         unfocusedBorderColor = TextGray.copy(alpha = 0.4f),
@@ -162,8 +207,9 @@ fun OtpScreen(
                         if (phoneNumber.isNotBlank()) {
                             isLoading = true
                             errorMessage = null
+                            val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
                             authManager.sendOtp(
-                                phoneNumber = phoneNumber,
+                                phoneNumber = fullPhoneNumber,
                                 activity = context as Activity,
                                 callbacks = callbacks
                             )

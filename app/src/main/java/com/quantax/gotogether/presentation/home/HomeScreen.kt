@@ -78,6 +78,7 @@ import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.Trip
 import com.quantax.gotogether.presentation.home.HomeViewModel
+import com.quantax.gotogether.presentation.components.LocationSearchDialog
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.*
 
@@ -100,6 +101,9 @@ fun HomeScreen(
     
     var showFilterSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    
+    // Pickers State
+    var showingLocationPickerFor by remember { mutableStateOf<String?>(null) }
 
     val context = LocalContext.current
 
@@ -253,6 +257,20 @@ fun HomeScreen(
                 }
             }
             
+            if (showingLocationPickerFor != null) {
+                LocationSearchDialog(
+                    onDismissRequest = { showingLocationPickerFor = null },
+                    onLocationSelected = { selectedLocation ->
+                        if (showingLocationPickerFor == "from") {
+                            viewModel.onSearchFromChange(selectedLocation)
+                        } else if (showingLocationPickerFor == "to") {
+                            viewModel.onSearchToChange(selectedLocation)
+                        }
+                        showingLocationPickerFor = null
+                    }
+                )
+            }
+            
             if (showFilterSheet) {
                 ModalBottomSheet(
                     onDismissRequest = { showFilterSheet = false },
@@ -268,40 +286,58 @@ fun HomeScreen(
                     ) {
                         Text("Filters", fontSize = 24.sp, fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary)
                         
-                        OutlinedTextField(
-                            value = searchFrom,
-                            onValueChange = viewModel::onSearchFromChange,
-                            placeholder = { Text("Leaving from...", color = GoTogetherTheme.colors.textSecondary) },
-                            leadingIcon = { Icon(Icons.Default.LocationOn, "From", tint = GoTogetherTheme.colors.textSecondary) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoTogetherOrange,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                                unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                                unfocusedContainerColor = GoTogetherTheme.colors.card,
-                                focusedContainerColor = GoTogetherTheme.colors.card
-                            ),
-                            shape = RoundedCornerShape(20.dp),
-                            singleLine = true
-                        )
-                        OutlinedTextField(
-                            value = searchTo,
-                            onValueChange = viewModel::onSearchToChange,
-                            placeholder = { Text("Going to...", color = GoTogetherTheme.colors.textSecondary) },
-                            leadingIcon = { Icon(Icons.Default.LocationOn, "To", tint = GoTogetherTheme.colors.textSecondary) },
-                            modifier = Modifier.fillMaxWidth(),
-                            colors = OutlinedTextFieldDefaults.colors(
-                                focusedBorderColor = GoTogetherOrange,
-                                unfocusedBorderColor = Color.Transparent,
-                                focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                                unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                                unfocusedContainerColor = GoTogetherTheme.colors.card,
-                                focusedContainerColor = GoTogetherTheme.colors.card
-                            ),
-                            shape = RoundedCornerShape(20.dp),
-                            singleLine = true
-                        )
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = searchFrom,
+                                onValueChange = { },
+                                readOnly = true,
+                                enabled = false,
+                                placeholder = { Text("Leaving from...", color = GoTogetherTheme.colors.textSecondary) },
+                                leadingIcon = { Icon(Icons.Default.LocationOn, "From", tint = GoTogetherTheme.colors.textSecondary) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledBorderColor = Color.Transparent,
+                                    disabledTextColor = GoTogetherTheme.colors.textPrimary,
+                                    disabledContainerColor = GoTogetherTheme.colors.card,
+                                    disabledPlaceholderColor = GoTogetherTheme.colors.textSecondary,
+                                    disabledLeadingIconColor = GoTogetherTheme.colors.textSecondary
+                                ),
+                                shape = RoundedCornerShape(20.dp),
+                                singleLine = true
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable { showingLocationPickerFor = "from" }
+                            )
+                        }
+                        Box(modifier = Modifier.fillMaxWidth()) {
+                            OutlinedTextField(
+                                value = searchTo,
+                                onValueChange = { },
+                                readOnly = true,
+                                enabled = false,
+                                placeholder = { Text("Going to...", color = GoTogetherTheme.colors.textSecondary) },
+                                leadingIcon = { Icon(Icons.Default.LocationOn, "To", tint = GoTogetherTheme.colors.textSecondary) },
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = OutlinedTextFieldDefaults.colors(
+                                    disabledBorderColor = Color.Transparent,
+                                    disabledTextColor = GoTogetherTheme.colors.textPrimary,
+                                    disabledContainerColor = GoTogetherTheme.colors.card,
+                                    disabledPlaceholderColor = GoTogetherTheme.colors.textSecondary,
+                                    disabledLeadingIconColor = GoTogetherTheme.colors.textSecondary
+                                ),
+                                shape = RoundedCornerShape(20.dp),
+                                singleLine = true
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .matchParentSize()
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable { showingLocationPickerFor = "to" }
+                            )
+                        }
                         
                         OutlinedTextField(
                             value = searchBudget,

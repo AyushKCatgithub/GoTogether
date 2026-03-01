@@ -29,14 +29,13 @@ class JoinRequestRepository {
         val listener = requestsCollection
             .whereEqualTo("hostId", hostId)
             .whereEqualTo("status", JoinRequest.STATUS_PENDING)
-            .orderBy("timestamp", Query.Direction.DESCENDING)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())
                     return@addSnapshotListener
                 }
                 val requests = snapshot?.toObjects(JoinRequest::class.java) ?: emptyList()
-                trySend(requests)
+                trySend(requests.sortedByDescending { it.timestamp })
             }
         awaitClose { listener.remove() }
     }
