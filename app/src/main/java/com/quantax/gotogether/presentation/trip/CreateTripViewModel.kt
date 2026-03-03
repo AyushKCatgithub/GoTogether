@@ -44,12 +44,18 @@ class CreateTripViewModel : ViewModel() {
     fun onStartingLocationChange(value: String) { _state.value = _state.value.copy(startingLocation = value) }
     fun onDestinationChange(value: String) { _state.value = _state.value.copy(destination = value) }
     
-    fun onStartDateChange(value: String) { 
-        _state.value = _state.value.copy(startDate = value) 
+    fun onStartDateChange(millis: Long?) {
+        millis?.let {
+            val dateString = dateFormatter.format(Date(it))
+            _state.value = _state.value.copy(startDate = dateString)
+        }
     }
-    
-    fun onEndDateChange(value: String) { 
-        _state.value = _state.value.copy(endDate = value)
+
+    fun onEndDateChange(millis: Long?) {
+        millis?.let {
+            val dateString = dateFormatter.format(Date(it))
+            _state.value = _state.value.copy(endDate = dateString)
+        }
     }
 
     fun onBudgetRangeChange(value: String) { _state.value = _state.value.copy(budgetRange = value) }
@@ -75,6 +81,10 @@ class CreateTripViewModel : ViewModel() {
         _state.value = _state.value.copy(selectedImageUri = uri)
     }
     
+    fun setError(message: String) {
+        _state.value = _state.value.copy(error = message)
+    }
+
     fun publishTrip() {
         val currentState = _state.value
         if (currentState.startingLocation.isBlank() || currentState.destination.isBlank()) {
@@ -169,4 +179,3 @@ class CreateTripViewModel : ViewModel() {
         }
     }
 }
-

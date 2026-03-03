@@ -40,21 +40,33 @@ class HomeViewModel : ViewModel() {
     private val _appliedTo = MutableStateFlow("")
     val appliedTo: StateFlow<String> = _appliedTo.asStateFlow()
 
+    private val _searchQuery = MutableStateFlow("")
+    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+
     init {
         loadTrips()
     }
 
     fun loadTrips() {
         viewModelScope.launch {
-            _state.value = HomeState.Loading
+            if (_state.value is HomeState.Success) {
+                _isRefreshing.value = true
+            } else {
+                _state.value = HomeState.Loading
+            }
             val result = repository.getTrips()
             result.fold(
                 onSuccess = { trips ->
                     allTrips = trips
                     applyFilters()
+                    _isRefreshing.value = false
                 },
                 onFailure = { error ->
                     _state.value = HomeState.Error(error.message ?: "Failed to fetch trips")
+                    _isRefreshing.value = false
                 }
             )
         }
@@ -78,16 +90,27 @@ class HomeViewModel : ViewModel() {
         }
     }
 
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+        applyFilters()
+    }
+
     fun applyFilters() {
         val fromQuery = _searchFrom.value.trim()
         val toQuery = _searchTo.value.trim()
         val budgetQuery = _searchBudget.value.trim()
         val groupSizeQuery = _searchGroupSize.value
+        val searchQuery = _searchQuery.value.trim()
 
         val filtered = allTrips.filter { trip ->
             val matchesFrom = fromQuery.isEmpty() || trip.startingLocation.contains(fromQuery, ignoreCase = true)
             val matchesTo = toQuery.isEmpty() || trip.destination.contains(toQuery, ignoreCase = true)
             
+            val matchesSearch = searchQuery.isEmpty() || 
+                    trip.destination.contains(searchQuery, ignoreCase = true) || 
+                    trip.startingLocation.contains(searchQuery, ignoreCase = true) ||
+                    trip.title.contains(searchQuery, ignoreCase = true)
+
             val maxBudget = budgetQuery.toIntOrNull()
             val matchesBudget = if (maxBudget != null) {
                 val tripMaxBudget = "\\d+".toRegex().findAll(trip.budgetRange).map { it.value.toInt() }.maxOrNull()
@@ -103,7 +126,7 @@ class HomeViewModel : ViewModel() {
             }
 
             val matchesGroupSize = groupSizeQuery == 0 || (trip.groupSize in 1..groupSizeQuery)
-            matchesFrom && matchesTo && matchesBudget && matchesGroupSize
+            matchesFrom && matchesTo && matchesBudget && matchesGroupSize && matchesSearch
         }
         
         _appliedFrom.value = fromQuery

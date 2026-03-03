@@ -53,6 +53,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -98,6 +99,8 @@ fun HomeScreen(
     
     val appliedFrom by viewModel.appliedFrom.collectAsState()
     val appliedTo by viewModel.appliedTo.collectAsState()
+    val searchQuery by viewModel.searchQuery.collectAsState()
+    val isRefreshing by viewModel.isRefreshing.collectAsState()
     
     var showFilterSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -181,7 +184,8 @@ fun HomeScreen(
                                     )
                                 ),
                                 CircleShape
-                            ),
+                            )
+                            .clickable { viewModel.loadTrips() },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -227,8 +231,8 @@ fun HomeScreen(
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
                 OutlinedTextField(
-                    value = "",
-                    onValueChange = {},
+                    value = searchQuery,
+                    onValueChange = viewModel::onSearchQueryChange,
                     placeholder = { Text("Search trips, destinations...", color = GoTogetherTheme.colors.textSecondary) },
                     leadingIcon = { Icon(Icons.Outlined.Search, "Search", tint = GoTogetherTheme.colors.textSecondary) },
                     modifier = Modifier.weight(1f),
@@ -420,53 +424,59 @@ fun HomeScreen(
             }
 
             // Feed Content
-            when (val currentState = state) {
-                is HomeState.Loading -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 3.dp)
-                    }
-                }
-                is HomeState.Error -> {
-                    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Text(currentState.message, color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
-                            Spacer(modifier = Modifier.height(12.dp))
-                            Button(
-                                onClick = { viewModel.loadTrips() },
-                                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                                shape = RoundedCornerShape(12.dp)
-                            ) {
-                                Text("Retry", fontWeight = FontWeight.Bold)
-                            }
+            PullToRefreshBox(
+                isRefreshing = isRefreshing,
+                onRefresh = { viewModel.loadTrips() },
+                modifier = Modifier.weight(1f)
+            ) {
+                when (val currentState = state) {
+                    is HomeState.Loading -> {
+                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 3.dp)
                         }
                     }
-                }
-                is HomeState.Success -> {
-                    if (currentState.trips.isEmpty()) {
+                    is HomeState.Error -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                             Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Icon(
-                                    Icons.Outlined.Explore,
-                                    contentDescription = null,
-                                    tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.4f),
-                                    modifier = Modifier.size(64.dp)
-                                )
-                                Spacer(modifier = Modifier.height(16.dp))
-                                Text("No trips found", color = GoTogetherTheme.colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
-                                Text("Create one to get started!", color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
+                                Text(currentState.message, color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
+                                Spacer(modifier = Modifier.height(12.dp))
+                                Button(
+                                    onClick = { viewModel.loadTrips() },
+                                    colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
+                                    shape = RoundedCornerShape(12.dp)
+                                ) {
+                                    Text("Retry", fontWeight = FontWeight.Bold)
+                                }
                             }
                         }
-                    } else {
-                        LazyColumn(
-                            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp),
-                            verticalArrangement = Arrangement.spacedBy(24.dp),
-                            modifier = Modifier.fillMaxSize()
-                        ) {
-                            items(currentState.trips) { trip ->
-                                TripCard(
-                                    trip = trip,
-                                    onClick = { onNavigateToTripDetail(trip.id) }
-                                )
+                    }
+                    is HomeState.Success -> {
+                        if (currentState.trips.isEmpty()) {
+                            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                    Icon(
+                                        Icons.Outlined.Explore,
+                                        contentDescription = null,
+                                        tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.4f),
+                                        modifier = Modifier.size(64.dp)
+                                    )
+                                    Spacer(modifier = Modifier.height(16.dp))
+                                    Text("No trips found", color = GoTogetherTheme.colors.textPrimary, fontSize = 18.sp, fontWeight = FontWeight.SemiBold)
+                                    Text("Create one to get started!", color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp),
+                                verticalArrangement = Arrangement.spacedBy(24.dp),
+                                modifier = Modifier.fillMaxSize()
+                            ) {
+                                items(currentState.trips) { trip ->
+                                    TripCard(
+                                        trip = trip,
+                                        onClick = { onNavigateToTripDetail(trip.id) }
+                                    )
+                                }
                             }
                         }
                     }
