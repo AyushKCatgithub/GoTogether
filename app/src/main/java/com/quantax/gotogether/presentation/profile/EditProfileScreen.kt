@@ -46,6 +46,7 @@ fun EditProfileScreen(
     var email by remember(profile) { mutableStateOf(profile?.email ?: "") }
     var phone by remember(profile) { mutableStateOf(profile?.phone ?: "") }
     var address by remember(profile) { mutableStateOf(profile?.address ?: "") }
+    var bio by remember(profile) { mutableStateOf(profile?.bio ?: "") }
     var profileImageUrl by remember(profile) { mutableStateOf(profile?.profileImageUrl ?: "") }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
@@ -216,6 +217,14 @@ fun EditProfileScreen(
             )
 
             ProfileTextField(
+                value = bio,
+                onValueChange = { bio = it },
+                label = "Bio / Description",
+                icon = Icons.Default.Info,
+                singleLine = false
+            )
+
+            ProfileTextField(
                 value = phone,
                 onValueChange = { phone = it },
                 label = "Phone *",
@@ -243,6 +252,7 @@ fun EditProfileScreen(
                         email = email,
                         phone = phone,
                         address = address,
+                        bio = bio,
                         profileImageUrl = profileImageUrl
                     ) ?: com.quantax.gotogether.domain.model.UserProfile(
                         name = name,
@@ -250,6 +260,7 @@ fun EditProfileScreen(
                         email = email,
                         phone = phone,
                         address = address,
+                        bio = bio,
                         profileImageUrl = profileImageUrl
                     )
                     viewModel.saveProfile(updatedProfile)
@@ -278,7 +289,8 @@ private fun ProfileTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    icon: ImageVector
+    icon: ImageVector,
+    singleLine: Boolean = true
 ) {
     OutlinedTextField(
         value = value,
@@ -294,6 +306,8 @@ private fun ProfileTextField(
             cursorColor = GoTogetherOrange
         ),
         shape = RoundedCornerShape(12.dp),
-        singleLine = true
+        singleLine = singleLine,
+        minLines = if (singleLine) 1 else 3,
+        maxLines = if (singleLine) 1 else 5
     )
 }

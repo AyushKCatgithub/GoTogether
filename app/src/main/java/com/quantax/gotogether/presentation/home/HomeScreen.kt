@@ -89,6 +89,7 @@ fun HomeScreen(
     onNavigateToCreateTrip: () -> Unit,
     onNavigateToTripDetail: (String) -> Unit = {},
     onNavigateToMessages: () -> Unit,
+    onNavigateToPublicProfile: (String) -> Unit = {},
     viewModel: HomeViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsState()
@@ -123,7 +124,6 @@ fun HomeScreen(
     }
 
     LaunchedEffect(Unit) {
-        viewModel.loadTrips()
         permissionLauncher.launch(
             arrayOf(
                 android.Manifest.permission.ACCESS_FINE_LOCATION,
@@ -474,7 +474,8 @@ fun HomeScreen(
                                 items(currentState.trips) { trip ->
                                     TripCard(
                                         trip = trip,
-                                        onClick = { onNavigateToTripDetail(trip.id) }
+                                        onClick = { onNavigateToTripDetail(trip.id) },
+                                        onHostClick = { onNavigateToPublicProfile(trip.hostId) }
                                     )
                                 }
                             }
@@ -490,7 +491,8 @@ fun HomeScreen(
 fun TripCard(
     trip: Trip,
     showBookmark: Boolean = true,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onHostClick: () -> Unit = {}
 ) {
     Card(
         modifier = Modifier
@@ -595,6 +597,7 @@ fun TripCard(
                         .padding(12.dp)
                         .align(Alignment.TopStart)
                         .background(Color.Black.copy(alpha = 0.45f), RoundedCornerShape(50))
+                        .clickable { onHostClick() }
                         .padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {

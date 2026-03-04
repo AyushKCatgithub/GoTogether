@@ -227,6 +227,19 @@ fun ProfileScreen(
                         )
                     }
 
+                    // Bio
+                    if (profile?.bio?.isNotBlank() == true) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            text = profile.bio,
+                            fontSize = 14.sp,
+                            color = GoTogetherTheme.colors.textSecondary,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            lineHeight = 20.sp,
+                            modifier = Modifier.padding(horizontal = 32.dp)
+                        )
+                    }
+
                     Spacer(modifier = Modifier.height(10.dp))
 
                     // Verification Badge

@@ -107,7 +107,9 @@ class AuthManager {
                 if (task.isSuccessful) {
                     CoroutineScope(Dispatchers.IO).launch {
                         ensureProfileExists()
-                        onResult(Result.success(Unit))
+                        kotlinx.coroutines.withContext(Dispatchers.Main) {
+                            onResult(Result.success(Unit))
+                        }
                     }
                 } else {
                     onResult(

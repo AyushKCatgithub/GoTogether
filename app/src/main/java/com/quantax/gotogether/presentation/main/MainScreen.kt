@@ -78,6 +78,7 @@ fun MainScreen(
     onNavigateToTripDetail: (String) -> Unit,
     onNavigateToMessages: () -> Unit,
     onNavigateToChatroom: (String) -> Unit,
+    onNavigateToPublicProfile: (String) -> Unit,
     onSignOut: () -> Unit
 ) {
     val navController = rememberNavController()
@@ -101,7 +102,8 @@ fun MainScreen(
                     HomeScreen(
                         onNavigateToCreateTrip = onNavigateToCreateTrip,
                         onNavigateToTripDetail = onNavigateToTripDetail,
-                        onNavigateToMessages = onNavigateToMessages
+                        onNavigateToMessages = onNavigateToMessages,
+                        onNavigateToPublicProfile = onNavigateToPublicProfile
                     )
                 }
                 composable(Routes.Notifications.route) {

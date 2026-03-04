@@ -17,6 +17,7 @@ import com.quantax.gotogether.presentation.auth.OtpScreen
 import com.quantax.gotogether.presentation.trip.CreateTripScreen
 import com.quantax.gotogether.presentation.trip.TripDetailScreen
 import com.quantax.gotogether.presentation.profile.EditProfileScreen
+import com.quantax.gotogether.presentation.profile.PublicProfileScreen
 import com.quantax.gotogether.presentation.messages.MessagesScreen
 import com.quantax.gotogether.presentation.onboarding.OnboardingScreen
 import com.quantax.gotogether.presentation.onboarding.SplashScreen
@@ -122,6 +123,9 @@ fun GoTogetherNavGraph(
                 onNavigateToChatroom = { chatroomId ->
                     navController.navigate(Routes.Chatroom.createRoute(chatroomId))
                 },
+                onNavigateToPublicProfile = { userId ->
+                    navController.navigate(Routes.PublicProfile.createRoute(userId))
+                },
                 onSignOut = {
                     navController.navigate(Routes.Register.route) {
                         popUpTo(Routes.Main.route) { inclusive = true }
@@ -167,6 +171,9 @@ fun GoTogetherNavGraph(
                 },
                 onNavigateToChatroom = { chatroomId ->
                     navController.navigate(Routes.Chatroom.createRoute(chatroomId))
+                },
+                onNavigateToPublicProfile = { userId ->
+                    navController.navigate(Routes.PublicProfile.createRoute(userId))
                 }
             )
         }
@@ -178,6 +185,19 @@ fun GoTogetherNavGraph(
             val chatroomId = backStackEntry.arguments?.getString("chatroomId") ?: ""
             com.quantax.gotogether.presentation.chat.ChatroomScreen(
                 chatroomId = chatroomId,
+                onNavigateBack = {
+                    navController.popBackStack()
+                }
+            )
+        }
+
+        composable(
+            Routes.PublicProfile.route,
+            arguments = listOf(navArgument("userId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString("userId") ?: ""
+            PublicProfileScreen(
+                userId = userId,
                 onNavigateBack = {
                     navController.popBackStack()
                 }

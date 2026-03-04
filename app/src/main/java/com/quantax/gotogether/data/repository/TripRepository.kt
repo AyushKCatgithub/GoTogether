@@ -15,7 +15,37 @@ class TripRepository {
                 .get()
                 .await()
             val trips = snapshot.toObjects(Trip::class.java)
-            Result.success(trips)
+
+            // Fetch host profiles by document ID to get current profile images
+            val hostIds = trips.map { it.hostId }.distinct().filter { it.isNotBlank() }
+            val hostProfiles = mutableMapOf<String, com.quantax.gotogether.domain.model.UserProfile>()
+            val usersCollection = firestore.collection("users")
+            hostIds.forEach { uid ->
+                try {
+                    val doc = usersCollection.document(uid).get().await()
+                    val profile = doc.toObject(com.quantax.gotogether.domain.model.UserProfile::class.java)
+                    if (profile != null) {
+                        hostProfiles[profile.uid] = profile
+                    }
+                } catch (_: Exception) {
+                    // Skip if individual profile fetch fails
+                }
+            }
+
+            // Override hostImageUrl and hostVerified with live data
+            val updatedTrips = trips.map { trip ->
+                val hostProfile = hostProfiles[trip.hostId]
+                if (hostProfile != null) {
+                    trip.copy(
+                        hostImageUrl = hostProfile.profileImageUrl.ifBlank { trip.hostImageUrl },
+                        hostVerified = hostProfile.isVerified
+                    )
+                } else {
+                    trip
+                }
+            }
+
+            Result.success(updatedTrips)
         } catch (e: Exception) {
             Result.failure(e)
         }

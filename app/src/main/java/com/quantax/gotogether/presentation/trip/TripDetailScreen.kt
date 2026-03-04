@@ -2,6 +2,7 @@ package com.quantax.gotogether.presentation.trip
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -37,6 +38,7 @@ fun TripDetailScreen(
     tripId: String,
     onNavigateBack: () -> Unit,
     onNavigateToChatroom: (String) -> Unit = {},
+    onNavigateToPublicProfile: (String) -> Unit = {},
     viewModel: TripDetailViewModel = viewModel()
 ) {
     val trip by viewModel.trip.collectAsState()
@@ -182,7 +184,8 @@ fun TripDetailScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
+                        .padding(horizontal = 16.dp)
+                        .clickable { onNavigateToPublicProfile(t.hostId) },
                     shape = RoundedCornerShape(16.dp),
                     colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card)
                 ) {
