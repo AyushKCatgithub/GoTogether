@@ -7,6 +7,7 @@ import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.Trip
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +15,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
 data class CreateTripState(
     val startingLocation: String = "",
@@ -31,10 +33,12 @@ data class CreateTripState(
     val isSuccess: Boolean = false
 )
 
-class CreateTripViewModel : ViewModel() {
-    private val repository = TripRepository()
-    private val userProfileRepository = UserProfileRepository()
-    private val chatRepository = com.quantax.gotogether.data.repository.ChatRepository()
+@HiltViewModel
+class CreateTripViewModel @Inject constructor(
+    private val repository: TripRepository,
+    private val userProfileRepository: UserProfileRepository,
+    private val chatRepository: com.quantax.gotogether.data.repository.ChatRepository
+) : ViewModel() {
     private val authManager = AuthManager()
     private val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 

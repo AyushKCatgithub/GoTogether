@@ -10,6 +10,7 @@
     </queries>
 
     <application
+        android:name=".GoTogetherApplication"
         android:usesCleartextTraffic="true"
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"

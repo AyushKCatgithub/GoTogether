@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.devtools.ksp)
     id("com.google.gms.google-services")
 }
 
@@ -77,4 +79,9 @@ dependencies {
     //GMS
     implementation(libs.play.services.auth)
     implementation(libs.play.services.location)
+
+    // Hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.navigation.compose)
 }

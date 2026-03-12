@@ -1,17 +1,25 @@
 package com.quantax.gotogether.presentation.profile
 
-import com.quantax.gotogether.ui.theme.*
-
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
-import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.filled.CheckCircle
@@ -21,7 +29,19 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material.icons.filled.Warning
-import androidx.compose.material3.*
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -37,24 +57,26 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.quantax.gotogether.ui.theme.*
-import com.quantax.gotogether.presentation.profile.ProfileViewModel
+import com.quantax.gotogether.ui.theme.GoTogetherOrange
+import com.quantax.gotogether.ui.theme.GoTogetherTheme
+import com.quantax.gotogether.ui.theme.VerifiedCyan
+import com.quantax.gotogether.ui.theme.WarningYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onNavigateToEditProfile: () -> Unit,
     onSignOut: () -> Unit,
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     
     // Reload profile each time screen is displayed
     LaunchedEffect(Unit) {
-        viewModel.loadProfile()
+        viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.LoadProfile)
     }
 
     Scaffold(
@@ -95,15 +117,49 @@ fun ProfileScreen(
                         .padding(paddingValues),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(state.error!!, color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Button(
-                            onClick = { viewModel.loadProfile() },
-                            colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                            shape = RoundedCornerShape(12.dp)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(90.dp)
+                                .background(
+                                    WarningYellow.copy(alpha = 0.1f),
+                                    RoundedCornerShape(26.dp)
+                                ),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Text("Retry", color = GoTogetherTheme.colors.textOnPrimary, fontWeight = FontWeight.Bold)
+                            Icon(
+                                Icons.Filled.Warning,
+                                contentDescription = null,
+                                tint = WarningYellow.copy(alpha = 0.8f),
+                                modifier = Modifier.size(45.dp)
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(24.dp))
+                        Text(
+                            "Profile Unavailable",
+                            color = GoTogetherTheme.colors.textPrimary,
+                            fontSize = 22.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                        Spacer(modifier = Modifier.height(8.dp))
+                        Text(
+                            state.error!!,
+                            color = GoTogetherTheme.colors.textSecondary,
+                            fontSize = 15.sp,
+                            textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                            lineHeight = 22.sp
+                        )
+                        Spacer(modifier = Modifier.height(32.dp))
+                        Button(
+                            onClick = { viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.LoadProfile) },
+                            colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.height(54.dp).fillMaxWidth(0.7f)
+                        ) {
+                            Text("Try Again", color = Color.White, fontWeight = FontWeight.Bold, fontSize = 16.sp)
                         }
                     }
                 }
@@ -145,68 +201,68 @@ fun ProfileScreen(
                                 .height(160.dp),
                             contentAlignment = Alignment.Center
                         ) {
-                        // Profile Image
-                        if (profile != null && profile.profileImageUrl.isNotBlank()) {
-                            SubcomposeAsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(profile.profileImageUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Profile Photo",
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .border(3.dp, GoTogetherOrange, CircleShape),
-                                contentScale = ContentScale.Crop,
-                                loading = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(GoTogetherTheme.colors.surface, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator(
-                                            color = GoTogetherOrange,
-                                            strokeWidth = 2.dp,
-                                            modifier = Modifier.size(24.dp)
-                                        )
+                            // Profile Image
+                            if (profile != null && profile.profileImageUrl.isNotBlank()) {
+                                SubcomposeAsyncImage(
+                                    model = ImageRequest.Builder(LocalContext.current)
+                                        .data(profile.profileImageUrl)
+                                        .crossfade(true)
+                                        .build(),
+                                    contentDescription = "Profile Photo",
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .border(3.dp, GoTogetherOrange, CircleShape),
+                                    contentScale = ContentScale.Crop,
+                                    loading = {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(GoTogetherTheme.colors.surface, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            CircularProgressIndicator(
+                                                color = GoTogetherOrange,
+                                                strokeWidth = 2.dp,
+                                                modifier = Modifier.size(24.dp)
+                                            )
+                                        }
+                                    },
+                                    error = {
+                                        Box(
+                                            modifier = Modifier
+                                                .fillMaxSize()
+                                                .background(GoTogetherTheme.colors.surface, CircleShape)
+                                                .border(3.dp, GoTogetherOrange, CircleShape),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Person,
+                                                contentDescription = "No Photo",
+                                                tint = GoTogetherTheme.colors.textSecondary,
+                                                modifier = Modifier.size(48.dp)
+                                            )
+                                        }
                                     }
-                                },
-                                error = {
-                                    Box(
-                                        modifier = Modifier
-                                            .fillMaxSize()
-                                            .background(GoTogetherTheme.colors.surface, CircleShape)
-                                            .border(3.dp, GoTogetherOrange, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Person,
-                                            contentDescription = "No Photo",
-                                            tint = GoTogetherTheme.colors.textSecondary,
-                                            modifier = Modifier.size(48.dp)
-                                        )
-                                    }
-                                }
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(120.dp)
-                                    .clip(CircleShape)
-                                    .background(GoTogetherTheme.colors.surface)
-                                    .border(3.dp, GoTogetherOrange, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Default.Person,
-                                    contentDescription = "No Photo",
-                                    tint = GoTogetherTheme.colors.textSecondary,
-                                    modifier = Modifier.size(48.dp)
                                 )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .size(120.dp)
+                                        .clip(CircleShape)
+                                        .background(GoTogetherTheme.colors.surface)
+                                        .border(3.dp, GoTogetherOrange, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = "No Photo",
+                                        tint = GoTogetherTheme.colors.textSecondary,
+                                        modifier = Modifier.size(48.dp)
+                                    )
+                                }
                             }
                         }
-                    }
 
                     Spacer(modifier = Modifier.height(8.dp))
 
@@ -326,7 +382,7 @@ fun ProfileScreen(
                     // Sign Out Button
                     OutlinedButton(
                         onClick = {
-                            viewModel.signOut()
+                            viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.SignOut)
                             onSignOut()
                         },
                         modifier = Modifier

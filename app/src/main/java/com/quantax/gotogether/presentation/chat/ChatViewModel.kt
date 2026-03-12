@@ -7,14 +7,18 @@ import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.ChatMessage
 import com.quantax.gotogether.domain.model.Chatroom
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class ChatViewModel : ViewModel() {
-    private val chatRepository = ChatRepository()
-    private val userProfileRepository = UserProfileRepository()
+@HiltViewModel
+class ChatViewModel @Inject constructor(
+    private val chatRepository: ChatRepository,
+    private val userProfileRepository: UserProfileRepository
+) : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())

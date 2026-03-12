@@ -27,9 +27,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.firebase.auth.FirebaseAuth
 import com.quantax.gotogether.R
-import kotlinx.coroutines.delay
+import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
-import com.quantax.gotogether.ui.theme.*
+import kotlinx.coroutines.delay
 
 @Composable
 fun SplashScreen(onTimeOut:()-> Unit) {

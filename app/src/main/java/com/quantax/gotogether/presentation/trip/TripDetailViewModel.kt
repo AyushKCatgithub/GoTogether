@@ -8,15 +8,19 @@ import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.JoinRequest
 import com.quantax.gotogether.domain.model.Trip
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-class TripDetailViewModel : ViewModel() {
-    private val tripRepository = TripRepository()
-    private val joinRequestRepository = JoinRequestRepository()
-    private val userProfileRepository = UserProfileRepository()
+@HiltViewModel
+class TripDetailViewModel @Inject constructor(
+    private val tripRepository: TripRepository,
+    private val joinRequestRepository: JoinRequestRepository,
+    private val userProfileRepository: UserProfileRepository
+) : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
 
     private val _trip = MutableStateFlow<Trip?>(null)

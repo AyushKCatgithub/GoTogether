@@ -4,19 +4,17 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.domain.model.Trip
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-sealed class HomeState {
-    object Loading : HomeState()
-    data class Success(val trips: List<Trip>, val locationText: String = "Current Location, Destination") : HomeState()
-    data class Error(val message: String) : HomeState()
-}
-
-class HomeViewModel : ViewModel() {
-    private val repository = TripRepository()
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val repository: TripRepository
+) : ViewModel() {
     private val _state = MutableStateFlow<HomeState>(HomeState.Loading)
     val state: StateFlow<HomeState> = _state.asStateFlow()
 
@@ -105,15 +103,16 @@ class HomeViewModel : ViewModel() {
         val filtered = allTrips.filter { trip ->
             val matchesFrom = fromQuery.isEmpty() || trip.startingLocation.contains(fromQuery, ignoreCase = true)
             val matchesTo = toQuery.isEmpty() || trip.destination.contains(toQuery, ignoreCase = true)
-            
-            val matchesSearch = searchQuery.isEmpty() || 
-                    trip.destination.contains(searchQuery, ignoreCase = true) || 
+
+            val matchesSearch = searchQuery.isEmpty() ||
+                    trip.destination.contains(searchQuery, ignoreCase = true) ||
                     trip.startingLocation.contains(searchQuery, ignoreCase = true) ||
                     trip.title.contains(searchQuery, ignoreCase = true)
 
             val maxBudget = budgetQuery.toIntOrNull()
             val matchesBudget = if (maxBudget != null) {
-                val tripMaxBudget = "\\d+".toRegex().findAll(trip.budgetRange).map { it.value.toInt() }.maxOrNull()
+                val tripMaxBudget =
+                    "\\d+".toRegex().findAll(trip.budgetRange).maxOfOrNull { it.value.toInt() }
                 if (tripMaxBudget != null) {
                     tripMaxBudget <= maxBudget
                 } else {
@@ -128,7 +127,7 @@ class HomeViewModel : ViewModel() {
             val matchesGroupSize = groupSizeQuery == 0 || (trip.groupSize in 1..groupSizeQuery)
             matchesFrom && matchesTo && matchesBudget && matchesGroupSize && matchesSearch
         }
-        
+
         _appliedFrom.value = fromQuery
         _appliedTo.value = toQuery
 
@@ -185,19 +184,14 @@ class HomeViewModel : ViewModel() {
     private fun updateLocationText(city: String?, country: String?) {
         val text = if (city != null && country != null) {
             "$city, $country"
-        } else if (city != null) {
-            city
-        } else if (country != null) {
-            country
-        } else {
-            "Location unavailable"
-        }
+        } else city
+            ?: (country ?: "Location unavailable")
         val currentState = _state.value
         if (currentState is HomeState.Success) {
             _state.value = currentState.copy(locationText = text)
         }
     }
-    
+
     fun setLocationError(message: String) {
         val currentState = _state.value
         if (currentState is HomeState.Success) {

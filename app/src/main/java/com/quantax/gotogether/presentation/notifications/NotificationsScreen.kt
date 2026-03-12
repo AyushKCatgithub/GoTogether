@@ -1,7 +1,18 @@
 package com.quantax.gotogether.presentation.notifications
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -11,8 +22,22 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Send
 import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,12 +49,15 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.JoinRequest
 import com.quantax.gotogether.domain.model.Notification
-import com.quantax.gotogether.ui.theme.*
+import com.quantax.gotogether.presentation.components.NotificationShimmerItem
+import com.quantax.gotogether.ui.theme.AccentGreen
+import com.quantax.gotogether.ui.theme.GoTogetherOrange
+import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -37,24 +65,25 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NotificationsScreen(
-    viewModel: NotificationsViewModel = viewModel(),
+    viewModel: NotificationsViewModel = hiltViewModel(),
     onNavigateToChatroom: (String) -> Unit = {}
 ) {
-    val allNotifications by viewModel.allNotifications.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val actionMessage by viewModel.actionMessage.collectAsState()
+    val state by viewModel.state.collectAsState()
+    val allNotifications = state.allNotifications
+    val isLoading = state.isLoading
+    val actionMessage = state.actionMessage
 
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(actionMessage) {
         actionMessage?.let {
             snackbarHostState.showSnackbar(it)
-            viewModel.clearActionMessage()
+            viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.ClearActionMessage)
         }
     }
 
     LaunchedEffect(Unit) {
-        viewModel.markAllAsRead()
+        viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.MarkAllAsRead)
     }
 
     Scaffold(
@@ -80,11 +109,14 @@ fun NotificationsScreen(
         ) {
             when {
                 isLoading -> {
-                    Box(
+                    LazyColumn(
                         modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(12.dp)
                     ) {
-                        CircularProgressIndicator(color = GoTogetherOrange)
+                        items(5) {
+                            NotificationShimmerItem()
+                        }
                     }
                 }
                 allNotifications.isEmpty() -> {
@@ -100,15 +132,15 @@ fun NotificationsScreen(
                                 is NotificationItem.JoinRequestItem -> {
                                     JoinRequestCard(
                                         request = item.request,
-                                        onApprove = { viewModel.approveRequest(item.request) },
-                                        onDeny = { viewModel.denyRequest(item.request) }
+                                        onApprove = { viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.ApproveRequest(item.request)) },
+                                        onDeny = { viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.DenyRequest(item.request)) }
                                     )
                                 }
                                 is NotificationItem.GeneralNotificationItem -> {
                                     GeneralNotificationCard(
                                         notification = item.notification,
                                         onNavigateToChatroom = {
-                                            viewModel.markAsRead(item.notification.id)
+                                            viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.MarkAsRead(item.notification.id))
                                             onNavigateToChatroom(item.notification.chatroomId)
                                         }
                                     )

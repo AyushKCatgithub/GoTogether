@@ -1,7 +1,5 @@
 package com.quantax.gotogether.presentation.profile
 
-import com.quantax.gotogether.domain.model.*
-
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
@@ -9,10 +7,12 @@ import com.google.firebase.auth.FirebaseAuth
 import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.UserProfile
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class ProfileState(
     val isLoading: Boolean = false,
@@ -22,22 +22,40 @@ data class ProfileState(
     val saveSuccess: Boolean = false
 )
 
-class ProfileViewModel : ViewModel() {
+sealed class ProfileEvent {
+    object LoadProfile : ProfileEvent()
+    data class SaveProfile(val profile: UserProfile) : ProfileEvent()
+    object ResetSaveSuccess : ProfileEvent()
+    object SignOut : ProfileEvent()
+}
+
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
+    private val repository: UserProfileRepository,
+    private val storageService: StorageService
+) : ViewModel() {
     private val auth = FirebaseAuth.getInstance()
-    private val repository = UserProfileRepository()
-    private val storageService = StorageService()
 
     private val _state = MutableStateFlow(ProfileState())
     val state: StateFlow<ProfileState> = _state.asStateFlow()
 
     init {
-        loadProfile()
+        onEvent(ProfileEvent.LoadProfile)
     }
 
-    fun loadProfile() {
+    fun onEvent(event: ProfileEvent) {
+        when (event) {
+            is ProfileEvent.LoadProfile -> loadProfile()
+            is ProfileEvent.SaveProfile -> saveProfile(event.profile)
+            is ProfileEvent.ResetSaveSuccess -> resetSaveSuccess()
+            is ProfileEvent.SignOut -> signOut()
+        }
+    }
+
+    private fun loadProfile() {
         val user = auth.currentUser
         if (user == null) {
-            _state.value = _state.value.copy(error = "User not logged in")
+            _state.value = _state.value.copy(error = "User not logged in", isLoading = false)
             return
         }
 
@@ -64,10 +82,10 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun saveProfile(profile: UserProfile) {
+    private fun saveProfile(profile: UserProfile) {
         val user = auth.currentUser
         if (user == null) {
-            _state.value = _state.value.copy(error = "User not logged in")
+            _state.value = _state.value.copy(error = "User not logged in", isSaving = false)
             return
         }
 
@@ -107,11 +125,11 @@ class ProfileViewModel : ViewModel() {
         }
     }
 
-    fun resetSaveSuccess() {
+    private fun resetSaveSuccess() {
         _state.value = _state.value.copy(saveSuccess = false)
     }
 
-    fun signOut() {
+    private fun signOut() {
         auth.signOut()
     }
 }

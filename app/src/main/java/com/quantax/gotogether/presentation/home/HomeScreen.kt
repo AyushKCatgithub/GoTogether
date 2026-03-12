@@ -9,14 +9,14 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -74,14 +74,16 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.Trip
-import com.quantax.gotogether.presentation.home.HomeViewModel
 import com.quantax.gotogether.presentation.components.LocationSearchDialog
+import com.quantax.gotogether.presentation.components.TripCardShimmer
+import com.quantax.gotogether.ui.theme.GoTogetherOrange
+import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
-import com.quantax.gotogether.ui.theme.*
+import com.quantax.gotogether.ui.theme.VerifiedCyan
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -90,7 +92,7 @@ fun HomeScreen(
     onNavigateToTripDetail: (String) -> Unit = {},
     onNavigateToMessages: () -> Unit,
     onNavigateToPublicProfile: (String) -> Unit = {},
-    viewModel: HomeViewModel = viewModel()
+    viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val searchFrom by viewModel.searchFrom.collectAsState()
@@ -431,21 +433,47 @@ fun HomeScreen(
             ) {
                 when (val currentState = state) {
                     is HomeState.Loading -> {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 3.dp)
+                        LazyColumn(
+                            contentPadding = PaddingValues(start = 20.dp, end = 20.dp, top = 8.dp, bottom = 100.dp),
+                            verticalArrangement = Arrangement.spacedBy(24.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(3) {
+                                TripCardShimmer()
+                            }
                         }
                     }
                     is HomeState.Error -> {
                         Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                Text(currentState.message, color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
-                                Spacer(modifier = Modifier.height(12.dp))
+                            Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                                Icon(
+                                    Icons.Outlined.Explore, // or something like Error/Warning
+                                    contentDescription = null,
+                                    tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(80.dp)
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
+                                Text(
+                                    "Oops! Something went wrong", 
+                                    color = GoTogetherTheme.colors.textPrimary, 
+                                    fontSize = 20.sp, 
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    currentState.message, 
+                                    color = GoTogetherTheme.colors.textSecondary, 
+                                    fontSize = 15.sp,
+                                    textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                                )
+                                Spacer(modifier = Modifier.height(24.dp))
                                 Button(
                                     onClick = { viewModel.loadTrips() },
                                     colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                                    shape = RoundedCornerShape(12.dp)
+                                    shape = RoundedCornerShape(16.dp),
+                                    modifier = Modifier.height(50.dp).fillMaxWidth(0.6f)
                                 ) {
-                                    Text("Retry", fontWeight = FontWeight.Bold)
+                                    Text("Try Again", fontWeight = FontWeight.Bold, fontSize = 16.sp, color = Color.White)
                                 }
                             }
                         }
@@ -498,11 +526,10 @@ fun TripCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .shadow(
-                12.dp,
-                RoundedCornerShape(32.dp),
-                ambientColor = Color.Black.copy(alpha = 0.5f),
-                spotColor = Color.Black.copy(alpha = 0.5f)
+            .border(
+                1.dp,
+                GoTogetherTheme.colors.border,
+                RoundedCornerShape(32.dp)
             ),
         shape = RoundedCornerShape(32.dp),
         colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card)

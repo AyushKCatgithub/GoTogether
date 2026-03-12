@@ -1,23 +1,58 @@
 package com.quantax.gotogether.presentation.profile
 
-import com.quantax.gotogether.ui.theme.*
-
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.*
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material.icons.filled.AlternateEmail
+import androidx.compose.material.icons.filled.CameraAlt
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -27,16 +62,18 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.navigation.compose.hiltViewModel
 import coil.compose.AsyncImage
-import com.quantax.gotogether.ui.theme.*
-import com.quantax.gotogether.presentation.profile.ProfileViewModel
+import com.quantax.gotogether.ui.theme.GoTogetherOrange
+import com.quantax.gotogether.ui.theme.GoTogetherTheme
+import com.quantax.gotogether.ui.theme.VerifiedCyan
+import com.quantax.gotogether.ui.theme.WarningYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EditProfileScreen(
     onNavigateBack: () -> Unit,
-    viewModel: ProfileViewModel = viewModel()
+    viewModel: ProfileViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsState()
     val profile = state.profile
@@ -59,7 +96,7 @@ fun EditProfileScreen(
     // Navigate back on successful save
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
-            viewModel.resetSaveSuccess()
+            viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.ResetSaveSuccess)
             onNavigateBack()
         }
     }
@@ -263,7 +300,7 @@ fun EditProfileScreen(
                         bio = bio,
                         profileImageUrl = profileImageUrl
                     )
-                    viewModel.saveProfile(updatedProfile)
+                    viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.SaveProfile(updatedProfile))
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -292,22 +329,40 @@ private fun ProfileTextField(
     icon: ImageVector,
     singleLine: Boolean = true
 ) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label, color = GoTogetherTheme.colors.textSecondary) },
-        modifier = Modifier.fillMaxWidth(),
-        leadingIcon = { Icon(icon, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
-        colors = OutlinedTextFieldDefaults.colors(
-            focusedBorderColor = GoTogetherOrange,
-            unfocusedBorderColor = GoTogetherTheme.colors.surface,
-            focusedTextColor = GoTogetherTheme.colors.textPrimary,
-            unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-            cursorColor = GoTogetherOrange
-        ),
-        shape = RoundedCornerShape(12.dp),
-        singleLine = singleLine,
-        minLines = if (singleLine) 1 else 3,
-        maxLines = if (singleLine) 1 else 5
-    )
+    Column {
+        Text(
+            text = label,
+            color = GoTogetherTheme.colors.textSecondary,
+            fontSize = 13.sp,
+            fontWeight = FontWeight.Medium,
+            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+        )
+        OutlinedTextField(
+            value = value,
+            onValueChange = onValueChange,
+            modifier = Modifier.fillMaxWidth().height(if (singleLine) 60.dp else 120.dp),
+            placeholder = { Text("Enter $label", color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f)) },
+            leadingIcon = { 
+                Box(
+                    modifier = Modifier.size(40.dp).padding(start = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = if(value.isNotBlank()) GoTogetherOrange else GoTogetherTheme.colors.textSecondary) 
+                }
+            },
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = GoTogetherOrange,
+                unfocusedBorderColor = Color.Transparent,
+                focusedTextColor = GoTogetherTheme.colors.textPrimary,
+                unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
+                unfocusedContainerColor = GoTogetherTheme.colors.surface,
+                focusedContainerColor = GoTogetherTheme.colors.surface,
+                cursorColor = GoTogetherOrange
+            ),
+            shape = RoundedCornerShape(16.dp),
+            singleLine = singleLine,
+            minLines = if (singleLine) 1 else 4,
+            maxLines = if (singleLine) 1 else 4
+        )
+    }
 }

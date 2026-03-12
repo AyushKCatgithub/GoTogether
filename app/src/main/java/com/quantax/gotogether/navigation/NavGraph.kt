@@ -9,19 +9,19 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.quantax.gotogether.auth.AuthManager
-import com.quantax.gotogether.presentation.onboarding.isOnboardingCompleted
-import com.quantax.gotogether.presentation.onboarding.saveOnboardingCompleted
-import com.quantax.gotogether.presentation.auth.SignInScreen
-import com.quantax.gotogether.presentation.auth.RegisterScreen
 import com.quantax.gotogether.presentation.auth.OtpScreen
-import com.quantax.gotogether.presentation.trip.CreateTripScreen
-import com.quantax.gotogether.presentation.trip.TripDetailScreen
-import com.quantax.gotogether.presentation.profile.EditProfileScreen
-import com.quantax.gotogether.presentation.profile.PublicProfileScreen
+import com.quantax.gotogether.presentation.auth.RegisterScreen
+import com.quantax.gotogether.presentation.auth.SignInScreen
+import com.quantax.gotogether.presentation.main.MainScreen
 import com.quantax.gotogether.presentation.messages.MessagesScreen
 import com.quantax.gotogether.presentation.onboarding.OnboardingScreen
 import com.quantax.gotogether.presentation.onboarding.SplashScreen
-import com.quantax.gotogether.presentation.main.MainScreen
+import com.quantax.gotogether.presentation.onboarding.isOnboardingCompleted
+import com.quantax.gotogether.presentation.onboarding.saveOnboardingCompleted
+import com.quantax.gotogether.presentation.profile.EditProfileScreen
+import com.quantax.gotogether.presentation.profile.PublicProfileScreen
+import com.quantax.gotogether.presentation.trip.CreateTripScreen
+import com.quantax.gotogether.presentation.trip.TripDetailScreen
 
 @Composable
 fun GoTogetherNavGraph(
