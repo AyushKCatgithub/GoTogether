@@ -134,16 +134,16 @@ fun MainScreen(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .padding(horizontal = 24.dp, vertical = 20.dp)
                     .fillMaxWidth()
-                    .height(68.dp)
-                    .clip(RoundedCornerShape(32.dp))
-                    .background(GoTogetherTheme.colors.navBar.copy(alpha = 0.85f)) // Frosty theme-colored glass
+                    .height(72.dp)
                     .border(
                         width = 1.dp,
-                        color = Color.White.copy(alpha = 0.1f),
-                        shape = RoundedCornerShape(32.dp)
-                    ),
+                        color = GoTogetherTheme.colors.border.copy(alpha = 0.4f),
+                        shape = RoundedCornerShape(36.dp)
+                    )
+                    .clip(RoundedCornerShape(36.dp))
+                    .background(GoTogetherTheme.colors.navBar.copy(alpha = 0.95f)), // Frosty theme-colored glass
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -169,6 +169,21 @@ fun MainScreen(
                                 }
                             }
                     ) {
+                        val iconContent = @Composable {
+                            Box(
+                                modifier = if (isSelected) Modifier
+                                    .background(GoTogetherOrange.copy(alpha = 0.15f), RoundedCornerShape(20.dp))
+                                    .padding(horizontal = 16.dp, vertical = 6.dp)
+                                else Modifier.padding(vertical = 6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
+                                    contentDescription = item.label,
+                                    tint = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.textSecondary
+                                )
+                            }
+                        }
+
                         if (item.route == Routes.Notifications.route && unreadCount > 0) {
                             BadgedBox(
                                 badge = {
@@ -177,26 +192,17 @@ fun MainScreen(
                                     }
                                 }
                             ) {
-                                Icon(
-                                    imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                    contentDescription = item.label,
-                                    tint = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.textSecondary,
-                                    modifier = Modifier.padding(bottom = 2.dp)
-                                )
+                                iconContent()
                             }
                         } else {
-                            Icon(
-                                imageVector = if (isSelected) item.selectedIcon else item.unselectedIcon,
-                                contentDescription = item.label,
-                                tint = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.textSecondary,
-                                modifier = Modifier.padding(bottom = 2.dp)
-                            )
+                            iconContent()
                         }
                         Text(
                             text = item.label,
                             fontSize = 11.sp,
                             fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                            color = if (isSelected) GoTogetherOrange else TextGray
+                            color = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.textSecondary,
+                            modifier = Modifier.padding(top = 2.dp)
                         )
                     }
                 }

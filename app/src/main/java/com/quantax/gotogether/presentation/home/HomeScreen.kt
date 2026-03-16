@@ -526,13 +526,15 @@ fun TripCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() }
-            .border(
-                1.dp,
-                GoTogetherTheme.colors.border,
-                RoundedCornerShape(32.dp)
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(28.dp),
+                ambientColor = GoTogetherTheme.colors.textPrimary.copy(alpha = 0.05f),
+                spotColor = GoTogetherTheme.colors.textPrimary.copy(alpha = 0.15f)
             ),
-        shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card)
+        shape = RoundedCornerShape(28.dp),
+        colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card),
+        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
     ) {
         Column {
             // Hero Image with gradient overlay
@@ -588,11 +590,11 @@ fun TripCard(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp)
+                        .height(140.dp)
                         .align(Alignment.BottomCenter)
                         .background(
                             Brush.verticalGradient(
-                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.7f))
+                                colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.5f), Color.Black.copy(alpha = 0.95f))
                             )
                         )
                 )
@@ -719,17 +721,12 @@ fun TripCard(
                             Box(
                                 modifier = Modifier
                                     .background(
-                                        GoTogetherOrange.copy(alpha = 0.1f),
-                                        RoundedCornerShape(50)
+                                        GoTogetherOrange.copy(alpha = 0.15f),
+                                        CircleShape
                                     )
-                                    .border(
-                                        1.dp,
-                                        GoTogetherOrange.copy(alpha = 0.3f),
-                                        RoundedCornerShape(50)
-                                    )
-                                    .padding(horizontal = 12.dp, vertical = 6.dp)
+                                    .padding(horizontal = 14.dp, vertical = 6.dp)
                             ) {
-                                Text(tag, color = GoTogetherOrangeLight, fontSize = 12.sp, fontWeight = FontWeight.Medium)
+                                Text(tag, color = GoTogetherOrange, fontSize = 12.sp, fontWeight = FontWeight.Bold)
                             }
                         }
                     }
@@ -752,15 +749,15 @@ fun TripCard(
                         )
                     }
                     
-                    Button(
-                        onClick = onClick,
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = GoTogetherOrange
-                        ),
-                        shape = CircleShape,
-                        contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp)
+                    Box(
+                        modifier = Modifier
+                            .clip(CircleShape)
+                            .background(Brush.linearGradient(listOf(GoTogetherOrange, GoTogetherOrangeLight)))
+                            .clickable { onClick() }
+                            .padding(horizontal = 24.dp, vertical = 12.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Text("View Trip", color = GoTogetherTheme.colors.textOnPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        Text("View Trip", color = Color.White, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                     }
                 }
             }

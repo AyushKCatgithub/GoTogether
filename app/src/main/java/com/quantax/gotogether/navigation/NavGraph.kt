@@ -9,15 +9,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.quantax.gotogether.auth.AuthManager
-import com.quantax.gotogether.presentation.auth.OtpScreen
-import com.quantax.gotogether.presentation.auth.RegisterScreen
 import com.quantax.gotogether.presentation.auth.SignInScreen
 import com.quantax.gotogether.presentation.main.MainScreen
 import com.quantax.gotogether.presentation.messages.MessagesScreen
-import com.quantax.gotogether.presentation.onboarding.OnboardingScreen
 import com.quantax.gotogether.presentation.onboarding.SplashScreen
-import com.quantax.gotogether.presentation.onboarding.isOnboardingCompleted
-import com.quantax.gotogether.presentation.onboarding.saveOnboardingCompleted
 import com.quantax.gotogether.presentation.profile.EditProfileScreen
 import com.quantax.gotogether.presentation.profile.PublicProfileScreen
 import com.quantax.gotogether.presentation.trip.CreateTripScreen
@@ -36,10 +31,10 @@ fun GoTogetherNavGraph(
     ) {
         composable(Routes.Splash.route) {
             SplashScreen {
-                val destination = when {
-                    authManager.isLoggedIn() -> Routes.Main.route
-                    isOnboardingCompleted(context) -> Routes.Register.route
-                    else -> Routes.Onboarding.route
+                val destination = if (authManager.isLoggedIn()) {
+                    Routes.Main.route
+                } else {
+                    Routes.SignIn.route
                 }
                 navController.navigate(destination) {
                     popUpTo(Routes.Splash.route) { inclusive = true }
@@ -47,59 +42,12 @@ fun GoTogetherNavGraph(
             }
         }
 
-        composable(Routes.Onboarding.route) {
-            OnboardingScreen {
-                saveOnboardingCompleted(context)
-                navController.navigate(Routes.Register.route) {
-                    popUpTo(Routes.Onboarding.route) { inclusive = true }
-                }
-            }
-        }
-
-        composable(Routes.Register.route) {
-            RegisterScreen(
-                authManager = authManager,
-                onNavigateToSignIn = {
-                    navController.navigate(Routes.SignIn.route) {
-                        popUpTo(Routes.Register.route) { inclusive = true }
-                    }
-                },
-                onNavigateToPhone = {
-                    navController.navigate(Routes.Otp.route)
-                },
-                onAuthSuccess = {
-                    navController.navigate(Routes.Main.route) {
-                        popUpTo(Routes.Register.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
         composable(Routes.SignIn.route) {
             SignInScreen(
                 authManager = authManager,
-                onNavigateToRegister = {
-                    navController.navigate(Routes.Register.route) {
-                        popUpTo(Routes.SignIn.route) { inclusive = true }
-                    }
-                },
-                onNavigateToPhone = {
-                    navController.navigate(Routes.Otp.route)
-                },
                 onAuthSuccess = {
                     navController.navigate(Routes.Main.route) {
                         popUpTo(Routes.SignIn.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
-        composable(Routes.Otp.route) {
-            OtpScreen(
-                authManager = authManager,
-                onAuthSuccess = {
-                    navController.navigate(Routes.Main.route) {
-                        popUpTo(Routes.Otp.route) { inclusive = true }
                     }
                 }
             )
@@ -127,7 +75,7 @@ fun GoTogetherNavGraph(
                     navController.navigate(Routes.PublicProfile.createRoute(userId))
                 },
                 onSignOut = {
-                    navController.navigate(Routes.Register.route) {
+                    navController.navigate(Routes.SignIn.route) {
                         popUpTo(Routes.Main.route) { inclusive = true }
                     }
                 }

@@ -19,7 +19,7 @@ class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val userProfileRepository: UserProfileRepository
 ) : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
+    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
