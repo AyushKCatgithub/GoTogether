@@ -20,8 +20,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Flag
 import androidx.compose.material.icons.filled.Groups
@@ -58,10 +58,12 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
+import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.JoinRequest
+import com.quantax.gotogether.presentation.components.ShimmerAnimation
 import com.quantax.gotogether.presentation.components.TripDetailShimmer
 import com.quantax.gotogether.ui.theme.AccentBlue
 import com.quantax.gotogether.ui.theme.AccentGreen
@@ -140,6 +142,8 @@ fun TripDetailScreen(
                         model = ImageRequest.Builder(LocalContext.current)
                             .data(t.imageUrl)
                             .crossfade(true)
+                            .diskCachePolicy(CachePolicy.ENABLED)
+                            .memoryCachePolicy(CachePolicy.ENABLED)
                             .build(),
                         contentDescription = "Trip Image",
                         contentScale = ContentScale.Crop,
@@ -147,14 +151,10 @@ fun TripDetailScreen(
                             .fillMaxSize()
                             .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
                         loading = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(GoTogetherTheme.colors.surface),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 2.dp)
-                            }
+                            ShimmerAnimation(
+                                modifier = Modifier.fillMaxSize(),
+                                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+                            )
                         },
                         error = {
                             Box(
@@ -233,6 +233,8 @@ fun TripDetailScreen(
                             model = ImageRequest.Builder(LocalContext.current)
                                 .data(t.hostImageUrl ?: "https://ui-avatars.com/api/?name=${t.hostName}&background=E8632B&color=fff&size=80")
                                 .crossfade(true)
+                                .diskCachePolicy(CachePolicy.ENABLED)
+                                .memoryCachePolicy(CachePolicy.ENABLED)
                                 .build(),
                             contentDescription = "Host Avatar",
                             modifier = Modifier
@@ -241,10 +243,9 @@ fun TripDetailScreen(
                                 .border(2.dp, GoTogetherOrange, CircleShape),
                             contentScale = ContentScale.Crop,
                             loading = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(GoTogetherTheme.colors.surface, CircleShape)
+                                ShimmerAnimation(
+                                    modifier = Modifier.fillMaxSize(),
+                                    shape = CircleShape
                                 )
                             },
                             error = {
@@ -436,7 +437,7 @@ fun TripDetailScreen(
                         colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
                         shape = RoundedCornerShape(16.dp)
                     ) {
-                        Icon(Icons.Default.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
+                        Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
                         Spacer(modifier = Modifier.width(8.dp))
                         Text("Open Trip Chat", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     }
