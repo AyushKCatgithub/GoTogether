@@ -3,6 +3,10 @@ package com.quantax.gotogether.navigation
 sealed class Routes(val route: String) {
     data object Splash : Routes("splash")
     data object SignIn : Routes("sign_in")
+    data object Otp : Routes("otp/{verificationId}/{phoneNumber}") {
+        fun createRoute(verificationId: String, phoneNumber: String) = 
+            "otp/$verificationId/$phoneNumber"
+    }
     data object Main : Routes("main")
     data object Home : Routes("home")
     data object CreateTrip : Routes("create_trip")

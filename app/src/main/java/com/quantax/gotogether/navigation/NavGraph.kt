@@ -9,6 +9,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.presentation.auth.OtpVerificationScreen
 import com.quantax.gotogether.presentation.auth.SignInScreen
 import com.quantax.gotogether.presentation.main.MainScreen
 import com.quantax.gotogether.presentation.messages.MessagesScreen
@@ -45,6 +46,31 @@ fun GoTogetherNavGraph(
         composable(Routes.SignIn.route) {
             SignInScreen(
                 authManager = authManager,
+                onNavigateToOtp = { vId, phone ->
+                    navController.navigate(Routes.Otp.createRoute(vId, phone))
+                },
+                onAuthSuccess = {
+                    navController.navigate(Routes.Main.route) {
+                        popUpTo(Routes.SignIn.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
+        composable(
+            route = Routes.Otp.route,
+            arguments = listOf(
+                navArgument("verificationId") { type = NavType.StringType },
+                navArgument("phoneNumber") { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val vId = backStackEntry.arguments?.getString("verificationId") ?: ""
+            val phone = backStackEntry.arguments?.getString("phoneNumber") ?: ""
+            OtpVerificationScreen(
+                verificationId = vId,
+                phoneNumber = phone,
+                authManager = authManager,
+                onNavigateBack = { navController.popBackStack() },
                 onAuthSuccess = {
                     navController.navigate(Routes.Main.route) {
                         popUpTo(Routes.SignIn.route) { inclusive = true }

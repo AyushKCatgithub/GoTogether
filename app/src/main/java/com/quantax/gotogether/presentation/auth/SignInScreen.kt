@@ -1,14 +1,8 @@
 package com.quantax.gotogether.presentation.auth
 
 import android.app.Activity
-import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.slideInVertically
-import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -48,6 +42,7 @@ import kotlinx.coroutines.launch
 @Composable
 fun SignInScreen(
     authManager: AuthManager,
+    onNavigateToOtp: (String, String) -> Unit,
     onAuthSuccess: () -> Unit
 ) {
     val context = LocalContext.current
@@ -55,27 +50,17 @@ fun SignInScreen(
 
     var isLoading by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
-    var codeSent by remember { mutableStateOf(false) }
     var phoneNumber by remember { mutableStateOf("") }
-    var otpCode by remember { mutableStateOf("") }
-    var verificationId by remember { mutableStateOf<String?>(null) }
 
     val countryCodes = listOf("+91" to "India", "+1" to "USA", "+44" to "UK", "+61" to "Australia", "+81" to "Japan")
     var selectedCountryCode by remember { mutableStateOf(countryCodes[0].first) }
+
+    fun resetError() { errorMessage = null }
 
     val callbacks = remember {
         object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onVerificationCompleted(credential: PhoneAuthCredential) {
                 isLoading = false
-                authManager.verifyOtp(
-                    verificationId ?: return,
-                    credential.smsCode ?: return
-                ) { result ->
-                    result.fold(
-                        onSuccess = { onAuthSuccess() },
-                        onFailure = { errorMessage = it.message }
-                    )
-                }
             }
 
             override fun onVerificationFailed(e: FirebaseException) {
@@ -88,8 +73,7 @@ fun SignInScreen(
                 token: PhoneAuthProvider.ForceResendingToken
             ) {
                 isLoading = false
-                verificationId = vId
-                codeSent = true
+                onNavigateToOtp(vId, "$selectedCountryCode$phoneNumber")
             }
         }
     }
@@ -120,8 +104,6 @@ fun SignInScreen(
             ),
         contentAlignment = Alignment.Center
     ) {
-        GlowingBackgroundOrb()
-
         Column(
             modifier = Modifier
                 .fillMaxSize()
@@ -135,85 +117,58 @@ fun SignInScreen(
 
             Spacer(modifier = Modifier.height(48.dp))
 
-            AnimatedVisibility(
-                visible = !codeSent,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { -20 }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { -20 })
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    PhoneSignInSection(
-                        phoneNumber = phoneNumber,
-                        selectedCountryCode = selectedCountryCode,
-                        countryCodes = countryCodes,
-                        isLoading = isLoading,
-                        onPhoneNumberChange = { phoneNumber = it },
-                        onCountryCodeChange = { selectedCountryCode = it },
-                        onSendOtp = {
-                            if (phoneNumber.isNotBlank()) {
-                                isLoading = true
-                                errorMessage = null
-                                val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
-                                authManager.sendOtp(
-                                    phoneNumber = fullPhoneNumber,
-                                    activity = context as Activity,
-                                    callbacks = callbacks
-                                )
-                            } else {
-                                errorMessage = "Please enter a valid phone number"
-                            }
-                        }
-                    )
-
-                    DividerWithText()
-
-                    GoogleSignInSection(
-                        isLoading = isLoading,
-                        onGoogleSignIn = {
-                            isLoading = true
-                            errorMessage = null
-                            try {
-                                val intent = authManager.getGoogleSignInIntent(context)
-                                googleSignInLauncher.launch(intent)
-                            } catch (e: Exception) {
-                                isLoading = false
-                                errorMessage = e.message
-                            }
-                        }
-                    )
-                }
-            }
-
-            AnimatedVisibility(
-                visible = codeSent,
-                enter = fadeIn() + slideInVertically(initialOffsetY = { 20 }),
-                exit = fadeOut() + slideOutVertically(targetOffsetY = { 20 })
-            ) {
-                OtpVerificationSection(
-                    otpCode = otpCode,
-                    isLoading = isLoading,
-                    onOtpChange = { if (it.length <= 6) otpCode = it },
-                    onVerify = {
-                        if (otpCode.length == 6 && verificationId != null) {
-                            isLoading = true
-                            errorMessage = null
-                            authManager.verifyOtp(verificationId!!, otpCode) { result ->
-                                isLoading = false
-                                result.fold(
-                                    onSuccess = { onAuthSuccess() },
-                                    onFailure = { errorMessage = it.message }
-                                )
-                            }
-                        } else {
-                            errorMessage = "Please enter a valid 6-digit OTP"
-                        }
-                    },
-                    onEditPhone = {
-                        codeSent = false
-                        otpCode = ""
-                        errorMessage = null
+            PhoneSignInSection(
+                phoneNumber = phoneNumber,
+                selectedCountryCode = selectedCountryCode,
+                countryCodes = countryCodes,
+                isLoading = isLoading,
+                onPhoneNumberChange = { 
+                    if (it.length <= 10) {
+                        phoneNumber = it
+                        resetError()
                     }
-                )
+                },
+                onCountryCodeChange = { 
+                    selectedCountryCode = it
+                    resetError()
+                },
+                onSendOtp = {
+                    if (phoneNumber.length < 10) {
+                        errorMessage = "Please enter a valid 10-digit phone number"
+                    } else {
+                        isLoading = true
+                        errorMessage = null
+                        val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
+                        authManager.sendOtp(
+                            phoneNumber = fullPhoneNumber,
+                            activity = context as Activity,
+                            callbacks = callbacks
+                        )
+                    }
+                }
+            )
+
+            errorMessage?.let { msg ->
+                Spacer(modifier = Modifier.height(16.dp))
+                ErrorBanner(message = msg)
             }
+
+            DividerWithText()
+
+            GoogleSignInSection(
+                isLoading = isLoading,
+                onGoogleSignIn = {
+                    isLoading = true
+                    errorMessage = null
+                    try {
+                        val intent = authManager.getGoogleSignInIntent(context)
+                        googleSignInLauncher.launch(intent)
+                    } catch (e: Exception) {
+                        isLoading = false
+                        errorMessage = e.message
+                    }
+                }
+            )
 
             if (isLoading) {
                 Spacer(modifier = Modifier.height(32.dp))
@@ -222,11 +177,6 @@ fun SignInScreen(
                     modifier = Modifier.size(40.dp),
                     strokeWidth = 3.dp
                 )
-            }
-
-            errorMessage?.let { msg ->
-                Spacer(modifier = Modifier.height(24.dp))
-                ErrorBanner(message = msg)
             }
         }
     }
@@ -301,6 +251,7 @@ fun PhoneSignInSection(
             value = phoneNumber,
             onValueChange = onPhoneNumberChange,
             label = { Text("Phone Number") },
+            placeholder = { Text("Enter number") },
             singleLine = true,
             enabled = !isLoading,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
@@ -359,7 +310,7 @@ fun PhoneSignInSection(
             onClick = onSendOtp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(56.dp)
+                .height(58.dp)
                 .shadow(
                     elevation = 16.dp,
                     shape = RoundedCornerShape(30.dp),
@@ -367,7 +318,7 @@ fun PhoneSignInSection(
                     spotColor = GoTogetherOrange.copy(alpha = 0.8f)
                 ),
             shape = RoundedCornerShape(30.dp),
-            enabled = !isLoading && phoneNumber.isNotBlank(),
+            enabled = !isLoading,
             colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
             contentPadding = PaddingValues()
         ) {
@@ -429,11 +380,11 @@ fun GoogleSignInSection(
         onClick = onGoogleSignIn,
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp),
+            .height(58.dp),
         shape = RoundedCornerShape(30.dp),
-        border = BorderStroke(1.dp, GoTogetherTheme.colors.border),
+        border = BorderStroke(1.2.dp, GoTogetherTheme.colors.border),
         colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = GoTogetherTheme.colors.card,
+            containerColor = Color.Transparent,
             contentColor = GoTogetherTheme.colors.textPrimary
         ),
         enabled = !isLoading
@@ -459,83 +410,6 @@ fun GoogleSignInSection(
 }
 
 @Composable
-fun OtpVerificationSection(
-    otpCode: String,
-    isLoading: Boolean,
-    onOtpChange: (String) -> Unit,
-    onVerify: () -> Unit,
-    onEditPhone: () -> Unit
-) {
-    Column(modifier = Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-        OutlinedTextField(
-            value = otpCode,
-            onValueChange = onOtpChange,
-            label = { Text("6-digit OTP") },
-            singleLine = true,
-            enabled = !isLoading,
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(16.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoTogetherOrange,
-                unfocusedBorderColor = TextGray.copy(alpha = 0.4f),
-                focusedLabelColor = GoTogetherOrange,
-                unfocusedLabelColor = GoTogetherTheme.colors.textSecondary,
-                cursorColor = GoTogetherOrange,
-                focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedTextColor = GoTogetherTheme.colors.textPrimary
-            )
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Button(
-            onClick = onVerify,
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(56.dp)
-                .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(30.dp),
-                    ambientColor = GoTogetherOrange.copy(alpha = 0.4f),
-                    spotColor = GoTogetherOrange.copy(alpha = 0.8f)
-                ),
-            shape = RoundedCornerShape(30.dp),
-            enabled = !isLoading && otpCode.length == 6,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-            contentPadding = PaddingValues()
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.linearGradient(listOf(GoTogetherOrange, GoTogetherOrangeLight))
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Verify & Continue",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        TextButton(onClick = onEditPhone, enabled = !isLoading) {
-            Text(
-                text = "Edit Phone Number",
-                color = GoTogetherOrange,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.SemiBold
-            )
-        }
-    }
-}
-
-@Composable
 fun ErrorBanner(message: String) {
     Box(
         modifier = Modifier
@@ -545,7 +419,7 @@ fun ErrorBanner(message: String) {
     ) {
         Text(
             text = message,
-            color = Color(0xFFFF5252),
+            color = GoTogetherTheme.colors.textPrimary,
             fontSize = 13.sp,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
