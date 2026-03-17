@@ -127,13 +127,13 @@ class CreateTripViewModel @Inject constructor(
             // Handle image upload if a local URI was selected
             var finalImageUrl: String? = null
             if (currentState.selectedImageUri != null) {
-                val uploadedUrl = storageService.uploadImage(currentState.selectedImageUri, "trip_images")
-                if (uploadedUrl != null) {
-                    finalImageUrl = uploadedUrl
+                val uploadResult = storageService.uploadImage(currentState.selectedImageUri, "trip_images")
+                if (uploadResult.isSuccess) {
+                    finalImageUrl = uploadResult.getOrNull()
                 } else {
                     _state.value = currentState.copy(
                         isLoading = false,
-                        error = "Failed to upload trip image. Please try again."
+                        error = uploadResult.exceptionOrNull()?.message ?: "Failed to upload trip image. Please try again."
                     )
                     return@launch
                 }

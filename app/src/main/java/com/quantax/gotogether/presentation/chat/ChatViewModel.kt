@@ -8,11 +8,21 @@ import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.ChatMessage
 import com.quantax.gotogether.domain.model.Chatroom
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
+data class ChatUIState(
+    val messages: List<ChatMessage> = emptyList(),
+    val chatroom: Chatroom? = null,
+    val isLoading: Boolean = false,
+    val isSending: Boolean = false,
+    val error: String? = null
+)
 
 @HiltViewModel
 class ChatViewModel @Inject constructor(
@@ -21,67 +31,81 @@ class ChatViewModel @Inject constructor(
     private val authManager: AuthManager
 ) : ViewModel() {
 
-    private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
-    val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
-
-    private val _chatroom = MutableStateFlow<Chatroom?>(null)
-    val chatroom: StateFlow<Chatroom?> = _chatroom.asStateFlow()
-
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _errorMessage = MutableStateFlow<String?>(null)
-    val errorMessage: StateFlow<String?> = _errorMessage.asStateFlow()
+    private val _state = MutableStateFlow(ChatUIState())
+    val state: StateFlow<ChatUIState> = _state.asStateFlow()
 
     private var currentUserName: String = ""
     private var currentUserImageUrl: String? = null
+    private var chatJob: Job? = null
 
     fun loadChatroom(chatroomId: String) {
-        viewModelScope.launch {
-            _isLoading.value = true
+        if (chatJob?.isActive == true) return
+        
+        chatJob = viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
 
-            // Load current user profile
-            val uid = authManager.currentUser?.uid ?: return@launch
-            userProfileRepository.getProfile(uid).onSuccess { profile ->
-                currentUserName = profile?.name ?: (authManager.currentUser?.displayName ?: "User")
-                currentUserImageUrl = profile?.profileImageUrl
+            // Load current user profile if not already loaded
+            if (currentUserName.isEmpty()) {
+                val uid = authManager.currentUser?.uid ?: return@launch
+                userProfileRepository.getProfile(uid).onSuccess { profile ->
+                    currentUserName = profile?.name ?: (authManager.currentUser?.displayName ?: "User")
+                    currentUserImageUrl = profile?.profileImageUrl
+                }
             }
 
             // Load chatroom info
             chatRepository.getChatroom(chatroomId).onSuccess { room ->
-                _chatroom.value = room
+                _state.update { it.copy(chatroom = room) }
+            }.onFailure { e ->
+                _state.update { it.copy(error = "Failed to load chat: ${e.message}") }
             }
 
             // Start listening to messages
-            chatRepository.getMessages(chatroomId).collect { messageList ->
-                _messages.value = messageList
-                _isLoading.value = false
-            }
+            chatRepository.getMessages(chatroomId)
+                .catch { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message) }
+                }
+                .collect { messageList ->
+                    _state.update { it.copy(messages = messageList, isLoading = false) }
+                }
         }
     }
 
     fun sendMessage(chatroomId: String, text: String) {
-        if (text.isBlank()) return
+        val trimmedText = text.trim()
+        if (trimmedText.isBlank()) return
         val uid = authManager.currentUser?.uid ?: return
 
         viewModelScope.launch {
+            _state.update { it.copy(isSending = true) }
+            
             val message = ChatMessage(
                 senderId = uid,
                 senderName = currentUserName,
                 senderImageUrl = currentUserImageUrl,
-                text = text.trim(),
+                text = trimmedText,
                 timestamp = System.currentTimeMillis()
             )
+            
             val result = chatRepository.sendMessage(chatroomId, message)
+            
+            _state.update { it.copy(isSending = false) }
+            
             if (result.isFailure) {
-                _errorMessage.value = "Failed to send message: ${result.exceptionOrNull()?.message}"
+                _state.update { it.copy(error = "Failed to send message: ${result.exceptionOrNull()?.message}") }
             }
         }
     }
 
     fun clearErrorMessage() {
-        _errorMessage.value = null
+        _state.update { it.copy(error = null) }
     }
 
     fun getCurrentUserId(): String = authManager.currentUser?.uid ?: ""
+
+    override fun onCleared() {
+        super.onCleared()
+        chatJob?.cancel()
+    }
 }
+

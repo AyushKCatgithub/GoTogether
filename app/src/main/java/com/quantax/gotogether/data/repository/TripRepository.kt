@@ -5,7 +5,9 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.quantax.gotogether.domain.model.Trip
 import com.quantax.gotogether.domain.model.UserProfile
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -16,8 +18,8 @@ class TripRepository @Inject constructor(
     private val tripsCollection = firestore.collection("trips")
     private val usersCollection = firestore.collection("users")
 
-    suspend fun getTrips(): Result<List<Trip>> {
-        return try {
+    suspend fun getTrips(): Result<List<Trip>> = withContext(Dispatchers.IO) {
+        try {
             val snapshot = tripsCollection
                 .orderBy("createdAt", Query.Direction.DESCENDING)
                 .limit(50)
@@ -25,25 +27,24 @@ class TripRepository @Inject constructor(
                 .await()
             val trips = snapshot.toObjects(Trip::class.java)
 
-            if (trips.isEmpty()) return Result.success(emptyList())
+            if (trips.isEmpty()) return@withContext Result.success(emptyList())
 
             // Optimize: Fetch host profiles in batches (Firestore 'whereIn' supports up to 30 items)
             val hostIds = trips.map { it.hostId }.distinct().filter { it.isNotBlank() }
             val hostProfiles = mutableMapOf<String, UserProfile>()
 
             if (hostIds.isNotEmpty()) {
-                // Process in chunks of 30 (Firestore limit for whereIn)
                 hostIds.chunked(30).forEach { chunk ->
                     try {
                         val usersSnapshot = usersCollection
-                            .whereIn(FieldPath.documentId(), chunk)
+                            .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
                             .get()
                             .await()
                         usersSnapshot.toObjects(UserProfile::class.java).forEach { profile ->
                             hostProfiles[profile.uid] = profile
                         }
                     } catch (e: Exception) {
-                        // Log or handle individual chunk failure if needed, otherwise continue
+                        // Continue even if profile enrichment fails for some users
                     }
                 }
             }
@@ -64,12 +65,12 @@ class TripRepository @Inject constructor(
         }
     }
 
-    suspend fun createTrip(trip: Trip): Result<String> {
+    suspend fun createTrip(trip: Trip): Result<String> = withContext(Dispatchers.IO) {
         if (trip.title.isBlank() || trip.destination.isBlank()) {
-            return Result.failure(IllegalArgumentException("Title and destination are required"))
+            return@withContext Result.failure(IllegalArgumentException("Title and destination are required"))
         }
 
-        return try {
+        try {
             val docRef = tripsCollection.document()
             val finalTrip = trip.copy(id = docRef.id)
             docRef.set(finalTrip).await()
@@ -79,13 +80,13 @@ class TripRepository @Inject constructor(
         }
     }
 
-    suspend fun getUserTrips(userId: String): Result<List<Trip>> {
-        if (userId.isBlank()) return Result.failure(IllegalArgumentException("User ID cannot be blank"))
+    suspend fun getUserTrips(userId: String): Result<List<Trip>> = withContext(Dispatchers.IO) {
+        if (userId.isBlank()) return@withContext Result.failure(IllegalArgumentException("User ID cannot be blank"))
         
-        return try {
+        try {
             val snapshot = tripsCollection
                 .whereEqualTo("hostId", userId)
-                .orderBy("createdAt", Query.Direction.DESCENDING) // Requires index if filtering by hostId
+                .orderBy("createdAt", Query.Direction.DESCENDING)
                 .get()
                 .await()
             val trips = snapshot.toObjects(Trip::class.java)
@@ -95,10 +96,10 @@ class TripRepository @Inject constructor(
         }
     }
 
-    suspend fun deleteTrip(tripId: String): Result<Unit> {
-        if (tripId.isBlank()) return Result.failure(IllegalArgumentException("Trip ID cannot be blank"))
+    suspend fun deleteTrip(tripId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        if (tripId.isBlank()) return@withContext Result.failure(IllegalArgumentException("Trip ID cannot be blank"))
 
-        return try {
+        try {
             tripsCollection.document(tripId).delete().await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -106,10 +107,10 @@ class TripRepository @Inject constructor(
         }
     }
 
-    suspend fun getTripById(tripId: String): Result<Trip?> {
-        if (tripId.isBlank()) return Result.success(null)
+    suspend fun getTripById(tripId: String): Result<Trip?> = withContext(Dispatchers.IO) {
+        if (tripId.isBlank()) return@withContext Result.success(null)
 
-        return try {
+        try {
             val doc = tripsCollection.document(tripId).get().await()
             val trip = doc.toObject(Trip::class.java)
             Result.success(trip)

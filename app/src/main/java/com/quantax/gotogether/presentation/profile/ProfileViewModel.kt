@@ -11,6 +11,7 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -55,29 +56,23 @@ class ProfileViewModel @Inject constructor(
     private fun loadProfile() {
         val user = authManager.currentUser
         if (user == null) {
-            _state.value = _state.value.copy(error = "User not logged in", isLoading = false)
+            _state.update { it.copy(error = "User not logged in", isLoading = false) }
             return
         }
 
-        _state.value = _state.value.copy(isLoading = true, error = null)
+        _state.update { it.copy(isLoading = true, error = null) }
         
         viewModelScope.launch {
-            try {
-                val profileResult = repository.getProfile(user.uid)
-                if (profileResult.isSuccess) {
-                    val profile = profileResult.getOrNull()
-                    if (profile != null) {
-                        _state.value = _state.value.copy(isLoading = false, profile = profile)
-                    } else {
-                        // Create an empty profile for new users
-                        val newProfile = UserProfile(uid = user.uid, email = user.email ?: "")
-                        _state.value = _state.value.copy(isLoading = false, profile = newProfile)
-                    }
-                } else {
-                    _state.value = _state.value.copy(isLoading = false, error = profileResult.exceptionOrNull()?.localizedMessage ?: "Failed to load profile")
+            repository.getProfile(user.uid).onSuccess { profile ->
+                val finalProfile = profile ?: UserProfile(uid = user.uid, email = user.email ?: "")
+                _state.update { it.copy(isLoading = false, profile = finalProfile) }
+            }.onFailure { e ->
+                _state.update { 
+                    it.copy(
+                        isLoading = false, 
+                        error = e.localizedMessage ?: "Failed to load profile"
+                    ) 
                 }
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(isLoading = false, error = e.localizedMessage ?: "Failed to load profile")
             }
         }
     }
@@ -85,48 +80,57 @@ class ProfileViewModel @Inject constructor(
     private fun saveProfile(profile: UserProfile) {
         val user = authManager.currentUser
         if (user == null) {
-            _state.value = _state.value.copy(error = "User not logged in", isSaving = false)
+            _state.update { it.copy(error = "User not logged in", isSaving = false) }
             return
         }
 
-        _state.value = _state.value.copy(isSaving = true, saveSuccess = false, error = null)
+        _state.update { it.copy(isSaving = true, saveSuccess = false, error = null) }
 
         viewModelScope.launch {
-            try {
-                var updatedProfile = profile.copy(uid = user.uid)
+            var updatedProfile = profile.copy(uid = user.uid)
+            
+            // If the profile image is a new local content URI, upload it to Storage first
+            if (storageService.isLocalUri(profile.profileImageUrl)) {
+                val uri = Uri.parse(profile.profileImageUrl)
+                val uploadResult = storageService.uploadImage(uri, "profile_images")
                 
-                // If the profile image is a new local content URI, upload it to Storage first
-                if (storageService.isLocalUri(profile.profileImageUrl)) {
-                    val uri = Uri.parse(profile.profileImageUrl)
-                    val publicUrl = storageService.uploadImage(uri, "profile_images")
-                    
+                if (uploadResult.isSuccess) {
+                    val publicUrl = uploadResult.getOrNull()
                     if (publicUrl != null) {
                         updatedProfile = updatedProfile.copy(profileImageUrl = publicUrl)
-                    } else {
-                        // If upload fails, fallback to keeping the original (or throwing an error)
-                        _state.value = _state.value.copy(
-                            isSaving = false, 
-                            error = "Failed to upload profile photo. Please try again."
-                        )
-                        return@launch
                     }
+                } else {
+                    _state.update { 
+                        it.copy(
+                            isSaving = false, 
+                            error = uploadResult.exceptionOrNull()?.message ?: "Failed to upload profile photo"
+                        )
+                    }
+                    return@launch
                 }
+            }
 
-                repository.saveProfile(updatedProfile)
-                _state.value = _state.value.copy(
-                    isSaving = false, 
-                    saveSuccess = true, 
-                    profile = updatedProfile
-                )
-            } catch (e: Exception) {
-                e.printStackTrace()
-                _state.value = _state.value.copy(isSaving = false, error = e.localizedMessage ?: "Failed to save profile")
+            repository.saveProfile(updatedProfile).onSuccess {
+                _state.update { 
+                    it.copy(
+                        isSaving = false, 
+                        saveSuccess = true, 
+                        profile = updatedProfile
+                    )
+                }
+            }.onFailure { e ->
+                _state.update { 
+                    it.copy(
+                        isSaving = false, 
+                        error = e.localizedMessage ?: "Failed to save profile"
+                    ) 
+                }
             }
         }
     }
 
     private fun resetSaveSuccess() {
-        _state.value = _state.value.copy(saveSuccess = false)
+        _state.update { it.copy(saveSuccess = false) }
     }
 
     private fun signOut() {

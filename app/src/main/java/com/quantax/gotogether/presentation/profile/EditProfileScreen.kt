@@ -3,8 +3,6 @@ package com.quantax.gotogether.presentation.profile
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -31,18 +29,17 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
-import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -55,7 +52,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
@@ -67,7 +63,6 @@ import coil.compose.AsyncImage
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.VerifiedCyan
-import com.quantax.gotogether.ui.theme.WarningYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,31 +88,21 @@ fun EditProfileScreen(
         }
     )
 
-    // Navigate back on successful save
     LaunchedEffect(state.saveSuccess) {
         if (state.saveSuccess) {
-            viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.ResetSaveSuccess)
+            viewModel.onEvent(ProfileEvent.ResetSaveSuccess)
             onNavigateBack()
         }
-    }
-
-    // Compute live verification status
-    val wouldBeVerified = name.isNotBlank() && email.isNotBlank() && phone.isNotBlank() && profileImageUrl.isNotBlank()
-    val missingFields = buildList {
-        if (profileImageUrl.isBlank()) add("Profile Photo")
-        if (name.isBlank()) add("Name")
-        if (email.isBlank()) add("Email")
-        if (phone.isBlank()) add("Phone")
     }
 
     Scaffold(
         containerColor = GoTogetherTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text("Edit Profile", fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary) },
+                title = { Text("SETTINGS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, letterSpacing = 2.sp) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = GoTogetherTheme.colors.textPrimary)
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -129,158 +114,62 @@ fun EditProfileScreen(
                 .fillMaxSize()
                 .padding(paddingValues)
                 .verticalScroll(rememberScrollState())
-                .padding(20.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
         ) {
-            // Profile Photo Picker
-            Box(
-                modifier = Modifier
-                    .size(130.dp)
-                    .clip(CircleShape)
-                    .clickable {
-                        photoPickerLauncher.launch(
-                            PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
-                    },
-                contentAlignment = Alignment.Center
-            ) {
-                if (profileImageUrl.isNotBlank()) {
-                    AsyncImage(
-                        model = profileImageUrl,
-                        contentDescription = "Profile Photo",
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(CircleShape)
-                            .border(3.dp, GoTogetherOrange, CircleShape),
-                        contentScale = ContentScale.Crop
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(GoTogetherTheme.colors.surface, CircleShape)
-                            .border(3.dp, GoTogetherOrange, CircleShape),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            Icons.Default.CameraAlt,
-                            contentDescription = "Add Photo",
-                            tint = GoTogetherTheme.colors.textSecondary,
-                            modifier = Modifier.size(40.dp)
-                        )
-                    }
-                }
-                // Overlay edit badge
-                Box(
+            // Bold Photo Picker
+            Box(contentAlignment = Alignment.BottomEnd) {
+                Surface(
                     modifier = Modifier
-                        .align(Alignment.BottomEnd)
-                        .size(36.dp)
-                        .background(GoTogetherOrange, CircleShape)
-                        .border(2.dp, GoTogetherTheme.colors.background, CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        Icons.Default.Edit,
-                        contentDescription = "Change Photo",
-                        tint = GoTogetherTheme.colors.textPrimary,
-                        modifier = Modifier.size(18.dp)
-                    )
-                }
-            }
-
-            Text("Tap to change photo", color = GoTogetherTheme.colors.textSecondary, fontSize = 13.sp)
-
-            // Verification Status Card
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(
-                    containerColor = if (wouldBeVerified)
-                        VerifiedCyan.copy(alpha = 0.08f) else WarningYellow.copy(alpha = 0.08f)
-                )
-            ) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        if (wouldBeVerified) Icons.Default.CheckCircle else Icons.Default.Warning,
-                        contentDescription = null,
-                        tint = if (wouldBeVerified) VerifiedCyan else WarningYellow,
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column {
-                        Text(
-                            if (wouldBeVerified) "Profile will be verified ✓" else "Missing fields for verification",
-                            color = if (wouldBeVerified) VerifiedCyan else WarningYellow,
-                            fontWeight = FontWeight.SemiBold,
-                            fontSize = 14.sp
-                        )
-                        if (!wouldBeVerified) {
-                            Text(
-                                "Missing: ${missingFields.joinToString(", ")}",
-                                color = GoTogetherTheme.colors.textSecondary,
-                                fontSize = 12.sp
+                        .size(120.dp)
+                        .clickable {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
-                        }
+                        },
+                    shape = CircleShape,
+                    border = androidx.compose.foundation.BorderStroke(4.dp, GoTogetherOrange),
+                    color = GoTogetherTheme.colors.surface
+                ) {
+                    if (profileImageUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = profileImageUrl,
+                            contentDescription = null,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop
+                        )
+                    } else {
+                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.padding(32.dp), tint = Color.LightGray)
                     }
+                }
+                Surface(
+                    modifier = Modifier.size(32.dp),
+                    shape = CircleShape,
+                    color = Color.Black
+                ) {
+                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.padding(8.dp), tint = Color.White)
                 }
             }
 
-            // Form Fields
-            ProfileTextField(
-                value = name,
-                onValueChange = { name = it },
-                label = "Full Name *",
-                icon = Icons.Default.Person
-            )
+            Spacer(modifier = Modifier.height(40.dp))
 
-            ProfileTextField(
-                value = username,
-                onValueChange = { username = it },
-                label = "Username",
-                icon = Icons.Default.AlternateEmail
-            )
-
-            ProfileTextField(
-                value = email,
-                onValueChange = { email = it },
-                label = "Email *",
-                icon = Icons.Default.Email
-            )
-
-            ProfileTextField(
-                value = bio,
-                onValueChange = { bio = it },
-                label = "Bio / Description",
-                icon = Icons.Default.Info,
-                singleLine = false
-            )
-
-            ProfileTextField(
-                value = phone,
-                onValueChange = { phone = it },
-                label = "Phone *",
-                icon = Icons.Default.Phone
-            )
-
-            ProfileTextField(
-                value = address,
-                onValueChange = { address = it },
-                label = "Address",
-                icon = Icons.Default.LocationOn
-            )
-
-            // Error
-            if (state.error != null) {
-                Text(state.error!!, color = Color.Red, fontSize = 14.sp)
+            // Minimalist Form
+            Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.fillMaxWidth()) {
+                GenZTextField(value = name, onValueChange = { name = it }, label = "NAME", placeholder = "Your legal name")
+                GenZTextField(value = username, onValueChange = { username = it }, label = "USERNAME", placeholder = "vibe_checker")
+                GenZTextField(value = email, onValueChange = { email = it }, label = "EMAIL", placeholder = "hello@travel.com")
+                GenZTextField(value = phone, onValueChange = { phone = it }, label = "PHONE", placeholder = "+1 234 ...")
+                GenZTextField(value = bio, onValueChange = { bio = it }, label = "BIO", placeholder = "Tell your story...", singleLine = false)
+                GenZTextField(value = address, onValueChange = { address = it }, label = "LOCATION", placeholder = "Earth")
             }
 
-            // Save Button
+            if (state.error != null) {
+                Text(state.error!!, color = Color.Red, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 16.dp))
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
+
+            // Bold Save Button
             Button(
                 onClick = {
                     val updatedProfile = profile?.copy(
@@ -300,69 +189,59 @@ fun EditProfileScreen(
                         bio = bio,
                         profileImageUrl = profileImageUrl
                     )
-                    viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.SaveProfile(updatedProfile))
+                    viewModel.onEvent(ProfileEvent.SaveProfile(updatedProfile))
                 },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                shape = RoundedCornerShape(14.dp),
+                modifier = Modifier.fillMaxWidth().height(64.dp),
+                shape = RoundedCornerShape(20.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                 enabled = !state.isSaving && name.isNotBlank()
             ) {
                 if (state.isSaving) {
-                    CircularProgressIndicator(color = GoTogetherTheme.colors.textOnPrimary, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    Text("Save Profile", color = GoTogetherTheme.colors.textOnPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text("SAVE CHANGES", fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.sp)
                 }
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
+            
+            Spacer(modifier = Modifier.height(40.dp))
         }
     }
 }
 
 @Composable
-private fun ProfileTextField(
+private fun GenZTextField(
     value: String,
     onValueChange: (String) -> Unit,
     label: String,
-    icon: ImageVector,
+    placeholder: String,
     singleLine: Boolean = true
 ) {
-    Column {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Text(
             text = label,
-            color = GoTogetherTheme.colors.textSecondary,
-            fontSize = 13.sp,
-            fontWeight = FontWeight.Medium,
-            modifier = Modifier.padding(start = 4.dp, bottom = 6.dp)
+            style = MaterialTheme.typography.labelLarge,
+            fontWeight = FontWeight.Black,
+            color = GoTogetherTheme.colors.textPrimary,
+            letterSpacing = 1.sp,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp)
         )
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth().height(if (singleLine) 60.dp else 120.dp),
-            placeholder = { Text("Enter $label", color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f)) },
-            leadingIcon = { 
-                Box(
-                    modifier = Modifier.size(40.dp).padding(start = 6.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(icon, contentDescription = null, tint = if(value.isNotBlank()) GoTogetherOrange else GoTogetherTheme.colors.textSecondary) 
-                }
-            },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(placeholder, color = Color.LightGray) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = GoTogetherOrange,
-                unfocusedBorderColor = Color.Transparent,
-                focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedContainerColor = GoTogetherTheme.colors.surface,
+                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.3f),
                 focusedContainerColor = GoTogetherTheme.colors.surface,
-                cursorColor = GoTogetherOrange
+                unfocusedContainerColor = GoTogetherTheme.colors.surface,
+                cursorColor = Color.Black
             ),
             shape = RoundedCornerShape(16.dp),
             singleLine = singleLine,
-            minLines = if (singleLine) 1 else 4,
-            maxLines = if (singleLine) 1 else 4
+            minLines = if (singleLine) 1 else 3
         )
     }
 }
+
+
