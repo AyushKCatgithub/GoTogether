@@ -66,11 +66,11 @@ fun HomeScreen(
     val searchGroupSize by viewModel.searchGroupSize.collectAsState()
     val searchQuery by viewModel.searchQuery.collectAsState()
     val isRefreshing by viewModel.isRefreshing.collectAsState()
+    val selectedCategory by viewModel.selectedCategory.collectAsState()
 
     var showFilterSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showingLocationPickerFor by remember { mutableStateOf<String?>(null) }
-    var selectedCategory by remember { mutableStateOf("All") }
     val categories = listOf("All", "Adventure", "Relaxation", "Cultural", "Budget Friendly", "Solo", "Group")
 
     val context = LocalContext.current
@@ -143,19 +143,21 @@ fun HomeScreen(
             ) {
                 // 1. Premium Greeting & Search
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
                         Text(
-                            "Discover Your",
-                            fontSize = 32.sp,
-                            fontWeight = FontWeight.Light,
-                            color = GoTogetherTheme.colors.textPrimary
+                            "DISCOVER YOUR",
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Black,
+                            color = GoTogetherOrange,
+                            letterSpacing = 2.sp
                         )
                         Text(
-                            "Next Adventure",
-                            fontSize = 34.sp,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = GoTogetherTheme.colors.textPrimary,
-                            lineHeight = 38.sp
+                            "NEXT VIBE",
+                            fontSize = 42.sp,
+                            fontWeight = FontWeight.Black,
+                            color = Color.Black,
+                            lineHeight = 46.sp,
+                            letterSpacing = (-1).sp
                         )
                     }
                 }
@@ -173,30 +175,13 @@ fun HomeScreen(
                     CategoryChips(
                         categories = categories,
                         selectedCategory = selectedCategory,
-                        onCategorySelected = { selectedCategory = it }
+                        onCategorySelected = viewModel::onCategorySelected
                     )
                 }
 
-                // 3. Featured Section (Optional - only if success and has trips)
-                if (state is HomeState.Success) {
-                    val successState = state as HomeState.Success
-                    if (successState.trips.isNotEmpty() && searchQuery.isEmpty() && selectedCategory == "All") {
-                        item {
-                            SectionHeader(title = "Featured Journeys", onSeeAllClick = {})
-                        }
-                        item {
-                            FeaturedTripsRow(
-                                trips = successState.trips.take(3),
-                                onTripClick = onNavigateToTripDetail
-                            )
-                        }
-                    }
-                }
-
-                // 4. Main Feed Header
                 item {
                     SectionHeader(
-                        title = if (selectedCategory == "All") "Upcoming Expeditions" else "$selectedCategory Trips",
+                        title = if (selectedCategory == "All") "UPCOMING EXPEDITIONS" else "${selectedCategory.uppercase()} TRIPS",
                         hideSeeAll = true
                     )
                 }
@@ -219,16 +204,10 @@ fun HomeScreen(
                         }
                     }
                     is HomeState.Success -> {
-                        val filteredByChip = if (selectedCategory == "All") {
-                            currentState.trips
-                        } else {
-                            currentState.trips.filter { it.title.contains(selectedCategory, ignoreCase = true) || it.description.contains(selectedCategory, ignoreCase = true) }
-                        }
-
-                        if (filteredByChip.isEmpty()) {
+                        if (currentState.trips.isEmpty()) {
                             item { EmptyTripsView() }
                         } else {
-                            items(filteredByChip, key = { it.id }) { trip ->
+                            items(currentState.trips, key = { it.id }) { trip ->
                                 Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
                                     TripCard(
                                         trip = trip,

@@ -309,13 +309,17 @@ fun TripCard(
     onHostClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Card(
+    Surface(
         modifier = modifier
             .fillMaxWidth()
-            .clickable { onClick() },
-        shape = RoundedCornerShape(24.dp),
-        colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 4.dp)
+            .clickable { onClick() }
+            .shadow(
+                elevation = 20.dp,
+                shape = RoundedCornerShape(32.dp),
+                spotColor = Color.Black.copy(alpha = 0.15f)
+            ),
+        shape = RoundedCornerShape(32.dp),
+        color = Color.White,
     ) {
         Column {
             TripCardHero(
@@ -493,12 +497,13 @@ private fun TripCardDetails(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = trip.title,
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = GoTogetherTheme.colors.textPrimary,
+                    text = trip.title.uppercase(),
+                    fontSize = 20.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Black,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    overflow = TextOverflow.Ellipsis,
+                    letterSpacing = (-0.5).sp
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -533,18 +538,19 @@ private fun TripCardDetails(
                 }
             }
 
-            // Price Tag - Always visible and prominent
+            // Price Tag - Sleek and modern
             if (trip.budgetRange.isNotBlank()) {
                 Surface(
-                    color = GoTogetherOrange.copy(alpha = 0.15f),
+                    color = Color.Black, // High contrast
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = trip.budgetRange,
-                        color = GoTogetherOrange,
-                        fontSize = 15.sp,
-                        fontWeight = FontWeight.ExtraBold,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+                        color = Color.White,
+                        fontSize = 14.sp,
+                        fontWeight = FontWeight.Black,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
+                        letterSpacing = 0.5.sp
                     )
                 }
             }
@@ -635,16 +641,21 @@ private fun TripCardDetails(
 
             Button(
                 onClick = onActionClick,
-                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                shape = RoundedCornerShape(14.dp),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 10.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                shape = RoundedCornerShape(16.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
                 modifier = Modifier.bounceClick(),
                 elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 6.dp,
-                    pressedElevation = 2.dp
+                    defaultElevation = 0.dp,
+                    pressedElevation = 0.dp
                 )
             ) {
-                Text("Join Trip", fontSize = 14.sp, fontWeight = FontWeight.ExtraBold)
+                Text(
+                    "JOIN THE VIBE",
+                    fontSize = 12.sp,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
+                )
             }
         }
     }

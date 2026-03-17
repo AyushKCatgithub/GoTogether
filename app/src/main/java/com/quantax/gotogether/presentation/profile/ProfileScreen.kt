@@ -6,6 +6,8 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -21,7 +23,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
@@ -31,13 +32,10 @@ import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -72,43 +70,33 @@ fun ProfileScreen(
     }
 
     Scaffold(
-        containerColor = GoTogetherTheme.colors.background,
-        topBar = {
-            TopAppBar(
-                title = { },
-                navigationIcon = { },
-                actions = {
-                    IconButton(
-                        onClick = onNavigateToEditProfile,
-                        modifier = Modifier.padding(end = 8.dp)
-                    ) {
-                        Icon(
-                            Icons.Default.Edit,
-                            contentDescription = "Edit",
-                            tint = GoTogetherTheme.colors.textPrimary
-                        )
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
-        }
+        containerColor = Color.White,
     ) { paddingValues ->
-        when {
-            state.isLoading -> LoadingState()
-            state.error != null -> ErrorState(state.error!!) { viewModel.onEvent(ProfileEvent.LoadProfile) }
-            else -> ProfileContent(
-                profile = state.profile,
-                onEditClick = onNavigateToEditProfile,
-                onSignOutClick = {
-                    viewModel.onEvent(ProfileEvent.SignOut)
-                    onSignOut()
-                },
-                modifier = Modifier.padding(paddingValues)
-            )
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(bottom = paddingValues.calculateBottomPadding())
+        ) {
+
+
+            when {
+                state.isLoading -> LoadingState()
+                state.error != null -> ErrorState(state.error!!) { viewModel.onEvent(ProfileEvent.LoadProfile) }
+                else -> ProfileContent(
+                    profile = state.profile,
+                    onEditClick = onNavigateToEditProfile,
+                    onSignOutClick = {
+                        viewModel.onEvent(ProfileEvent.SignOut)
+                        onSignOut()
+                    },
+                    modifier = Modifier // Removed paddingValues here to handle overlap correctly
+                )
+            }
         }
     }
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun ProfileContent(
     profile: UserProfile?,
@@ -218,34 +206,39 @@ private fun ProfileContent(
         ) {
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Large, Bold Typography
+            // Name & Rank
             Text(
-                text = profile?.name?.ifBlank { "Traveler" } ?: "...",
+                text = profile?.name?.ifBlank { "Traveler" }?.uppercase() ?: "...",
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Black,
-                color = GoTogetherTheme.colors.textPrimary,
-                textAlign = TextAlign.Center
+                color = Color.Black,
+                textAlign = TextAlign.Center,
+                letterSpacing = (-1).sp
             )
 
-            Text(
-                text = if (profile?.username?.isNotBlank() == true) "@${profile.username}" else "Active Wanderer",
-                style = MaterialTheme.typography.titleMedium,
-                color = GoTogetherOrange,
-                fontWeight = FontWeight.Bold
-            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text(
+                    text = if (profile?.username?.isNotBlank() == true) "@${profile.username}" else "ACTIVE WANDERER",
+                    style = MaterialTheme.typography.titleSmall,
+                    color = GoTogetherOrange,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 1.sp
+                )
+
+            }
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Premium Stats Card
+            // Premium Stats Card - Refined
             Surface(
-                color = GoTogetherTheme.colors.surface,
-                shape = RoundedCornerShape(32.dp),
+                color = Color(0xFFF8F8F8),
+                shape = RoundedCornerShape(24.dp),
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(vertical = 24.dp),
+                        .padding(vertical = 20.dp),
                     horizontalArrangement = Arrangement.SpaceEvenly
                 ) {
                     CleanStat("12", "TRIPS", Icons.Default.Star)
@@ -256,33 +249,85 @@ private fun ProfileContent(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            // Bio in a very clean, minimal card
-            if (profile?.bio?.isNotBlank() == true) {
-                Surface(
-                    color = GoTogetherTheme.colors.surface,
-                    shape = RoundedCornerShape(24.dp),
-                    modifier = Modifier.fillMaxWidth()
+            // Vibes (Interests) Section
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    "MY VIBES",
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = FontWeight.Black,
+                    letterSpacing = 2.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+                FlowRow(
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(
-                        text = profile.bio,
-                        style = MaterialTheme.typography.bodyLarge,
-                        color = GoTogetherTheme.colors.textPrimary,
-                        textAlign = TextAlign.Start,
-                        modifier = Modifier.padding(20.dp),
-                        lineHeight = 26.sp
-                    )
+                    val vibes =
+                        listOf("Adventure", "Trekking", "Solo Traveler", "Foodie", "Mountains")
+                    vibes.forEach { vibe ->
+                        Surface(
+                            color = Color.White,
+                            border = androidx.compose.foundation.BorderStroke(
+                                1.dp,
+                                Color.Black.copy(alpha = 0.1f)
+                            ),
+                            shape = RoundedCornerShape(50.dp)
+                        ) {
+                            Text(
+                                vibe.uppercase(),
+                                modifier = Modifier.padding(horizontal = 14.dp, vertical = 8.dp),
+                                fontSize = 10.sp,
+                                fontWeight = FontWeight.Black,
+                                letterSpacing = 1.sp
+                            )
+                        }
+                    }
                 }
-                Spacer(modifier = Modifier.height(24.dp))
             }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Bio Section - Refined
+            if (profile?.bio?.isNotBlank() == true) {
+                Spacer(modifier = Modifier.height(32.dp))
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Text(
+                        "ABOUT ME",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp,
+                        color = Color.Gray
+                    )
+                    Spacer(modifier = Modifier.height(12.dp))
+                    Surface(
+                        color = Color(0xFFF8F8F8),
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = profile.bio,
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = Color.Black,
+                            textAlign = TextAlign.Start,
+                            modifier = Modifier.padding(20.dp),
+                            lineHeight = 22.sp
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(40.dp))
 
             // Action Buttons - High Contrast
             Button(
                 onClick = onEditClick,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black)
+                    .height(64.dp),
+                shape = RoundedCornerShape(16.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
             ) {
                 Text(
                     "EDIT PROFILE",
@@ -316,8 +361,8 @@ private fun ProfileContent(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
-                    shape = CircleShape,
-                    color = GoTogetherTheme.colors.surface
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFF1F1F1)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -331,7 +376,7 @@ private fun ProfileContent(
                             Text(
                                 "SHARE",
                                 fontWeight = FontWeight.Black,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 letterSpacing = 1.sp
                             )
                         }
@@ -356,8 +401,8 @@ private fun ProfileContent(
                     modifier = Modifier
                         .weight(1f)
                         .height(56.dp),
-                    shape = CircleShape,
-                    color = GoTogetherTheme.colors.surface
+                    shape = RoundedCornerShape(16.dp),
+                    color = Color(0xFFF1F1F1)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -371,7 +416,7 @@ private fun ProfileContent(
                             Text(
                                 "RATE",
                                 fontWeight = FontWeight.Black,
-                                fontSize = 12.sp,
+                                fontSize = 11.sp,
                                 letterSpacing = 1.sp
                             )
                         }

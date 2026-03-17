@@ -41,8 +41,12 @@ class HomeViewModel @Inject constructor(
     private val _searchGroupSize = MutableStateFlow(0)
     val searchGroupSize = _searchGroupSize.asStateFlow()
 
+    private val _selectedCategory = MutableStateFlow("All")
+    val selectedCategory = _selectedCategory.asStateFlow()
+
     private val _locationText = MutableStateFlow("Detecting location...")
     private val _currentCity = MutableStateFlow<String?>(null)
+    private val _error = MutableStateFlow<String?>(null)
 
     // Main state combining trips and filters
     val state: StateFlow<HomeState> = combine(
@@ -54,6 +58,8 @@ class HomeViewModel @Inject constructor(
         _searchGroupSize,
         _locationText,
         _currentCity,
+        _selectedCategory,
+        _error
     ) { args: Array<Any?> ->
         val trips = args[0] as? List<Trip>
         val query = args[1] as String
@@ -63,7 +69,10 @@ class HomeViewModel @Inject constructor(
         val size = args[5] as Int
         val loc = args[6] as String
         val currentCity = args[7] as String?
+        val category = args[8] as String
+        val errorMsg = args[9] as String?
 
+        if (errorMsg != null) return@combine HomeState.Error(errorMsg)
         if (trips == null) return@combine HomeState.Loading
 
         val displayTitle = when {
@@ -85,7 +94,13 @@ class HomeViewModel @Inject constructor(
         }
 
         val filtered = sortedTrips.filter { trip ->
-            trip.matchesFilter(query, from, to, budget, size)
+            val matchesSearch = trip.matchesFilter(query, from, to, budget, size)
+            val matchesCategory = category == "All" || 
+                trip.title.contains(category, ignoreCase = true) || 
+                trip.description.contains(category, ignoreCase = true) ||
+                trip.interests.any { it.contains(category, ignoreCase = true) }
+            
+            matchesSearch && matchesCategory
         }
 
         HomeState.Success(filtered, displayTitle)
@@ -101,13 +116,14 @@ class HomeViewModel @Inject constructor(
 
     fun loadTrips() {
         viewModelScope.launch {
+            _error.value = null
             _isRefreshing.value = true
             repository.getTrips().fold(
                 onSuccess = { trips ->
                     _allTrips.value = trips
                 },
                 onFailure = { error ->
-
+                    _error.value = error.localizedMessage ?: "Failed to load trips"
                 }
             )
             _isRefreshing.value = false
@@ -119,6 +135,7 @@ class HomeViewModel @Inject constructor(
     fun onSearchToChange(query: String) { _searchTo.value = query }
     fun onSearchBudgetChange(query: String) { _searchBudget.value = query }
     fun onSearchGroupSizeChange(size: Int) { if (size >= 0) _searchGroupSize.value = size }
+    fun onCategorySelected(category: String) { _selectedCategory.value = category }
 
     fun clearFilters() {
         _searchFrom.value = ""
@@ -154,10 +171,16 @@ class HomeViewModel @Inject constructor(
         return matchesFrom && matchesTo && matchesSearch && matchesBudget && matchesGroupSize
     }
 
+    private val budgetRegex = "\\d+".toRegex()
+
     private fun Trip.matchesBudgetRange(maxBudgetStr: String): Boolean {
         val maxBudget = maxBudgetStr.toIntOrNull() ?: return true
-        val numbers = "\\d+".toRegex().findAll(budgetRange)
-        val tripMaxBudget = if (numbers.any()) numbers.maxOf { it.value.toInt() } else null
+        
+        // Performance: Reusing regex and avoiding expensive operations
+        val tripMaxBudget = budgetRegex.findAll(budgetRange)
+            .map { it.value.toIntOrNull() }
+            .filterNotNull()
+            .maxOrNull()
         
         return tripMaxBudget?.let { it <= maxBudget } ?: (
             budgetRange.isEmpty() || 

@@ -273,11 +273,13 @@ fun TripDetailContent(
                 verticalAlignment = Alignment.Top
             ) {
                 Text(
-                    text = trip.title.ifBlank { trip.destination },
+                    text = trip.title.ifBlank { trip.destination }.uppercase(),
                     modifier = Modifier.weight(1f),
-                    fontSize = 24.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    fontSize = 28.sp,
+                    fontWeight = FontWeight.Black,
+                    color = Color.Black,
+                    letterSpacing = (-1).sp,
+                    lineHeight = 32.sp
                 )
                 Column(horizontalAlignment = Alignment.End) {
                     Text(
@@ -783,16 +785,17 @@ fun ActionBottomBar(
                     onClick = onChatClick,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(58.dp),
-                    shape = RoundedCornerShape(28.dp), // More pill-like
-                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A8E4E)),
+                        .height(64.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
                     Text(
-                        "Go to Chatroom",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = Color.White
+                        "ENTER CHATROOM",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        color = Color.White,
+                        letterSpacing = 1.sp
                     )
                 }
             } else {
@@ -802,21 +805,20 @@ fun ActionBottomBar(
                     enabled = !isPending,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(58.dp),
-                    shape = RoundedCornerShape(28.dp),
+                        .height(64.dp),
+                    shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isPending) Color.Gray.copy(alpha = 0.1f) else Color(
-                            0xFF6A8E4E
-                        ),
-                        disabledContainerColor = Color.Gray.copy(alpha = 0.1f)
+                        containerColor = if (isPending) Color.Black.copy(alpha = 0.5f) else Color.Black,
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.3f)
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
                     Text(
-                        if (isPending) "Request Pending" else "Booking",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 16.sp,
-                        color = if (isPending) Color.Gray else Color.White
+                        if (isPending) "REQUEST PENDING" else "JOIN THE VIBE",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 14.sp,
+                        color = Color.White,
+                        letterSpacing = 1.sp
                     )
                 }
             }
