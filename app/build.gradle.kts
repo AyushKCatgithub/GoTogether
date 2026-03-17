@@ -13,7 +13,7 @@ android {
     defaultConfig {
         applicationId = "com.quantax.gotogether"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -30,12 +30,16 @@ android {
         }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
@@ -59,29 +63,25 @@ dependencies {
     //HorizontalPager
     implementation(libs.androidx.compose.foundation)
 
-    //Navigation
-    implementation(libs.androidx.navigation.compose)
-
-    //Firebase
-    implementation(platform(libs.firebase.bom))
-    implementation(libs.firebase.analytics)
-    implementation(libs.firebase.auth)
-    implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
-    implementation(libs.firebase.database)
+    // Coil (core for ImageLoaderFactory + compose for AsyncImage)
+    implementation(libs.coil)
     implementation(libs.coil.compose)
-
-    //Google Sign-In (Credential Manager)
-    implementation(libs.credentials)
-    implementation(libs.credentials.play.services.auth)
-    implementation(libs.googleid)
-
-    //GMS
-    implementation(libs.play.services.auth)
-    implementation(libs.play.services.location)
 
     // Hilt
     implementation(libs.hilt.android)
     ksp(libs.hilt.android.compiler)
     implementation(libs.hilt.navigation.compose)
+
+    // Google Sign-In (GoogleSignIn, GoogleSignInOptions)
+    implementation(libs.play.services.auth)
+    // Play Services Location (LocationServices, FusedLocationProviderClient)
+    implementation(libs.play.services.location)
+
+    // Firebase (required for AppModule + KSP can resolve types)
+    implementation(platform(libs.firebase.bom))
+    implementation(libs.firebase.analytics)
+    implementation(libs.firebase.auth)
+    implementation(libs.firebase.firestore)
+    implementation(libs.firebase.database)
+    implementation(libs.firebase.storage)
 }

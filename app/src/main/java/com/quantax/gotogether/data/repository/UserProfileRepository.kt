@@ -2,8 +2,10 @@ package com.quantax.gotogether.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
 import com.quantax.gotogether.domain.model.UserProfile
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
-
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -12,6 +14,74 @@ class UserProfileRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
     private val usersCollection = firestore.collection("users")
+
+    /** Normalize for uniqueness: lowercase, trim, letters/digits/underscore/dot only (Instagram-style). */
+    private fun normalizeUsername(username: String): String =
+        username.trim().lowercase().filter { it.isLetterOrDigit() || it == '_' || it == '.' }
+
+    /**
+     * Returns true if the username is available for use (not taken by another user).
+     * Case-insensitive: "agentalpha" and "Agentalpha" are the same.
+     * Uses usernameLower (normalized) plus exact matches for input and normalized so we catch
+     * all case variations and old docs that only have username.
+     */
+    suspend fun isUsernameAvailable(username: String, excludeUid: String): Result<Boolean> {
+        val normalized = normalizeUsername(username)
+        if (normalized.isBlank()) return Result.success(true)
+        return try {
+            val byNormalized = usersCollection
+                .whereEqualTo("usernameLower", normalized)
+                .limit(1)
+                .get()
+                .await()
+            val byExactInput = usersCollection
+                .whereEqualTo("username", username)
+                .limit(1)
+                .get()
+                .await()
+            val byExactNormalized = usersCollection
+                .whereEqualTo("username", normalized)
+                .limit(1)
+                .get()
+                .await()
+            val takenByOther = byNormalized.documents.any { it.id != excludeUid } ||
+                byExactInput.documents.any { it.id != excludeUid } ||
+                byExactNormalized.documents.any { it.id != excludeUid }
+            Result.success(!takenByOther)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Backfills usernameLower for the given user document so future uniqueness checks work.
+     * Call when profile has username set but usernameLower blank (e.g. after loading profile).
+     */
+    suspend fun updateUsernameLowerIfNeeded(uid: String, username: String): Result<Unit> {
+        if (username.isBlank()) return Result.success(Unit)
+        return try {
+            val normalized = normalizeUsername(username)
+            usersCollection.document(uid).update("usernameLower", normalized).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Real-time flow of profile updates. Emits whenever the profile document changes.
+     */
+    fun getProfileFlow(uid: String): Flow<UserProfile?> = callbackFlow {
+        val listener = usersCollection.document(uid).addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                trySend(null)
+                return@addSnapshotListener
+            }
+            val profile = snapshot?.toObject(UserProfile::class.java)
+            trySend(profile)
+        }
+        awaitClose { listener.remove() }
+    }
 
     suspend fun getProfile(uid: String): Result<UserProfile?> {
         return try {
@@ -27,9 +97,26 @@ class UserProfileRepository @Inject constructor(
         }
     }
 
-    suspend fun saveProfile(profile: UserProfile): Result<Unit> {
+    /**
+     * Saves the profile and enforces unique username (Instagram-style).
+     * Uniqueness is enforced by querying the users collection only (no separate usernames collection).
+     */
+    suspend fun saveProfile(profile: UserProfile, oldUsername: String? = null): Result<Unit> {
         return try {
-            usersCollection.document(profile.uid).set(profile).await()
+            val newNormalized = normalizeUsername(profile.username)
+            if (newNormalized.isNotBlank()) {
+                val availabilityResult = isUsernameAvailable(profile.username, profile.uid)
+                if (availabilityResult.isFailure) {
+                    return Result.failure(availabilityResult.exceptionOrNull() ?: Exception("Could not check username"))
+                }
+                if (!availabilityResult.getOrNull()!!) {
+                    return Result.failure(Exception("This username is already taken."))
+                }
+            }
+            val profileToSave = profile.copy(
+                usernameLower = if (profile.username.isNotBlank()) newNormalized else ""
+            )
+            usersCollection.document(profileToSave.uid).set(profileToSave).await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)

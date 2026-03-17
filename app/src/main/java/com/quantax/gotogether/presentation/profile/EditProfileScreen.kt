@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -31,6 +32,8 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Phone
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -40,6 +43,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
@@ -85,11 +89,38 @@ fun EditProfileScreen(
     var address by remember(profile) { mutableStateOf(profile?.address ?: "") }
     var bio by remember(profile) { mutableStateOf(profile?.bio ?: "") }
     var profileImageUrl by remember(profile) { mutableStateOf(profile?.profileImageUrl ?: "") }
+    var backgroundPhotoUrls by remember(profile) {
+        mutableStateOf(
+            (profile?.verificationPhotoUrls?.filter { it.isNotBlank() } ?: emptyList())
+                .let { list -> list + List((4 - list.size).coerceAtLeast(0)) { "" } }
+                .take(4)
+        )
+    }
+    var pickerForBackgroundSlot by remember { mutableStateOf<Int?>(null) }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia(),
         onResult = { uri ->
-            uri?.let { profileImageUrl = it.toString() }
+            uri?.let { u ->
+                val slot = pickerForBackgroundSlot
+                if (slot == null) {
+                    profileImageUrl = u.toString()
+                } else {
+                    backgroundPhotoUrls = backgroundPhotoUrls.toMutableList().apply { set(slot, u.toString()) }
+                    pickerForBackgroundSlot = null
+                }
+            }
+        }
+    )
+
+    val pickMultiplePhotosLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(4),
+        onResult = { uris ->
+            if (uris.isNotEmpty()) {
+                val newList = uris.take(4).map { it.toString() } +
+                    List((4 - uris.size).coerceAtLeast(0)) { "" }
+                backgroundPhotoUrls = newList.take(4)
+            }
         }
     )
 
@@ -101,10 +132,11 @@ fun EditProfileScreen(
         }
     }
 
-    // Compute live verification status
-    val wouldBeVerified = name.isNotBlank() && email.isNotBlank() && phone.isNotBlank() && profileImageUrl.isNotBlank()
+    // Verification: min 3 of 4 background photos
+    val backgroundCount = backgroundPhotoUrls.count { it.isNotBlank() }
+    val wouldBeVerified = backgroundCount >= 3
     val missingFields = buildList {
-        if (profileImageUrl.isBlank()) add("Profile Photo")
+        if (backgroundCount < 3) add("Background photos (min 3 of 4)")
         if (name.isBlank()) add("Name")
         if (email.isBlank()) add("Email")
         if (phone.isBlank()) add("Phone")
@@ -139,6 +171,7 @@ fun EditProfileScreen(
                     .size(130.dp)
                     .clip(CircleShape)
                     .clickable {
+                        pickerForBackgroundSlot = null
                         photoPickerLauncher.launch(
                             PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                         )
@@ -191,6 +224,89 @@ fun EditProfileScreen(
 
             Text("Tap to change photo", color = GoTogetherTheme.colors.textSecondary, fontSize = 13.sp)
 
+            // Background photos (up to 4) for profile header and verification
+            Text(
+                "Background photos (up to 4)",
+                color = GoTogetherTheme.colors.textPrimary,
+                fontSize = 14.sp,
+                fontWeight = FontWeight.SemiBold,
+                modifier = Modifier.fillMaxWidth()
+            )
+            Text(
+                "Add at least 3 to get verified. Shown on your profile header.",
+                color = GoTogetherTheme.colors.textSecondary,
+                fontSize = 12.sp,
+                modifier = Modifier.fillMaxWidth()
+            )
+            OutlinedButton(
+                onClick = {
+                    pickMultiplePhotosLauncher.launch(
+                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                    )
+                },
+                modifier = Modifier.fillMaxWidth(),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = GoTogetherOrange)
+            ) {
+                Icon(Icons.Default.Add, contentDescription = null, modifier = Modifier.size(20.dp))
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Select up to 4 photos at once")
+            }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                repeat(4) { index ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(80.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(GoTogetherTheme.colors.surface)
+                            .border(1.dp, GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .clickable {
+                                pickerForBackgroundSlot = index
+                                photoPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (backgroundPhotoUrls.getOrNull(index).orEmpty().isNotBlank()) {
+                            AsyncImage(
+                                model = backgroundPhotoUrls[index],
+                                contentDescription = "Background ${index + 1}",
+                                modifier = Modifier.fillMaxSize(),
+                                contentScale = ContentScale.Crop
+                            )
+                            IconButton(
+                                onClick = {
+                                    backgroundPhotoUrls = backgroundPhotoUrls.toMutableList().apply { set(index, "") }
+                                },
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .size(28.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.Close,
+                                    contentDescription = "Remove",
+                                    tint = Color.White,
+                                    modifier = Modifier
+                                        .size(18.dp)
+                                        .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+                                )
+                            }
+                        } else {
+                            Icon(
+                                Icons.Default.Add,
+                                contentDescription = "Add photo",
+                                tint = GoTogetherTheme.colors.textSecondary,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             // Verification Status Card
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -241,7 +357,10 @@ fun EditProfileScreen(
 
             ProfileTextField(
                 value = username,
-                onValueChange = { username = it },
+                onValueChange = {
+                    username = it
+                    if (state.error != null) viewModel.onEvent(ProfileEvent.ClearError)
+                },
                 label = "Username",
                 icon = Icons.Default.AlternateEmail
             )
@@ -283,6 +402,7 @@ fun EditProfileScreen(
             // Save Button
             Button(
                 onClick = {
+                    val verificationUrls = backgroundPhotoUrls.filter { it.isNotBlank() }
                     val updatedProfile = profile?.copy(
                         name = name,
                         username = username,
@@ -290,7 +410,8 @@ fun EditProfileScreen(
                         phone = phone,
                         address = address,
                         bio = bio,
-                        profileImageUrl = profileImageUrl
+                        profileImageUrl = profileImageUrl,
+                        verificationPhotoUrls = verificationUrls
                     ) ?: com.quantax.gotogether.domain.model.UserProfile(
                         name = name,
                         username = username,
@@ -298,7 +419,8 @@ fun EditProfileScreen(
                         phone = phone,
                         address = address,
                         bio = bio,
-                        profileImageUrl = profileImageUrl
+                        profileImageUrl = profileImageUrl,
+                        verificationPhotoUrls = verificationUrls
                     )
                     viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.SaveProfile(updatedProfile))
                 },

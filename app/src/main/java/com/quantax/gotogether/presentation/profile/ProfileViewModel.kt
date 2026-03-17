@@ -11,6 +11,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -27,6 +30,7 @@ sealed class ProfileEvent {
     data class SaveProfile(val profile: UserProfile) : ProfileEvent()
     object ResetSaveSuccess : ProfileEvent()
     object SignOut : ProfileEvent()
+    object ClearError : ProfileEvent()
 }
 
 @HiltViewModel
@@ -40,7 +44,33 @@ class ProfileViewModel @Inject constructor(
     val state: StateFlow<ProfileState> = _state.asStateFlow()
 
     init {
-        onEvent(ProfileEvent.LoadProfile)
+        val user = authManager.currentUser
+        if (user != null) {
+            _state.value = _state.value.copy(isLoading = true)
+            repository.getProfileFlow(user.uid)
+                .onEach { profile ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        profile = profile ?: UserProfile(uid = user.uid, email = user.email ?: ""),
+                        error = null
+                    )
+                    // Self-backfill usernameLower when missing so uniqueness checks work
+                    if (profile != null && profile.username.isNotBlank() && profile.usernameLower.isBlank()) {
+                        viewModelScope.launch {
+                            repository.updateUsernameLowerIfNeeded(profile.uid, profile.username)
+                        }
+                    }
+                }
+                .catch { e ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.localizedMessage ?: "Failed to load profile"
+                    )
+                }
+                .launchIn(viewModelScope)
+        } else {
+            _state.value = _state.value.copy(error = "User not logged in", isLoading = false)
+        }
     }
 
     fun onEvent(event: ProfileEvent) {
@@ -49,6 +79,7 @@ class ProfileViewModel @Inject constructor(
             is ProfileEvent.SaveProfile -> saveProfile(event.profile)
             is ProfileEvent.ResetSaveSuccess -> resetSaveSuccess()
             is ProfileEvent.SignOut -> signOut()
+            is ProfileEvent.ClearError -> _state.value = _state.value.copy(error = null)
         }
     }
 
@@ -94,33 +125,53 @@ class ProfileViewModel @Inject constructor(
         viewModelScope.launch {
             try {
                 var updatedProfile = profile.copy(uid = user.uid)
-                
-                // If the profile image is a new local content URI, upload it to Storage first
+
+                // Upload profile image if it's a local content URI
                 if (storageService.isLocalUri(profile.profileImageUrl)) {
                     val uri = Uri.parse(profile.profileImageUrl)
                     val publicUrl = storageService.uploadImage(uri, "profile_images")
-                    
                     if (publicUrl != null) {
                         updatedProfile = updatedProfile.copy(profileImageUrl = publicUrl)
                     } else {
-                        // If upload fails, fallback to keeping the original (or throwing an error)
                         _state.value = _state.value.copy(
-                            isSaving = false, 
+                            isSaving = false,
                             error = "Failed to upload profile photo. Please try again."
                         )
                         return@launch
                     }
                 }
 
-                repository.saveProfile(updatedProfile)
-                _state.value = _state.value.copy(
-                    isSaving = false, 
-                    saveSuccess = true, 
-                    profile = updatedProfile
+                // Upload any local verification/background photo URIs and collect public URLs
+                val verificationUrls = profile.verificationPhotoUrls.map { url ->
+                    if (storageService.isLocalUri(url)) {
+                        val uri = Uri.parse(url)
+                        storageService.uploadImage(uri, "verification_photos") ?: url
+                    } else {
+                        url
+                    }
+                }
+                updatedProfile = updatedProfile.copy(verificationPhotoUrls = verificationUrls)
+
+                val oldUsername = _state.value.profile?.username
+                val saveResult = repository.saveProfile(updatedProfile, oldUsername)
+                saveResult.fold(
+                    onSuccess = {
+                        _state.value = _state.value.copy(
+                            isSaving = false,
+                            saveSuccess = true,
+                            profile = updatedProfile
+                        )
+                    },
+                    onFailure = { e ->
+                        _state.value = _state.value.copy(
+                            isSaving = false,
+                            error = e.message ?: e.localizedMessage ?: "Failed to save profile"
+                        )
+                    }
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(isSaving = false, error = e.localizedMessage ?: "Failed to save profile")
+                _state.value = _state.value.copy(isSaving = false, error = e.message ?: e.localizedMessage ?: "Failed to save profile")
             }
         }
     }
