@@ -2,7 +2,7 @@ package com.quantax.gotogether.presentation.messages
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.domain.usecase.chat.GetChatroomsUseCase
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -16,9 +16,9 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MessagesViewModel @Inject constructor(
-    private val getChatroomsUseCase: GetChatroomsUseCase
+    private val getChatroomsUseCase: GetChatroomsUseCase,
+    private val authManager: AuthManager
 ) : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
 
     private val _state = MutableStateFlow(MessagesState())
     val state: StateFlow<MessagesState> = _state.asStateFlow()
@@ -34,7 +34,7 @@ class MessagesViewModel @Inject constructor(
     }
 
     private fun loadChatrooms() {
-        val uid = auth.currentUser?.uid
+        val uid = authManager.currentUser?.uid
         if (uid == null) {
             _state.update { it.copy(isLoading = false, error = "User not logged in") }
             return

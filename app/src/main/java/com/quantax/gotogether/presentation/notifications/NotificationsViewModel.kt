@@ -2,7 +2,7 @@ package com.quantax.gotogether.presentation.notifications
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.JoinRequestRepository
 import com.quantax.gotogether.data.repository.NotificationRepository
@@ -23,9 +23,9 @@ import javax.inject.Inject
 class NotificationsViewModel @Inject constructor(
     private val joinRequestRepository: JoinRequestRepository,
     private val chatRepository: ChatRepository,
-    private val notificationRepository: NotificationRepository
+    private val notificationRepository: NotificationRepository,
+    private val authManager: AuthManager
 ) : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
 
     private val _pendingRequests = MutableStateFlow<List<JoinRequest>>(emptyList())
     private val _generalNotifications = MutableStateFlow<List<Notification>>(emptyList())
@@ -69,7 +69,7 @@ class NotificationsViewModel @Inject constructor(
     }
 
     private fun loadRequestsAndNotifications() {
-        val uid = auth.currentUser?.uid
+        val uid = authManager.currentUser?.uid
         if (uid == null) {
             _isLoading.value = false
             _actionMessage.value = "User not logged in"
@@ -123,7 +123,7 @@ class NotificationsViewModel @Inject constructor(
     }
 
     private fun approveRequest(request: JoinRequest) {
-        val currentUser = auth.currentUser
+        val currentUser = authManager.currentUser
         if (currentUser == null) {
             _actionMessage.value = "User not logged in"
             return
@@ -173,7 +173,7 @@ class NotificationsViewModel @Inject constructor(
     }
 
     private fun denyRequest(request: JoinRequest) {
-        if (auth.currentUser == null) {
+        if (authManager.currentUser == null) {
             _actionMessage.value = "User not logged in"
             return
         }
@@ -204,7 +204,7 @@ class NotificationsViewModel @Inject constructor(
     }
 
     private fun markAllAsRead() {
-        val uid = auth.currentUser?.uid ?: return
+        val uid = authManager.currentUser?.uid ?: return
         viewModelScope.launch {
             try {
                 notificationRepository.markAllAsRead(uid)

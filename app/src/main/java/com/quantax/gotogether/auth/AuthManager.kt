@@ -15,12 +15,16 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.util.concurrent.TimeUnit
+import javax.inject.Inject
+import javax.inject.Singleton
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class AuthManager {
-
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
+@Singleton
+class AuthManager @Inject constructor(
+    private val auth: FirebaseAuth,
+    private val profileRepo: UserProfileRepository
+) {
     
     val currentUser get() = auth.currentUser
 
@@ -72,7 +76,6 @@ class AuthManager {
     private suspend fun ensureProfileExists() {
         try {
             val user = auth.currentUser ?: return
-            val profileRepo = UserProfileRepository()
 
             val existingProfileResult = profileRepo.getProfile(user.uid)
             val profile = existingProfileResult.getOrNull()

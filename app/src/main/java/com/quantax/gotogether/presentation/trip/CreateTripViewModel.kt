@@ -4,6 +4,8 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.data.repository.ChatRepository
+import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.Trip
@@ -37,9 +39,10 @@ data class CreateTripState(
 class CreateTripViewModel @Inject constructor(
     private val repository: TripRepository,
     private val userProfileRepository: UserProfileRepository,
-    private val chatRepository: com.quantax.gotogether.data.repository.ChatRepository
+    private val chatRepository: ChatRepository,
+    private val authManager: AuthManager,
+    private val storageService: StorageService
 ) : ViewModel() {
-    private val authManager = AuthManager()
     private val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
     private val _state = MutableStateFlow(CreateTripState())
@@ -124,7 +127,6 @@ class CreateTripViewModel @Inject constructor(
             // Handle image upload if a local URI was selected
             var finalImageUrl: String? = null
             if (currentState.selectedImageUri != null) {
-                val storageService = com.quantax.gotogether.data.repository.StorageService()
                 val uploadedUrl = storageService.uploadImage(currentState.selectedImageUri, "trip_images")
                 if (uploadedUrl != null) {
                     finalImageUrl = uploadedUrl

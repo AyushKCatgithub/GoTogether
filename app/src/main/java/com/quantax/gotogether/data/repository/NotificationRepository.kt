@@ -7,8 +7,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class NotificationRepository {
-    private val firestore = FirebaseFirestore.getInstance()
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class NotificationRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
     private val notificationsCollection = firestore.collection("notifications")
 
     suspend fun createNotification(notification: Notification): Result<Unit> {

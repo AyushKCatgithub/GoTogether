@@ -3,7 +3,7 @@ package com.quantax.gotogether.presentation.profile
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.UserProfile
@@ -32,9 +32,9 @@ sealed class ProfileEvent {
 @HiltViewModel
 class ProfileViewModel @Inject constructor(
     private val repository: UserProfileRepository,
-    private val storageService: StorageService
+    private val storageService: StorageService,
+    private val authManager: AuthManager
 ) : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
 
     private val _state = MutableStateFlow(ProfileState())
     val state: StateFlow<ProfileState> = _state.asStateFlow()
@@ -53,7 +53,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     private fun loadProfile() {
-        val user = auth.currentUser
+        val user = authManager.currentUser
         if (user == null) {
             _state.value = _state.value.copy(error = "User not logged in", isLoading = false)
             return
@@ -83,7 +83,7 @@ class ProfileViewModel @Inject constructor(
     }
 
     private fun saveProfile(profile: UserProfile) {
-        val user = auth.currentUser
+        val user = authManager.currentUser
         if (user == null) {
             _state.value = _state.value.copy(error = "User not logged in", isSaving = false)
             return
@@ -130,6 +130,6 @@ class ProfileViewModel @Inject constructor(
     }
 
     private fun signOut() {
-        auth.signOut()
+        authManager.signOut()
     }
 }

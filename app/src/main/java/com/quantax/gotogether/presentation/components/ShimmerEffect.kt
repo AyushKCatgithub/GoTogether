@@ -1,8 +1,23 @@
 package com.quantax.gotogether.presentation.components
 
-import androidx.compose.animation.core.*
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -231,37 +246,86 @@ fun MessageShimmerItem() {
 @Composable
 fun TripDetailShimmer() {
     Column(
-        modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.background)
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Color.White)
+            .padding(16.dp)
     ) {
+        // Hero Image Card Shimmer
         ShimmerAnimation(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(320.dp),
-            shape = RoundedCornerShape(bottomStart = 32.dp, bottomEnd = 32.dp)
+                .height(380.dp),
+            shape = RoundedCornerShape(24.dp)
         )
+
         Spacer(modifier = Modifier.height(24.dp))
 
-        Column(modifier = Modifier.padding(horizontal = 24.dp)) {
-            ShimmerAnimation(modifier = Modifier.fillMaxWidth(0.7f).height(32.dp))
-            Spacer(modifier = Modifier.height(12.dp))
-            ShimmerAnimation(modifier = Modifier.fillMaxWidth(0.4f).height(18.dp))
-            
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            // Host Section
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                ShimmerAnimation(modifier = Modifier.size(56.dp), shape = CircleShape)
-                Spacer(modifier = Modifier.width(16.dp))
-                Column {
-                    ShimmerAnimation(modifier = Modifier.width(100.dp).height(18.dp))
-                    Spacer(modifier = Modifier.height(6.dp))
-                    ShimmerAnimation(modifier = Modifier.width(60.dp).height(14.dp))
-                }
-            }
-
-            Spacer(modifier = Modifier.height(32.dp))
-            
-            ShimmerAnimation(modifier = Modifier.fillMaxWidth().height(100.dp), shape = RoundedCornerShape(20.dp))
+        // Title and Pricing Row Shimmer
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.Top
+        ) {
+            ShimmerAnimation(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(32.dp),
+                shape = RoundedCornerShape(8.dp)
+            )
+            Spacer(modifier = Modifier.width(32.dp))
+            ShimmerAnimation(
+                modifier = Modifier
+                    .width(80.dp)
+                    .height(32.dp),
+                shape = RoundedCornerShape(8.dp)
+            )
         }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Location Info Shimmer
+        ShimmerAnimation(
+            modifier = Modifier
+                .width(160.dp)
+                .height(18.dp),
+            shape = RoundedCornerShape(4.dp)
+        )
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        // Central Status Card Shimmer
+        ShimmerAnimation(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(80.dp),
+            shape = RoundedCornerShape(20.dp)
+        )
+
+        Spacer(modifier = Modifier.height(32.dp))
+
+        // Description Shimmer
+        ShimmerAnimation(
+            modifier = Modifier
+                .width(120.dp)
+                .height(24.dp),
+            shape = RoundedCornerShape(4.dp)
+        )
+        Spacer(modifier = Modifier.height(12.dp))
+        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            ShimmerAnimation(modifier = Modifier.fillMaxWidth().height(14.dp))
+            ShimmerAnimation(modifier = Modifier.fillMaxWidth().height(14.dp))
+            ShimmerAnimation(modifier = Modifier.fillMaxWidth(0.6f).height(14.dp))
+        }
+
+        Spacer(modifier = Modifier.weight(1f))
+
+        // Booking Button Shimmer
+        ShimmerAnimation(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp)
+        )
     }
 }

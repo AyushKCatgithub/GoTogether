@@ -4,8 +4,13 @@ import com.google.firebase.firestore.FirebaseFirestore
 import com.quantax.gotogether.domain.model.UserProfile
 import kotlinx.coroutines.tasks.await
 
-class UserProfileRepository {
-    private val firestore = FirebaseFirestore.getInstance()
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class UserProfileRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
     private val usersCollection = firestore.collection("users")
 
     suspend fun getProfile(uid: String): Result<UserProfile?> {
@@ -26,6 +31,25 @@ class UserProfileRepository {
         return try {
             usersCollection.document(profile.uid).set(profile).await()
             Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getProfiles(uids: List<String>): Result<List<UserProfile>> {
+        if (uids.isEmpty()) return Result.success(emptyList())
+        
+        return try {
+            val profiles = mutableListOf<UserProfile>()
+            // Firestore whereIn supports up to 30 items
+            uids.distinct().chunked(30).forEach { chunk ->
+                val snapshot = usersCollection
+                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
+                    .get()
+                    .await()
+                profiles.addAll(snapshot.toObjects(UserProfile::class.java))
+            }
+            Result.success(profiles)
         } catch (e: Exception) {
             Result.failure(e)
         }

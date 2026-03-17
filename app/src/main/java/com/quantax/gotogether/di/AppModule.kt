@@ -1,5 +1,10 @@
 package com.quantax.gotogether.di
 
+import com.google.firebase.auth.FirebaseAuth
+import com.google.firebase.database.FirebaseDatabase
+import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.storage.FirebaseStorage
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.JoinRequestRepository
 import com.quantax.gotogether.data.repository.NotificationRepository
@@ -18,37 +23,59 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTripRepository(): TripRepository {
-        return TripRepository()
+    fun provideFirestore(): FirebaseFirestore = FirebaseFirestore.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseAuth(): FirebaseAuth = FirebaseAuth.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseDatabase(): FirebaseDatabase = FirebaseDatabase.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideTripRepository(firestore: FirebaseFirestore): TripRepository {
+        return TripRepository(firestore)
     }
 
     @Provides
     @Singleton
-    fun provideChatRepository(): ChatRepository {
-        return ChatRepository()
+    fun provideChatRepository(firestore: FirebaseFirestore, database: FirebaseDatabase): ChatRepository {
+        return ChatRepository(firestore, database)
     }
 
     @Provides
     @Singleton
-    fun provideJoinRequestRepository(): JoinRequestRepository {
-        return JoinRequestRepository()
+    fun provideJoinRequestRepository(firestore: FirebaseFirestore): JoinRequestRepository {
+        return JoinRequestRepository(firestore)
     }
 
     @Provides
     @Singleton
-    fun provideNotificationRepository(): NotificationRepository {
-        return NotificationRepository()
+    fun provideNotificationRepository(firestore: FirebaseFirestore): NotificationRepository {
+        return NotificationRepository(firestore)
     }
 
     @Provides
     @Singleton
-    fun provideStorageService(): StorageService {
-        return StorageService()
+    fun provideStorageService(storage: FirebaseStorage, auth: FirebaseAuth): StorageService {
+        return StorageService(storage, auth)
     }
 
     @Provides
     @Singleton
-    fun provideUserProfileRepository(): UserProfileRepository {
-        return UserProfileRepository()
+    fun provideUserProfileRepository(firestore: FirebaseFirestore): UserProfileRepository {
+        return UserProfileRepository(firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideAuthManager(auth: FirebaseAuth, profileRepo: UserProfileRepository): AuthManager {
+        return AuthManager(auth, profileRepo)
     }
 }

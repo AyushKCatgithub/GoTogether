@@ -6,9 +6,14 @@ import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.domain.model.Trip
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
-import java.util.*
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
@@ -36,9 +41,8 @@ class HomeViewModel @Inject constructor(
     private val _searchGroupSize = MutableStateFlow(0)
     val searchGroupSize = _searchGroupSize.asStateFlow()
 
-    private val _locationText = MutableStateFlow("Search journeys...")
-    
-    private val _homeError = MutableStateFlow<String?>(null)
+    private val _locationText = MutableStateFlow("Detecting location...")
+    private val _currentCity = MutableStateFlow<String?>(null)
 
     // Main state combining trips and filters
     val state: StateFlow<HomeState> = combine(
@@ -49,7 +53,7 @@ class HomeViewModel @Inject constructor(
         _searchBudget,
         _searchGroupSize,
         _locationText,
-        _homeError
+        _currentCity,
     ) { args: Array<Any?> ->
         val trips = args[0] as? List<Trip>
         val query = args[1] as String
@@ -58,20 +62,30 @@ class HomeViewModel @Inject constructor(
         val budget = args[4] as String
         val size = args[5] as Int
         val loc = args[6] as String
-        val error = args[7] as String?
+        val currentCity = args[7] as String?
 
-        if (error != null) return@combine HomeState.Error(error)
         if (trips == null) return@combine HomeState.Loading
-
-        val filtered = trips.filter { trip ->
-            trip.matchesFilter(query, from, to, budget, size)
-        }
 
         val displayTitle = when {
             from.isNotBlank() && to.isNotBlank() -> "$from → $to"
             from.isNotBlank() -> "$from → Anywhere"
             to.isNotBlank() -> "Anywhere → $to"
-            else -> loc
+            loc != "Detecting location..." && loc != "Location permission denied" -> loc
+            else -> "Search journeys..."
+        }
+
+        // Sort trips by current location if no specific 'from' filter is applied
+        val sortedTrips = if (from.isBlank() && _currentCity.value != null) {
+            val current = _currentCity.value!!
+            trips.sortedWith(compareByDescending<Trip> { 
+                it.startingLocation.contains(current, ignoreCase = true) || current.contains(it.startingLocation, ignoreCase = true)
+            }.thenByDescending { it.createdAt })
+        } else {
+            trips
+        }
+
+        val filtered = sortedTrips.filter { trip ->
+            trip.matchesFilter(query, from, to, budget, size)
         }
 
         HomeState.Success(filtered, displayTitle)
@@ -91,10 +105,9 @@ class HomeViewModel @Inject constructor(
             repository.getTrips().fold(
                 onSuccess = { trips ->
                     _allTrips.value = trips
-                    _homeError.value = null
                 },
                 onFailure = { error ->
-                    _homeError.value = error.message ?: "Failed to fetch trips"
+
                 }
             )
             _isRefreshing.value = false
@@ -118,13 +131,18 @@ class HomeViewModel @Inject constructor(
         // combine handles this reactively now
     }
 
-    fun updateLocationText(text: String) {
+    fun updateLocationText(text: String, cityOnly: String? = null) {
         _locationText.value = text
+        cityOnly?.let { _currentCity.value = it }
     }
 
     private fun Trip.matchesFilter(query: String, from: String, to: String, budget: String, size: Int): Boolean {
-        val matchesFrom = from.isEmpty() || startingLocation.contains(from, ignoreCase = true)
-        val matchesTo = to.isEmpty() || destination.contains(to, ignoreCase = true)
+        val matchesFrom = from.isEmpty() || 
+                startingLocation.contains(from.split(",")[0].trim(), ignoreCase = true) || 
+                from.contains(startingLocation, ignoreCase = true)
+        val matchesTo = to.isEmpty() || 
+                destination.contains(to.split(",")[0].trim(), ignoreCase = true) || 
+                to.contains(destination, ignoreCase = true)
         val matchesSearch = query.isEmpty() || (
             destination.contains(query, ignoreCase = true) ||
             startingLocation.contains(query, ignoreCase = true) ||

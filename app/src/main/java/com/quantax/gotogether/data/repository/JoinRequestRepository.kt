@@ -8,8 +8,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
-class JoinRequestRepository {
-    private val firestore = FirebaseFirestore.getInstance()
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class JoinRequestRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
     private val requestsCollection = firestore.collection("join_requests")
     private val tripsCollection = firestore.collection("trips")
 

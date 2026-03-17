@@ -2,13 +2,13 @@ package com.quantax.gotogether.navigation
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.presentation.auth.AuthViewModel
 import com.quantax.gotogether.presentation.auth.OtpVerificationScreen
 import com.quantax.gotogether.presentation.auth.SignInScreen
 import com.quantax.gotogether.presentation.main.MainScreen
@@ -24,15 +24,14 @@ fun GoTogetherNavGraph(
     navController: NavHostController,
     context: Context
 ) {
-    val authManager = remember { AuthManager() }
-
     NavHost(
         navController = navController,
         startDestination = Routes.Splash.route
     ) {
         composable(Routes.Splash.route) {
+            val authViewModel: AuthViewModel = hiltViewModel()
             SplashScreen {
-                val destination = if (authManager.isLoggedIn()) {
+                val destination = if (authViewModel.isLoggedIn()) {
                     Routes.Main.route
                 } else {
                     Routes.SignIn.route
@@ -45,7 +44,6 @@ fun GoTogetherNavGraph(
 
         composable(Routes.SignIn.route) {
             SignInScreen(
-                authManager = authManager,
                 onNavigateToOtp = { vId, phone ->
                     navController.navigate(Routes.Otp.createRoute(vId, phone))
                 },
@@ -69,7 +67,6 @@ fun GoTogetherNavGraph(
             OtpVerificationScreen(
                 verificationId = vId,
                 phoneNumber = phone,
-                authManager = authManager,
                 onNavigateBack = { navController.popBackStack() },
                 onAuthSuccess = {
                     navController.navigate(Routes.Main.route) {

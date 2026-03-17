@@ -46,7 +46,7 @@ object PermissionUtils {
 
     fun fetchLocation(
         context: Context,
-        onAddressFetched: (String) -> Unit,
+        onLocationDetailsFetched: (String, String?) -> Unit,
         onError: (String) -> Unit
     ) {
         if (!hasLocationPermission(context)) {
@@ -58,7 +58,7 @@ object PermissionUtils {
             val fusedLocationClient = LocationServices.getFusedLocationProviderClient(context)
             fusedLocationClient.lastLocation.addOnSuccessListener { location ->
                 if (location != null) {
-                    reverseGeocode(context, location.latitude, location.longitude, onAddressFetched, onError)
+                    reverseGeocode(context, location.latitude, location.longitude, onLocationDetailsFetched, onError)
                 } else {
                     onError("Unable to get current location")
                 }
@@ -74,7 +74,7 @@ object PermissionUtils {
         context: Context,
         lat: Double,
         lon: Double,
-        onAddressFetched: (String) -> Unit,
+        onLocationDetailsFetched: (String, String?) -> Unit,
         onError: (String) -> Unit
     ) {
         try {
@@ -82,12 +82,18 @@ object PermissionUtils {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
                 geocoder.getFromLocation(lat, lon, 1) { addresses ->
                     val address = addresses.firstOrNull()
-                    onAddressFetched(formatAddress(address?.locality, address?.countryName))
+                    onLocationDetailsFetched(
+                        formatAddress(address?.locality, address?.countryName),
+                        address?.locality
+                    )
                 }
             } else {
                 @Suppress("DEPRECATION")
                 val address = geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()
-                onAddressFetched(formatAddress(address?.locality, address?.countryName))
+                onLocationDetailsFetched(
+                    formatAddress(address?.locality, address?.countryName),
+                    address?.locality
+                )
             }
         } catch (e: Exception) {
             onError("Geocoder error: ${e.message}")

@@ -2,7 +2,7 @@ package com.quantax.gotogether.presentation.chat
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.ChatMessage
@@ -17,9 +17,9 @@ import javax.inject.Inject
 @HiltViewModel
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
-    private val userProfileRepository: UserProfileRepository
+    private val userProfileRepository: UserProfileRepository,
+    private val authManager: AuthManager
 ) : ViewModel() {
-    private val auth: FirebaseAuth by lazy { FirebaseAuth.getInstance() }
 
     private val _messages = MutableStateFlow<List<ChatMessage>>(emptyList())
     val messages: StateFlow<List<ChatMessage>> = _messages.asStateFlow()
@@ -41,9 +41,9 @@ class ChatViewModel @Inject constructor(
             _isLoading.value = true
 
             // Load current user profile
-            val uid = auth.currentUser?.uid ?: return@launch
+            val uid = authManager.currentUser?.uid ?: return@launch
             userProfileRepository.getProfile(uid).onSuccess { profile ->
-                currentUserName = profile?.name ?: (auth.currentUser?.displayName ?: "User")
+                currentUserName = profile?.name ?: (authManager.currentUser?.displayName ?: "User")
                 currentUserImageUrl = profile?.profileImageUrl
             }
 
@@ -62,7 +62,7 @@ class ChatViewModel @Inject constructor(
 
     fun sendMessage(chatroomId: String, text: String) {
         if (text.isBlank()) return
-        val uid = auth.currentUser?.uid ?: return
+        val uid = authManager.currentUser?.uid ?: return
 
         viewModelScope.launch {
             val message = ChatMessage(
@@ -83,5 +83,5 @@ class ChatViewModel @Inject constructor(
         _errorMessage.value = null
     }
 
-    fun getCurrentUserId(): String = auth.currentUser?.uid ?: ""
+    fun getCurrentUserId(): String = authManager.currentUser?.uid ?: ""
 }

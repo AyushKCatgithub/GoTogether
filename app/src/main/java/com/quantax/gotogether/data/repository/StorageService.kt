@@ -6,9 +6,14 @@ import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
-class StorageService {
-    private val storage = FirebaseStorage.getInstance()
-    private val auth = FirebaseAuth.getInstance()
+import javax.inject.Inject
+import javax.inject.Singleton
+
+@Singleton
+class StorageService @Inject constructor(
+    private val storage: FirebaseStorage,
+    private val auth: FirebaseAuth
+) {
 
     /**
      * Uploads an image URI to Firebase Storage and returns the public download URL.

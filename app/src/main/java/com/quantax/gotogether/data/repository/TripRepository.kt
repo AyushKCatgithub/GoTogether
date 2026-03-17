@@ -1,48 +1,61 @@
 package com.quantax.gotogether.data.repository
 
+import com.google.firebase.firestore.FieldPath
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.quantax.gotogether.domain.model.Trip
+import com.quantax.gotogether.domain.model.UserProfile
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class TripRepository {
-    private val firestore = FirebaseFirestore.getInstance()
+@Singleton
+class TripRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
     private val tripsCollection = firestore.collection("trips")
+    private val usersCollection = firestore.collection("users")
 
     suspend fun getTrips(): Result<List<Trip>> {
         return try {
             val snapshot = tripsCollection
-                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(50)
                 .get()
                 .await()
             val trips = snapshot.toObjects(Trip::class.java)
 
-            // Fetch host profiles by document ID to get current profile images
+            if (trips.isEmpty()) return Result.success(emptyList())
+
+            // Optimize: Fetch host profiles in batches (Firestore 'whereIn' supports up to 30 items)
             val hostIds = trips.map { it.hostId }.distinct().filter { it.isNotBlank() }
-            val hostProfiles = mutableMapOf<String, com.quantax.gotogether.domain.model.UserProfile>()
-            val usersCollection = firestore.collection("users")
-            hostIds.forEach { uid ->
-                try {
-                    val doc = usersCollection.document(uid).get().await()
-                    val profile = doc.toObject(com.quantax.gotogether.domain.model.UserProfile::class.java)
-                    if (profile != null) {
-                        hostProfiles[profile.uid] = profile
+            val hostProfiles = mutableMapOf<String, UserProfile>()
+
+            if (hostIds.isNotEmpty()) {
+                // Process in chunks of 30 (Firestore limit for whereIn)
+                hostIds.chunked(30).forEach { chunk ->
+                    try {
+                        val usersSnapshot = usersCollection
+                            .whereIn(FieldPath.documentId(), chunk)
+                            .get()
+                            .await()
+                        usersSnapshot.toObjects(UserProfile::class.java).forEach { profile ->
+                            hostProfiles[profile.uid] = profile
+                        }
+                    } catch (e: Exception) {
+                        // Log or handle individual chunk failure if needed, otherwise continue
                     }
-                } catch (_: Exception) {
-                    // Skip if individual profile fetch fails
                 }
             }
 
-            // Override hostImageUrl and hostVerified with live data
+            // Map trips with live host data
             val updatedTrips = trips.map { trip ->
-                val hostProfile = hostProfiles[trip.hostId]
-                if (hostProfile != null) {
-                    trip.copy(
-                        hostImageUrl = hostProfile.profileImageUrl.ifBlank { trip.hostImageUrl },
-                        hostVerified = hostProfile.isVerified
-                    )
-                } else {
-                    trip
-                }
+                val profile = hostProfiles[trip.hostId]
+                trip.copy(
+                    hostName = profile?.name ?: trip.hostName,
+                    hostImageUrl = profile?.profileImageUrl?.takeIf { it.isNotBlank() } ?: trip.hostImageUrl,
+                    hostVerified = profile?.isVerified ?: trip.hostVerified
+                )
             }
 
             Result.success(updatedTrips)
@@ -52,24 +65,30 @@ class TripRepository {
     }
 
     suspend fun createTrip(trip: Trip): Result<String> {
+        if (trip.title.isBlank() || trip.destination.isBlank()) {
+            return Result.failure(IllegalArgumentException("Title and destination are required"))
+        }
+
         return try {
-            val documentRef = tripsCollection.document()
-            val newTrip = trip.copy(id = documentRef.id)
-            documentRef.set(newTrip).await()
-            Result.success(newTrip.id)
+            val docRef = tripsCollection.document()
+            val finalTrip = trip.copy(id = docRef.id)
+            docRef.set(finalTrip).await()
+            Result.success(finalTrip.id)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
     suspend fun getUserTrips(userId: String): Result<List<Trip>> {
+        if (userId.isBlank()) return Result.failure(IllegalArgumentException("User ID cannot be blank"))
+        
         return try {
             val snapshot = tripsCollection
                 .whereEqualTo("hostId", userId)
+                .orderBy("createdAt", Query.Direction.DESCENDING) // Requires index if filtering by hostId
                 .get()
                 .await()
             val trips = snapshot.toObjects(Trip::class.java)
-                .sortedByDescending { it.createdAt }
             Result.success(trips)
         } catch (e: Exception) {
             Result.failure(e)
@@ -77,6 +96,8 @@ class TripRepository {
     }
 
     suspend fun deleteTrip(tripId: String): Result<Unit> {
+        if (tripId.isBlank()) return Result.failure(IllegalArgumentException("Trip ID cannot be blank"))
+
         return try {
             tripsCollection.document(tripId).delete().await()
             Result.success(Unit)
@@ -86,9 +107,11 @@ class TripRepository {
     }
 
     suspend fun getTripById(tripId: String): Result<Trip?> {
+        if (tripId.isBlank()) return Result.success(null)
+
         return try {
-            val snapshot = tripsCollection.document(tripId).get().await()
-            val trip = snapshot.toObject(Trip::class.java)
+            val doc = tripsCollection.document(tripId).get().await()
+            val trip = doc.toObject(Trip::class.java)
             Result.success(trip)
         } catch (e: Exception) {
             Result.failure(e)

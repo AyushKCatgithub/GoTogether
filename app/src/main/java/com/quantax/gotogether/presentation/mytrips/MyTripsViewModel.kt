@@ -2,7 +2,7 @@ package com.quantax.gotogether.presentation.mytrips
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.TripRepository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -14,15 +14,15 @@ import javax.inject.Inject
 
 @HiltViewModel
 class MyTripsViewModel @Inject constructor(
-    private val repository: TripRepository
+    private val repository: TripRepository,
+    private val authManager: AuthManager
 ) : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
 
     private val _state = MutableStateFlow(MyTripsState())
     val state: StateFlow<MyTripsState> = _state.asStateFlow()
 
     fun loadMyTrips() {
-        val user = auth.currentUser
+        val user = authManager.currentUser
         if (user == null) {
             _state.value = _state.value.copy(error = "User not logged in")
             return

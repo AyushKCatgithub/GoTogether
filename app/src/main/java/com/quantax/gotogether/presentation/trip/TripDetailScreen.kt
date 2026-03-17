@@ -1,16 +1,22 @@
 package com.quantax.gotogether.presentation.trip
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -20,27 +26,34 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.AttachMoney
-import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.Flag
+import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.ErrorOutline
+import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Groups
-import androidx.compose.material.icons.filled.Landscape
+import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.Map
+import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.filled.Route
+import androidx.compose.material.icons.filled.Schedule
+import androidx.compose.material.icons.filled.Share
+import androidx.compose.material.icons.filled.Shield
+import androidx.compose.material.icons.filled.StarBorder
+import androidx.compose.material.icons.filled.Upload
+import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TopAppBar
-import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
@@ -51,29 +64,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.zIndex
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
-import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.JoinRequest
-import com.quantax.gotogether.presentation.components.ShimmerAnimation
 import com.quantax.gotogether.presentation.components.TripDetailShimmer
 import com.quantax.gotogether.ui.theme.AccentBlue
-import com.quantax.gotogether.ui.theme.AccentGreen
-import com.quantax.gotogether.ui.theme.AccentPurple
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.VerifiedCyan
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun TripDetailScreen(
     tripId: String,
@@ -82,13 +93,15 @@ fun TripDetailScreen(
     onNavigateToPublicProfile: (String) -> Unit = {},
     viewModel: TripDetailViewModel = hiltViewModel()
 ) {
-    val trip by viewModel.trip.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
-    val isHost by viewModel.isHost.collectAsState()
-    val requestStatus by viewModel.requestStatus.collectAsState()
+    val state by viewModel.state.collectAsState()
     val actionMessage by viewModel.actionMessage.collectAsState()
-
     val snackbarHostState = remember { SnackbarHostState() }
+    val context = LocalContext.current
+    val scrollState = rememberScrollState()
+
+    BackHandler {
+        onNavigateBack()
+    }
 
     LaunchedEffect(tripId) {
         viewModel.loadTrip(tripId)
@@ -102,428 +115,774 @@ fun TripDetailScreen(
     }
 
     Scaffold(
-        containerColor = GoTogetherTheme.colors.background,
+        containerColor = Color.White,
         snackbarHost = { SnackbarHost(snackbarHostState) },
-        topBar = {
-            TopAppBar(
-                title = { Text("Trip Details", fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = GoTogetherTheme.colors.textPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-            )
+        bottomBar = {
+            if (state is TripDetailState.Success) {
+                val successState = state as TripDetailState.Success
+                ActionBottomBar(
+                    isHost = successState.isHost,
+                    requestStatus = successState.requestStatus,
+                    onJoinClick = { viewModel.requestToJoin() },
+                    onChatClick = { onNavigateToChatroom(successState.trip.id) }
+                )
+            }
         }
     ) { paddingValues ->
-        if (isLoading && trip == null) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-            ) {
-                TripDetailShimmer()
-            }
-        } else if (trip != null) {
-            val t = trip!!
-            Column(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(paddingValues)
-                    .verticalScroll(rememberScrollState())
-            ) {
-                // Hero Image
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(280.dp)
-                ) {
-                    SubcomposeAsyncImage(
-                        model = ImageRequest.Builder(LocalContext.current)
-                            .data(t.imageUrl)
-                            .crossfade(true)
-                            .diskCachePolicy(CachePolicy.ENABLED)
-                            .memoryCachePolicy(CachePolicy.ENABLED)
-                            .build(),
-                        contentDescription = "Trip Image",
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)),
-                        loading = {
-                            ShimmerAnimation(
-                                modifier = Modifier.fillMaxSize(),
-                                shape = RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(paddingValues)
+        ) {
+            // Content
+            when (val currentState = state) {
+                is TripDetailState.Loading -> {
+                    TripDetailShimmer()
+                }
+
+                is TripDetailState.Error -> {
+                    ErrorState(
+                        message = currentState.message,
+                        onRetry = { viewModel.loadTrip(tripId) })
+                }
+
+                is TripDetailState.Success -> {
+                    val trip = currentState.trip
+                    val shareTrip = {
+                        val sendIntent = android.content.Intent().apply {
+                            action = android.content.Intent.ACTION_SEND
+                            putExtra(
+                                android.content.Intent.EXTRA_TEXT,
+                                "Join me for '${trip.title}' in ${trip.destination}! Check it out on GoTogether."
                             )
-                        },
-                        error = {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.linearGradient(listOf(GoTogetherTheme.colors.surface, GoTogetherTheme.colors.surfaceVariant))
-                                    ),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    Icons.Filled.Landscape,
-                                    contentDescription = null,
-                                    tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f),
-                                    modifier = Modifier.size(64.dp)
-                                )
-                            }
+                            type = "text/plain"
                         }
-                    )
-                    
-                    // Gradient overlay
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(140.dp)
-                            .align(Alignment.BottomCenter)
-                            .clip(RoundedCornerShape(bottomStart = 24.dp, bottomEnd = 24.dp))
-                            .background(
-                                Brush.verticalGradient(
-                                    colors = listOf(Color.Transparent, Color.Black.copy(alpha = 0.75f))
-                                )
+                        context.startActivity(
+                            android.content.Intent.createChooser(
+                                sendIntent,
+                                null
                             )
-                    )
-
-                    // Trip title + dates on image
-                    Column(
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(20.dp)
-                    ) {
-                        Text(
-                            text = "${t.startingLocation} to ${t.destination}",
-                            fontSize = 22.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = Color.White,
-                            lineHeight = 28.sp
-                        )
-                        Spacer(modifier = Modifier.height(4.dp))
-                        Text(
-                            text = "${t.startDate} - ${t.endDate}",
-                            fontSize = 14.sp,
-                            color = Color.White.copy(alpha = 0.85f),
-                            fontWeight = FontWeight.Medium
                         )
                     }
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Host Card
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp)
-                        .clickable { onNavigateToPublicProfile(t.hostId) },
-                    shape = RoundedCornerShape(16.dp),
-                    colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card)
-                ) {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        SubcomposeAsyncImage(
-                            model = ImageRequest.Builder(LocalContext.current)
-                                .data(t.hostImageUrl ?: "https://ui-avatars.com/api/?name=${t.hostName}&background=E8632B&color=fff&size=80")
-                                .crossfade(true)
-                                .diskCachePolicy(CachePolicy.ENABLED)
-                                .memoryCachePolicy(CachePolicy.ENABLED)
-                                .build(),
-                            contentDescription = "Host Avatar",
-                            modifier = Modifier
-                                .size(48.dp)
-                                .clip(CircleShape)
-                                .border(2.dp, GoTogetherOrange, CircleShape),
-                            contentScale = ContentScale.Crop,
-                            loading = {
-                                ShimmerAnimation(
-                                    modifier = Modifier.fillMaxSize(),
-                                    shape = CircleShape
-                                )
-                            },
-                            error = {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(GoTogetherOrange, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        t.hostName.take(1).uppercase(),
-                                        color = Color.White,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        )
-                        Spacer(modifier = Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = if (isHost) "You're the Host" else "Hosted by ${t.hostName}",
-                                color = GoTogetherTheme.colors.textPrimary,
-                                fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp
-                            )
-                            Spacer(modifier = Modifier.height(4.dp))
-                            if (t.hostVerified) {
-                                Row(
-                                    modifier = Modifier
-                                        .background(VerifiedCyan.copy(alpha = 0.12f), RoundedCornerShape(50))
-                                        .padding(horizontal = 10.dp, vertical = 3.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Icon(Icons.Default.CheckCircle, "Verified", tint = VerifiedCyan, modifier = Modifier.size(13.dp))
-                                    Spacer(modifier = Modifier.width(4.dp))
-                                    Text("Verified Host", color = VerifiedCyan, fontSize = 11.sp, fontWeight = FontWeight.Bold)
-                                }
-                            } else {
-                                Text("Host", color = GoTogetherTheme.colors.textSecondary, fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // About This Trip
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(
-                        text = "About This Trip",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GoTogetherTheme.colors.textPrimary
+                    TripDetailContent(
+                        trip = trip,
+                        isHost = currentState.isHost,
+                        requestStatus = currentState.requestStatus,
+                        members = currentState.membersList,
+                        scrollState = scrollState,
+                        onBackClick = onNavigateBack,
+                        onShareClick = shareTrip,
+                        onProfileClick = { onNavigateToPublicProfile(it) },
+                        paddingValues = paddingValues
                     )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = t.description.ifBlank { "No description provided." },
-                        fontSize = 15.sp,
-                        color = GoTogetherTheme.colors.textPrimary,
-                        lineHeight = 24.sp
-                    )
-                }
 
-                Spacer(modifier = Modifier.height(20.dp))
-
-                // Trip Info Cards
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    TripInfoRow(
-                        icon = Icons.Default.AttachMoney,
-                        label = "Budget",
-                        value = t.budgetRange.ifBlank { "Not specified" }
-                    )
-                    TripInfoRow(
-                        icon = Icons.Default.LocationOn,
-                        label = "From",
-                        value = t.startingLocation.ifBlank { "Not specified" }
-                    )
-                    TripInfoRow(
-                        icon = Icons.Default.Flag,
-                        label = "To",
-                        value = t.destination.ifBlank { "Not specified" }
-                    )
-                    TripInfoRow(
-                        icon = Icons.Default.Groups,
-                        label = "Group Size",
-                        value = "${t.joinedCount}/${t.groupSize} travelers"
-                    )
-                }
-
-                // Interests
-                if (t.interests.isNotEmpty()) {
-                    Spacer(modifier = Modifier.height(20.dp))
-                    Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                        Text(
-                            text = "Interests",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = GoTogetherTheme.colors.textPrimary
-                        )
-                        Spacer(modifier = Modifier.height(12.dp))
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            t.interests.forEach { tag ->
-                                Box(
-                                    modifier = Modifier
-                                        .background(
-                                            GoTogetherOrange.copy(alpha = 0.1f),
-                                            RoundedCornerShape(50)
-                                        )
-                                        .border(1.dp, GoTogetherOrange.copy(alpha = 0.3f), RoundedCornerShape(50))
-                                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                                ) {
-                                    Text(tag, color = GoTogetherOrangeLight, fontSize = 13.sp, fontWeight = FontWeight.Medium)
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // Travelers Joining section
-                Spacer(modifier = Modifier.height(24.dp))
-                Column(modifier = Modifier.padding(horizontal = 16.dp)) {
-                    Text(
-                        text = "Travelers Joining (${t.joinedCount})",
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GoTogetherTheme.colors.textPrimary
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    if (t.joinedCount > 0) {
-                        Row(horizontalArrangement = Arrangement.spacedBy((-8).dp)) {
-                            repeat(minOf(t.joinedCount, 5)) { idx ->
-                                Box(
-                                    modifier = Modifier
-                                        .size(40.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            listOf(
-                                                GoTogetherOrange,
-                                                AccentBlue,
-                                                AccentPurple,
-                                                AccentGreen,
-                                                VerifiedCyan
-                                            )[idx % 5],
-                                            CircleShape
-                                        )
-                                        .border(2.dp, GoTogetherTheme.colors.background, CircleShape),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        "${idx + 1}",
-                                        color = Color.White,
-                                        fontSize = 14.sp,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "${t.joinedCount} people have already joined this trip.",
-                            color = GoTogetherTheme.colors.textSecondary,
-                            fontSize = 13.sp
-                        )
-                    } else {
-                        Text(
-                            text = "Be the first to join this trip!",
-                            color = GoTogetherTheme.colors.textSecondary,
-                            fontSize = 14.sp
+                    // Floating Top Header (Sticky)
+                    val headerAlpha = (scrollState.value.toFloat() / 300f).coerceIn(0f, 1f)
+                    if (headerAlpha > 0.1f) {
+                        FloatingHeader(
+                            title = trip.title.ifBlank { trip.destination },
+                            alpha = headerAlpha,
+                            backgroundColor = Color.White,
+                            onBackClick = onNavigateBack,
+                            onShareClick = shareTrip
                         )
                     }
                 }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                // Action Buttons Area
-                if (isHost || requestStatus == JoinRequest.STATUS_APPROVED) {
-                    Button(
-                        onClick = { onNavigateToChatroom(t.id) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentBlue),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(Icons.AutoMirrored.Filled.Chat, contentDescription = null, tint = Color.White, modifier = Modifier.size(20.dp))
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Open Trip Chat", color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                    }
-                } else {
-                    // "Request to Join" flow for non-hosts
-                    Button(
-                        onClick = { viewModel.requestToJoin() },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp)
-                            .height(56.dp),
-                        colors = ButtonDefaults.buttonColors(
-                            containerColor = if (requestStatus == JoinRequest.STATUS_PENDING) GoTogetherTheme.colors.surfaceVariant else GoTogetherOrange,
-                            disabledContainerColor = GoTogetherTheme.colors.surfaceVariant
-                        ),
-                        shape = RoundedCornerShape(16.dp),
-                        enabled = requestStatus == "NONE" && !isLoading
-                    ) {
-                        if (isLoading) {
-                            CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp), strokeWidth = 2.dp)
-                        } else {
-                            Text(
-                                text = when (requestStatus) {
-                                    JoinRequest.STATUS_PENDING -> "Request Pending"
-                                    JoinRequest.STATUS_DENIED -> "Request Denied"
-                                    else -> "Request to Join"
-                                },
-                                color = if (requestStatus == JoinRequest.STATUS_PENDING) GoTogetherTheme.colors.textSecondary else Color.White,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                    
-                    if (requestStatus == JoinRequest.STATUS_PENDING) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Waiting for host approval.",
-                            color = GoTogetherTheme.colors.textSecondary,
-                            fontSize = 13.sp,
-                            modifier = Modifier.fillMaxWidth(),
-                            textAlign = TextAlign.Center
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(32.dp))
             }
         }
     }
 }
 
 @Composable
-private fun TripInfoRow(
-    icon: ImageVector,
-    label: String,
-    value: String
+fun TripDetailContent(
+    trip: com.quantax.gotogether.domain.model.Trip,
+    isHost: Boolean,
+    requestStatus: String,
+    members: List<com.quantax.gotogether.domain.model.UserProfile>,
+    scrollState: androidx.compose.foundation.ScrollState,
+    onBackClick: () -> Unit,
+    onShareClick: () -> Unit,
+    onProfileClick: (String) -> Unit,
+    paddingValues: PaddingValues
 ) {
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(14.dp),
-        colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card)
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .verticalScroll(scrollState)
+            .background(Color.White)
+            .padding(bottom = paddingValues.calculateBottomPadding())
+    ) {
+        // Hero Image Card Section
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(400.dp)
+                .padding(16.dp)
+                .clip(RoundedCornerShape(28.dp))
+        ) {
+            SubcomposeAsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(trip.imageUrl)
+                    .crossfade(true)
+                    .build(),
+                contentDescription = null,
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer {
+                        translationY = scrollState.value * 0.4f
+                    }
+            )
+
+            // Overlays on top of image
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                Color.Black.copy(alpha = 0.2f),
+                                Color.Transparent,
+                                Color.Black.copy(alpha = 0.4f)
+                            )
+                        )
+                    )
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                FloatingCircleButton(Icons.AutoMirrored.Filled.ArrowBack, onClick = onBackClick)
+                FloatingCircleButton(Icons.Filled.IosShare, onClick = onShareClick)
+            }
+
+
+        }
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        Column(modifier = Modifier.padding(horizontal = 20.dp)) {
+            // Title and Pricing Row
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.Top
+            ) {
+                Text(
+                    text = trip.title.ifBlank { trip.destination },
+                    modifier = Modifier.weight(1f),
+                    fontSize = 24.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Column(horizontalAlignment = Alignment.End) {
+                    Text(
+                        text = trip.budgetRange,
+                        fontSize = 20.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color.Black
+                    )
+                    Text(
+                        text = "/Trip",
+                        fontSize = 12.sp,
+                        color = Color.Gray
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Location and Rating Info
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Icon(
+                    Icons.Default.LocationOn,
+                    null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = trip.destination,
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Box(
+                    modifier = Modifier
+                        .width(1.dp)
+                        .height(12.dp)
+                        .background(Color.LightGray)
+                )
+                Spacer(modifier = Modifier.width(12.dp))
+                Icon(Icons.Default.Route, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "14km",
+                    fontSize = 14.sp,
+                    color = Color.Gray
+                )
+            }
+
+            Row(
+                modifier = Modifier.padding(top = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Icon(
+                    Icons.Default.StarBorder,
+                    null,
+                    tint = Color.Gray,
+                    modifier = Modifier.size(16.dp)
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "4.9/5",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Spacer(modifier = Modifier.width(4.dp))
+                Text(
+                    text = "137 Review",
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Medium,
+                    color = Color.Black,
+                    style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Central Status Card
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFF9F9F9),
+                border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+            ) {
+                Row(
+                    modifier = Modifier.padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Groups,
+                            null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Max ${trip.groupSize} Group Size",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(24.dp)
+                            .background(Color.LightGray)
+                    )
+                    Row(
+                        modifier = Modifier.weight(1f),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Icon(
+                            Icons.Default.Schedule,
+                            null,
+                            tint = Color.Gray,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "4 Day Trip Duration",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Medium
+                        )
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Description
+            Text(
+                text = "Description",
+                fontSize = 18.sp,
+                fontWeight = FontWeight.Bold,
+                color = Color.Black
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = trip.description.ifBlank { "Bromo Tengger Semeru National Park, located in East Java, Indonesia, features active volcanoes, rugged landscapes, and the iconic Mount Bromo." },
+                fontSize = 14.sp,
+                lineHeight = 22.sp,
+                color = Color.Gray
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Location Section
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Location",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color.Black
+                )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        text = "Open on maps",
+                        fontSize = 14.sp,
+                        color = Color(0xFF6A8E4E),
+                        fontWeight = FontWeight.Medium
+                    )
+                    Icon(
+                        Icons.Default.ChevronRight,
+                        null,
+                        tint = Color(0xFF6A8E4E),
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Mock Map Preview
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(180.dp),
+                shape = RoundedCornerShape(20.dp),
+                color = Color(0xFFF0F0F0)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        Icons.Default.Map,
+                        null,
+                        modifier = Modifier.size(48.dp),
+                        tint = Color.Gray.copy(alpha = 0.3f)
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+
+            // Travelers
+            SectionHeader(title = "Travelers Joining")
+            Spacer(modifier = Modifier.height(16.dp))
+            if (members.isNotEmpty()) {
+                TravelersList(members, onProfileClick)
+            } else {
+                EmptyTravelersPlaceholder()
+            }
+
+            Spacer(modifier = Modifier.height(32.dp))
+        }
+    }
+}
+
+@Composable
+fun FloatingCircleButton(icon: ImageVector, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        modifier = Modifier.size(44.dp),
+        shape = CircleShape,
+        color = Color.White.copy(alpha = 0.9f),
+        shadowElevation = 4.dp
+    ) {
+        Box(contentAlignment = Alignment.Center) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(20.dp),
+                tint = Color.Black
+            )
+        }
+    }
+}
+
+@Composable
+fun FloatingHeader(
+    title: String,
+    alpha: Float,
+    backgroundColor: Color,
+    onBackClick: () -> Unit,
+    onShareClick: () -> Unit
+) {
+    Surface(
+        color = backgroundColor.copy(alpha = alpha.coerceIn(0f, 0.95f)),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(64.dp)
+            .zIndex(10f)
     ) {
         Row(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(14.dp),
+                .fillMaxSize()
+                .padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(14.dp)
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
-            Box(
-                modifier = Modifier
-                    .size(40.dp)
-                    .background(GoTogetherOrange.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
-                contentAlignment = Alignment.Center
+            IconButton(
+                onClick = onBackClick,
+                modifier = Modifier.background(
+                    if (alpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent,
+                    CircleShape
+                )
             ) {
-                Icon(icon, contentDescription = null, tint = GoTogetherOrange, modifier = Modifier.size(20.dp))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = null,
+                    tint = if (alpha < 0.5f) Color.White else GoTogetherTheme.colors.textPrimary
+                )
             }
-            Column {
-                Text(label, color = GoTogetherTheme.colors.textSecondary, fontSize = 12.sp)
+
+            if (alpha > 0.6f) {
                 Text(
-                    text = value,
+                    text = title,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
                     color = GoTogetherTheme.colors.textPrimary,
-                    fontSize = 15.sp,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(horizontal = 16.dp)
+                )
+            }
+
+            IconButton(
+                onClick = onShareClick,
+                modifier = Modifier.background(
+                    if (alpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent,
+                    CircleShape
+                )
+            ) {
+                Icon(
+                    Icons.Default.Share,
+                    contentDescription = null,
+                    tint = if (alpha < 0.5f) Color.White else GoTogetherTheme.colors.textPrimary
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun TripInfoHub(trip: com.quantax.gotogether.domain.model.Trip) {
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(
+            containerColor = GoTogetherTheme.colors.surfaceVariant.copy(alpha = 0.4f)
+        ),
+        border = BorderStroke(1.dp, GoTogetherTheme.colors.surfaceVariant)
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(20.dp)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceBetween
+        ) {
+            InfoItem(Icons.Default.Groups, "${trip.joinedCount}/${trip.groupSize}", "Travelers")
+            VerticalDivider()
+            InfoItem(Icons.Default.AttachMoney, trip.budgetRange, "Budget")
+            VerticalDivider()
+            InfoItem(Icons.Default.Map, trip.startingLocation.ifBlank { "TBA" }.take(8), "From")
+        }
+    }
+}
+
+@Composable
+fun InfoItem(icon: ImageVector, value: String, label: String) {
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Icon(icon, null, tint = GoTogetherOrange, modifier = Modifier.size(22.dp))
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text(label, fontSize = 11.sp, color = GoTogetherTheme.colors.textSecondary)
+    }
+}
+
+@Composable
+fun VerticalDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(40.dp)
+            .background(GoTogetherTheme.colors.surfaceVariant)
+    )
+}
+
+@Composable
+fun HostSection(
+    name: String,
+    imageUrl: String?,
+    isVerified: Boolean,
+    isYou: Boolean,
+    onProfileClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onProfileClick() },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        SubcomposeAsyncImage(
+            model = imageUrl ?: "https://ui-avatars.com/api/?name=$name&background=random",
+            contentDescription = null,
+            modifier = Modifier
+                .size(52.dp)
+                .clip(CircleShape)
+                .border(2.dp, GoTogetherOrange.copy(alpha = 0.3f), CircleShape),
+            contentScale = ContentScale.Crop
+        )
+        Spacer(modifier = Modifier.width(16.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = if (isYou) "You (Host)" else name,
+                fontWeight = FontWeight.Bold,
+                fontSize = 17.sp,
+                color = GoTogetherTheme.colors.textPrimary
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                Text("Golden Member", fontSize = 12.sp, color = GoTogetherOrange)
+                if (isVerified) {
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Icon(
+                        Icons.Default.Verified,
+                        null,
+                        tint = VerifiedCyan,
+                        modifier = Modifier.size(14.dp)
+                    )
+                }
+                Spacer(modifier = Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(3.dp)
+                        .background(Color.Gray.copy(alpha = 0.5f), CircleShape)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    "Verified Expert",
+                    fontSize = 12.sp,
+                    color = GoTogetherTheme.colors.textSecondary
+                )
+            }
+        }
+        Icon(Icons.Default.ChevronRight, null, tint = GoTogetherTheme.colors.textSecondary)
+    }
+}
+
+@Composable
+fun InterestsChips(interests: List<String>) {
+    FlowRow(
+        modifier = Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+        verticalArrangement = Arrangement.spacedBy(8.dp)
+    ) {
+        interests.forEach { tag ->
+            Surface(
+                color = GoTogetherTheme.colors.surfaceVariant.copy(alpha = 0.5f),
+                shape = RoundedCornerShape(50),
+                border = BorderStroke(1.dp, GoTogetherTheme.colors.surfaceVariant)
+            ) {
+                Text(
+                    tag,
+                    modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
+                    fontSize = 13.sp,
                     fontWeight = FontWeight.Medium
                 )
+            }
+        }
+    }
+}
+
+@Composable
+fun TravelersList(
+    members: List<com.quantax.gotogether.domain.model.UserProfile>,
+    onProfileClick: (String) -> Unit
+) {
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        members.forEach { member ->
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { onProfileClick(member.uid) },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                SubcomposeAsyncImage(
+                    model = member.profileImageUrl
+                        ?: "https://ui-avatars.com/api/?name=${member.name}",
+                    contentDescription = null,
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape),
+                    contentScale = ContentScale.Crop
+                )
+                Spacer(modifier = Modifier.width(16.dp))
+                Column {
+                    Text(member.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text("Ready for adventure", fontSize = 12.sp, color = Color.Gray)
+                }
+                Spacer(modifier = Modifier.weight(1f))
+                Icon(
+                    Icons.Default.ChevronRight,
+                    null,
+                    tint = Color.LightGray,
+                    modifier = Modifier.size(18.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun EmptyTravelersPlaceholder() {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 20.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(48.dp), tint = Color.LightGray)
+        Spacer(modifier = Modifier.height(12.dp))
+        Text("No travelers yet. Be the first to join!", color = Color.Gray, fontSize = 14.sp)
+    }
+}
+
+@Composable
+fun ActionBottomBar(
+    isHost: Boolean,
+    requestStatus: String,
+    onJoinClick: () -> Unit,
+    onChatClick: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        color = Color.White,
+        shadowElevation = 0.dp // Reference image has it very flat or subtle
+    ) {
+        Box(
+            modifier = Modifier
+                .padding(horizontal = 24.dp, vertical = 20.dp)
+                .navigationBarsPadding(),
+            contentAlignment = Alignment.Center
+        ) {
+            if (isHost || requestStatus == JoinRequest.STATUS_APPROVED) {
+                Button(
+                    onClick = onChatClick,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(58.dp),
+                    shape = RoundedCornerShape(28.dp), // More pill-like
+                    colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF6A8E4E)),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Text(
+                        "Go to Chatroom",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = Color.White
+                    )
+                }
+            } else {
+                val isPending = requestStatus == JoinRequest.STATUS_PENDING
+                Button(
+                    onClick = onJoinClick,
+                    enabled = !isPending,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(58.dp),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = if (isPending) Color.Gray.copy(alpha = 0.1f) else Color(
+                            0xFF6A8E4E
+                        ),
+                        disabledContainerColor = Color.Gray.copy(alpha = 0.1f)
+                    ),
+                    elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
+                ) {
+                    Text(
+                        if (isPending) "Request Pending" else "Booking",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 16.sp,
+                        color = if (isPending) Color.Gray else Color.White
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun TripPolicyItem() {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .background(GoTogetherTheme.colors.surfaceVariant.copy(alpha = 0.2f))
+            .padding(16.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Icon(Icons.Default.Shield, null, tint = AccentBlue, modifier = Modifier.size(24.dp))
+        Spacer(modifier = Modifier.width(16.dp))
+        Column {
+            Text("Travel Safe Policy", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+            Text(
+                "All members are verified by GoTogether",
+                fontSize = 12.sp,
+                color = GoTogetherTheme.colors.textSecondary
+            )
+        }
+    }
+}
+
+@Composable
+fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        style = MaterialTheme.typography.titleLarge,
+        fontWeight = FontWeight.Bold,
+        color = GoTogetherTheme.colors.textPrimary,
+        letterSpacing = (-0.5).sp
+    )
+}
+
+@Composable
+fun ErrorState(message: String, onRetry: () -> Unit) {
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Icon(
+                Icons.Default.ErrorOutline,
+                null,
+                modifier = Modifier.size(64.dp),
+                tint = Color.Red.copy(alpha = 0.6f)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                message,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 48.dp),
+                color = GoTogetherTheme.colors.textSecondary,
+                lineHeight = 22.sp
+            )
+            Spacer(modifier = Modifier.height(32.dp))
+            Button(
+                onClick = onRetry,
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange)
+            ) {
+                Text("Try Again", modifier = Modifier.padding(horizontal = 16.dp))
             }
         }
     }

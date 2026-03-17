@@ -13,9 +13,14 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class ChatRepository {
-    private val firestore = FirebaseFirestore.getInstance()
+@Singleton
+class ChatRepository @Inject constructor(
+    private val firestore: FirebaseFirestore,
+    private val database: FirebaseDatabase
+) {
     private val chatroomsCollection = firestore.collection("chatrooms")
 
     suspend fun createChatroom(chatroom: Chatroom): Result<Unit> {
@@ -57,8 +62,9 @@ class ChatRepository {
     }
 
     fun getMessages(chatroomId: String): Flow<List<ChatMessage>> = callbackFlow {
-        val databaseRef = FirebaseDatabase.getInstance().getReference("chatrooms").child(chatroomId).child("messages")
-        
+        val databaseRef = database.getReference("chatrooms").child(chatroomId)
+            .child("messages")
+
         val listener = object : ValueEventListener {
             override fun onDataChange(snapshot: DataSnapshot) {
                 val messagesList = mutableListOf<ChatMessage>()
@@ -73,7 +79,11 @@ class ChatRepository {
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("ChatRepository", "Listen failed for messages in $chatroomId", error.toException())
+                Log.e(
+                    "ChatRepository",
+                    "Listen failed for messages in $chatroomId",
+                    error.toException()
+                )
                 trySend(emptyList())
             }
         }
@@ -83,7 +93,9 @@ class ChatRepository {
 
     suspend fun sendMessage(chatroomId: String, message: ChatMessage): Result<Unit> {
         return try {
-            val databaseRef = FirebaseDatabase.getInstance().getReference("chatrooms").child(chatroomId).child("messages").push()
+            val databaseRef =
+                database.getReference("chatrooms").child(chatroomId)
+                    .child("messages").push()
             val newMessage = message.copy(id = databaseRef.key ?: "", chatroomId = chatroomId)
             databaseRef.setValue(newMessage).await()
 
