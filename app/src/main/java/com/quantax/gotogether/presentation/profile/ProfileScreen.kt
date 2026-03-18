@@ -17,6 +17,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
@@ -154,8 +155,11 @@ fun ProfileScreen(
                 val profile = state.profile
                 val pagerCount = (backgroundPhotos.size).coerceAtLeast(1)
 
-                // 1. Background section: banner with gradient overlay, no overlap with content
-                val bannerHeight = 280.dp
+                //Background section: banner only (profile photo sits half-over in next layer)
+                val bannerHeight = 267.dp
+                val photoSize = 120.dp
+                val photoHalf = photoSize / 2
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -209,7 +213,6 @@ fun ProfileScreen(
                                         )
                                 )
                             }
-                            // Tap overlay: opens fullscreen (above image so pager doesn't consume tap)
                             if (backgroundPhotos.isNotEmpty()) {
                                 Box(
                                     modifier = Modifier
@@ -225,7 +228,6 @@ fun ProfileScreen(
                             }
                         }
                     }
-                    // Subtle gradient overlay so content reads better
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
@@ -233,36 +235,40 @@ fun ProfileScreen(
                                 Brush.verticalGradient(
                                     colors = listOf(
                                         Color.Transparent,
-                                        Color.Black.copy(alpha = 0.15f),
-                                        Color.Black.copy(alpha = 0.35f)
+                                        Color.Black.copy(alpha = 0.2f),
+                                        Color.Black.copy(alpha = 0.4f)
                                     ),
                                     startY = 0f,
                                     endY = Float.POSITIVE_INFINITY
                                 )
                             )
                     )
-                    // Page indicators (bottom center, above camera row)
-                    if (backgroundPhotos.size > 1) {
+                    // Stick indicators, divided as per the number of images uploaded by user
+                    if (backgroundPhotos.isNotEmpty()) {
+                        val count = backgroundPhotos.size
                         Row(
                             modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 48.dp),
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                .align(Alignment.TopCenter)
+                                .fillMaxWidth()
+                                .statusBarsPadding()
+                                .padding(start = 8.dp, end = 8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(2.dp)
                         ) {
-                            repeat(backgroundPhotos.size) { index ->
+                            repeat(count) { index ->
+                                val isSelected = pagerState.currentPage == index
                                 Box(
                                     modifier = Modifier
-                                        .size(if (pagerState.currentPage == index) 8.dp else 6.dp)
-                                        .clip(CircleShape)
+                                        .weight(1f)
+                                        .height(3.dp)
+                                        .clip(RoundedCornerShape(2.dp))
                                         .background(
-                                            if (pagerState.currentPage == index) Color.White
-                                            else Color.White.copy(alpha = 0.5f)
+                                            if (isSelected) Color.White
+                                            else Color.White.copy(alpha = 0.45f)
                                         )
                                 )
                             }
                         }
                     }
-                    // Camera icon: add/edit background photos
                     IconButton(
                         onClick = onNavigateToEditProfile,
                         modifier = Modifier
@@ -276,59 +282,9 @@ fun ProfileScreen(
                             modifier = Modifier.size(28.dp)
                         )
                     }
-                    // Centered profile photo with shadow so it pops
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        val photoSize = 124.dp
-                        if (profile != null && profile.profileImageUrl.isNotBlank()) {
-                            SubcomposeAsyncImage(
-                                model = ImageRequest.Builder(LocalContext.current)
-                                    .data(profile.profileImageUrl)
-                                    .crossfade(true)
-                                    .build(),
-                                contentDescription = "Profile Photo",
-                                modifier = Modifier
-                                    .size(photoSize)
-                                    .clip(CircleShape)
-                                    .border(4.dp, Color.White, CircleShape)
-                                    .border(4.dp, GoTogetherOrange, CircleShape),
-                                contentScale = ContentScale.Crop,
-                                loading = {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.surface, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
-                                    }
-                                },
-                                error = {
-                                    Box(
-                                        modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.surface, CircleShape).border(4.dp, GoTogetherOrange, CircleShape),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(Icons.Default.Person, contentDescription = "No Photo", tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(48.dp))
-                                    }
-                                }
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .size(photoSize)
-                                    .clip(CircleShape)
-                                    .background(GoTogetherTheme.colors.surface)
-                                    .border(4.dp, Color.White, CircleShape)
-                                    .border(4.dp, GoTogetherOrange, CircleShape),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(Icons.Default.Person, contentDescription = "No Photo", tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(48.dp))
-                            }
-                        }
-                    }
                 }
 
-                // 2. Scrollable content: starts below banner so no overlap with profile photo
+                // 2. Scrollable content: starts below banner; first spacer leaves room for overlapping avatar
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
@@ -338,7 +294,8 @@ fun ProfileScreen(
                         .padding(bottom = 100.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    Spacer(modifier = Modifier.height(8.dp))
+                    Spacer(modifier = Modifier.height(photoHalf))
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
                         text = if (profile?.name?.isNotBlank() == true) profile.name else "No name set",
                         fontSize = 24.sp,
@@ -432,7 +389,60 @@ fun ProfileScreen(
                     Spacer(modifier = Modifier.height(16.dp))
                 }
 
-                // 3. TopAppBar on top of everything
+                // 3. Profile photo straddling banner and content (half above, half below — Telegram-style)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .padding(top = bannerHeight - photoHalf)
+                        .fillMaxWidth(),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (profile != null && profile.profileImageUrl.isNotBlank()) {
+                        SubcomposeAsyncImage(
+                            model = ImageRequest.Builder(LocalContext.current)
+                                .data(profile.profileImageUrl)
+                                .crossfade(true)
+                                .build(),
+                            contentDescription = "Profile Photo",
+                            modifier = Modifier
+                                .size(photoSize)
+                                .clip(CircleShape)
+                                .border(4.dp, Color.White, CircleShape)
+                                .border(4.dp, GoTogetherOrange, CircleShape),
+                            contentScale = ContentScale.Crop,
+                            loading = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.surface, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                                }
+                            },
+                            error = {
+                                Box(
+                                    modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.surface, CircleShape).border(4.dp, GoTogetherOrange, CircleShape),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(Icons.Default.Person, contentDescription = "No Photo", tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(48.dp))
+                                }
+                            }
+                        )
+                    } else {
+                        Box(
+                            modifier = Modifier
+                                .size(photoSize)
+                                .clip(CircleShape)
+                                .background(GoTogetherTheme.colors.surface)
+                                .border(4.dp, Color.White, CircleShape)
+                                .border(4.dp, GoTogetherOrange, CircleShape),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(Icons.Default.Person, contentDescription = "No Photo", tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(48.dp))
+                        }
+                    }
+                }
+
+                // 4. TopAppBar on top of everything
                 TopAppBar(
                     title = {
                         Text("Profile", fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary)
