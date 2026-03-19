@@ -43,6 +43,7 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
@@ -64,6 +65,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -106,7 +108,8 @@ fun EditProfileScreen(
                 if (slot == null) {
                     profileImageUrl = u.toString()
                 } else {
-                    backgroundPhotoUrls = backgroundPhotoUrls.toMutableList().apply { set(slot, u.toString()) }
+                    backgroundPhotoUrls =
+                        backgroundPhotoUrls.toMutableList().apply { set(slot, u.toString()) }
                     pickerForBackgroundSlot = null
                 }
             }
@@ -118,7 +121,7 @@ fun EditProfileScreen(
         onResult = { uris ->
             if (uris.isNotEmpty()) {
                 val newList = uris.take(4).map { it.toString() } +
-                    List((4 - uris.size).coerceAtLeast(0)) { "" }
+                        List((4 - uris.size).coerceAtLeast(0)) { "" }
                 backgroundPhotoUrls = newList.take(4)
             }
         }
@@ -146,10 +149,20 @@ fun EditProfileScreen(
         containerColor = GoTogetherTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text("Edit Profile", fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary) },
+                title = {
+                    Text(
+                        "Edit Profile",
+                        fontWeight = FontWeight.Bold,
+                        color = GoTogetherTheme.colors.textPrimary
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = GoTogetherTheme.colors.textPrimary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = GoTogetherTheme.colors.textPrimary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -222,7 +235,11 @@ fun EditProfileScreen(
                 }
             }
 
-            Text("Tap to change photo", color = GoTogetherTheme.colors.textSecondary, fontSize = 13.sp)
+            Text(
+                "Tap to change photo",
+                color = GoTogetherTheme.colors.textSecondary,
+                fontSize = 13.sp
+            )
 
             // Background photos (up to 4) for profile header and verification
             Text(
@@ -262,7 +279,11 @@ fun EditProfileScreen(
                             .height(80.dp)
                             .clip(RoundedCornerShape(12.dp))
                             .background(GoTogetherTheme.colors.surface)
-                            .border(1.dp, GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f), RoundedCornerShape(12.dp))
+                            .border(
+                                1.dp,
+                                GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f),
+                                RoundedCornerShape(12.dp)
+                            )
                             .clickable {
                                 pickerForBackgroundSlot = index
                                 photoPickerLauncher.launch(
@@ -280,7 +301,8 @@ fun EditProfileScreen(
                             )
                             IconButton(
                                 onClick = {
-                                    backgroundPhotoUrls = backgroundPhotoUrls.toMutableList().apply { set(index, "") }
+                                    backgroundPhotoUrls =
+                                        backgroundPhotoUrls.toMutableList().apply { set(index, "") }
                                 },
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
@@ -422,7 +444,11 @@ fun EditProfileScreen(
                         profileImageUrl = profileImageUrl,
                         verificationPhotoUrls = verificationUrls
                     )
-                    viewModel.onEvent(com.quantax.gotogether.presentation.profile.ProfileEvent.SaveProfile(updatedProfile))
+                    viewModel.onEvent(
+                        com.quantax.gotogether.presentation.profile.ProfileEvent.SaveProfile(
+                            updatedProfile
+                        )
+                    )
                 },
                 modifier = Modifier
                     .fillMaxWidth()
@@ -432,9 +458,17 @@ fun EditProfileScreen(
                 enabled = !state.isSaving && name.isNotBlank()
             ) {
                 if (state.isSaving) {
-                    CircularProgressIndicator(color = GoTogetherTheme.colors.textOnPrimary, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(
+                        color = GoTogetherTheme.colors.textOnPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
-                    Text("Save Profile", color = GoTogetherTheme.colors.textOnPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Save Profile",
+                        color = GoTogetherTheme.colors.textOnPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
 
@@ -451,7 +485,7 @@ private fun ProfileTextField(
     icon: ImageVector,
     singleLine: Boolean = true
 ) {
-    Column {
+    Column{
         Text(
             text = label,
             color = GoTogetherTheme.colors.textSecondary,
@@ -462,16 +496,32 @@ private fun ProfileTextField(
         OutlinedTextField(
             value = value,
             onValueChange = onValueChange,
-            modifier = Modifier.fillMaxWidth().height(if (singleLine) 60.dp else 120.dp),
-            placeholder = { Text("Enter $label", color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f)) },
-            leadingIcon = { 
+            modifier = Modifier
+                .fillMaxWidth()
+                .height(if (singleLine) 60.dp else 120.dp),
+            placeholder = {
+                Text(
+                    "Enter $label",
+                    color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f)
+                )
+            },
+
+            leadingIcon = {
                 Box(
-                    modifier = Modifier.size(40.dp).padding(start = 6.dp),
+                    modifier = Modifier
+                        .size(40.dp)
+                        .padding(start = 6.dp),
                     contentAlignment = Alignment.Center
+
                 ) {
-                    Icon(icon, contentDescription = null, tint = if(value.isNotBlank()) GoTogetherOrange else GoTogetherTheme.colors.textSecondary) 
+                    Icon(
+                        icon,
+                        contentDescription = null,
+                        tint = if (value.isNotBlank()) GoTogetherOrange else GoTogetherTheme.colors.textSecondary
+                    )
                 }
             },
+
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = GoTogetherOrange,
                 unfocusedBorderColor = Color.Transparent,
