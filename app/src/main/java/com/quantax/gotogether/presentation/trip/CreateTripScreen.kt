@@ -52,7 +52,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -78,7 +77,7 @@ fun CreateTripScreen(
     onNavigateBack: () -> Unit,
     viewModel: CreateTripViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
 
     LaunchedEffect(state.isSuccess) {
@@ -88,7 +87,7 @@ fun CreateTripScreen(
     }
 
     LaunchedEffect(state.error) {
-        state.error?.let { 
+        state.error?.let {
             snackbarHostState.showSnackbar(it)
         }
     }
@@ -108,10 +107,20 @@ fun CreateTripScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Create New Trip", fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary) },
+                title = {
+                    Text(
+                        "Create New Trip",
+                        fontWeight = FontWeight.Bold,
+                        color = GoTogetherTheme.colors.textPrimary
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = GoTogetherTheme.colors.textPrimary)
+                        Icon(
+                            Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Back",
+                            tint = GoTogetherTheme.colors.textPrimary
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -128,16 +137,28 @@ fun CreateTripScreen(
                 .padding(20.dp),
             verticalArrangement = Arrangement.spacedBy(24.dp)
         ) {
-            Text("Trip Details", fontSize = 20.sp, fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary)
+            Text(
+                "Trip Details",
+                fontSize = 20.sp,
+                fontWeight = FontWeight.Bold,
+                color = GoTogetherTheme.colors.textPrimary
+            )
 
             // Starting Location
-            LocationField(state.startingLocation, "Starting Location") { showingLocationPickerFor = "start" }
+            LocationField(state.startingLocation, "Starting Location") {
+                showingLocationPickerFor = "start"
+            }
 
             // Destination
-            LocationField(state.destination, "Destination") { showingLocationPickerFor = "destination" }
+            LocationField(state.destination, "Destination") {
+                showingLocationPickerFor = "destination"
+            }
 
             // Travel Dates
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                 Box(modifier = Modifier.weight(1f)) {
                     DateField(state.startDate, "Start Date") { showingStartDatePicker = true }
                 }
@@ -150,9 +171,20 @@ fun CreateTripScreen(
             OutlinedTextField(
                 value = state.budgetRange,
                 onValueChange = viewModel::onBudgetRangeChange,
-                label = { Text("Budget Range (e.g., ₹₹₹, Flexible)", color = GoTogetherTheme.colors.textSecondary) },
+                label = {
+                    Text(
+                        "Budget Range (e.g., ₹₹₹, Flexible)",
+                        color = GoTogetherTheme.colors.textSecondary
+                    )
+                },
                 modifier = Modifier.fillMaxWidth(),
-                leadingIcon = { Icon(Icons.Default.Money, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
+                leadingIcon = {
+                    Icon(
+                        Icons.Default.Money,
+                        contentDescription = null,
+                        tint = GoTogetherTheme.colors.textSecondary
+                    )
+                },
                 colors = textFieldColors(),
                 shape = RoundedCornerShape(20.dp)
             )
@@ -168,30 +200,49 @@ fun CreateTripScreen(
                 value = state.description,
                 onValueChange = viewModel::onDescriptionChange,
                 label = { Text("Trip Description", color = GoTogetherTheme.colors.textSecondary) },
-                modifier = Modifier.fillMaxWidth().height(150.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(150.dp),
                 colors = textFieldColors(),
                 shape = RoundedCornerShape(20.dp),
                 maxLines = 5
             )
 
             // Photos
-            PhotoSection(state.selectedImageUri, 
-                onPickerLaunch = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) },
+            PhotoSection(
+                state.selectedImageUri,
+                onPickerLaunch = {
+                    photoPickerLauncher.launch(
+                        PickVisualMediaRequest(
+                            ActivityResultContracts.PickVisualMedia.ImageOnly
+                        )
+                    )
+                },
                 onRemove = { viewModel.onImageSelected(null) }
             )
 
             // Publish Button
             Button(
                 onClick = { viewModel.publishTrip() },
-                modifier = Modifier.fillMaxWidth().height(60.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(60.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
                 shape = RoundedCornerShape(24.dp),
                 enabled = !state.isLoading
             ) {
                 if (state.isLoading) {
-                    CircularProgressIndicator(color = GoTogetherTheme.colors.textOnPrimary, modifier = Modifier.size(24.dp))
+                    CircularProgressIndicator(
+                        color = GoTogetherTheme.colors.textOnPrimary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 } else {
-                    Text("Publish Trip", color = GoTogetherTheme.colors.textOnPrimary, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Text(
+                        "Publish Trip",
+                        color = GoTogetherTheme.colors.textOnPrimary,
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
             }
         }
@@ -201,7 +252,9 @@ fun CreateTripScreen(
             LocationSearchDialog(
                 onDismissRequest = { showingLocationPickerFor = null },
                 onLocationSelected = { location ->
-                    if (showingLocationPickerFor == "start") viewModel.onStartingLocationChange(location)
+                    if (showingLocationPickerFor == "start") viewModel.onStartingLocationChange(
+                        location
+                    )
                     else viewModel.onDestinationChange(location)
                     showingLocationPickerFor = null
                 }
@@ -217,7 +270,11 @@ fun CreateTripScreen(
                         showingStartDatePicker = false
                     }) { Text("Confirm") }
                 },
-                dismissButton = { TextButton(onClick = { showingStartDatePicker = false }) { Text("Cancel") } }
+                dismissButton = {
+                    TextButton(onClick = {
+                        showingStartDatePicker = false
+                    }) { Text("Cancel") }
+                }
             ) {
                 DatePicker(
                     state = startDatePickerState,
@@ -235,7 +292,11 @@ fun CreateTripScreen(
                         showingEndDatePicker = false
                     }) { Text("Confirm") }
                 },
-                dismissButton = { TextButton(onClick = { showingEndDatePicker = false }) { Text("Cancel") } }
+                dismissButton = {
+                    TextButton(onClick = {
+                        showingEndDatePicker = false
+                    }) { Text("Cancel") }
+                }
             ) {
                 DatePicker(
                     state = endDatePickerState,
@@ -256,11 +317,22 @@ fun LocationField(value: String, placeholder: String, onClick: () -> Unit) {
             enabled = false,
             placeholder = { Text(placeholder, color = GoTogetherTheme.colors.textSecondary) },
             modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.LocationOn, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.LocationOn,
+                    contentDescription = null,
+                    tint = GoTogetherTheme.colors.textSecondary
+                )
+            },
             colors = disabledTextFieldColors(),
             shape = RoundedCornerShape(20.dp)
         )
-        Box(modifier = Modifier.matchParentSize().clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick))
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(20.dp))
+                .clickable(onClick = onClick)
+        )
     }
 }
 
@@ -274,18 +346,34 @@ fun DateField(value: String, placeholder: String, onClick: () -> Unit) {
             enabled = false,
             placeholder = { Text(placeholder, color = GoTogetherTheme.colors.textSecondary) },
             modifier = Modifier.fillMaxWidth(),
-            leadingIcon = { Icon(Icons.Default.DateRange, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary) },
+            leadingIcon = {
+                Icon(
+                    Icons.Default.DateRange,
+                    contentDescription = null,
+                    tint = GoTogetherTheme.colors.textSecondary
+                )
+            },
             colors = disabledTextFieldColors(),
             shape = RoundedCornerShape(20.dp)
         )
-        Box(modifier = Modifier.matchParentSize().clip(RoundedCornerShape(20.dp)).clickable(onClick = onClick))
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(RoundedCornerShape(20.dp))
+                .clickable(onClick = onClick)
+        )
     }
 }
 
 @Composable
 fun GroupSizeSection(groupSize: Int, onValueChange: (Int) -> Unit) {
     Column {
-        Text("Group Size", color = GoTogetherTheme.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp), fontSize = 14.sp)
+        Text(
+            "Group Size",
+            color = GoTogetherTheme.colors.textSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+            fontSize = 14.sp
+        )
         Row(
             modifier = Modifier
                 .fillMaxWidth()
@@ -300,20 +388,33 @@ fun GroupSizeSection(groupSize: Int, onValueChange: (Int) -> Unit) {
                 onClick = { if (groupSize > 0) onValueChange(groupSize - 1) },
                 modifier = Modifier
                     .size(48.dp)
-                    .background(if (groupSize > 0) GoTogetherOrange.copy(alpha = 0.1f) else GoTogetherTheme.colors.surface, RoundedCornerShape(16.dp))
+                    .background(
+                        if (groupSize > 0) GoTogetherOrange.copy(alpha = 0.1f) else GoTogetherTheme.colors.surface,
+                        RoundedCornerShape(16.dp)
+                    )
             ) {
-                Icon(Icons.Default.Remove, contentDescription = "Decrease", tint = if (groupSize > 0) GoTogetherOrange else GoTogetherTheme.colors.textSecondary.copy(alpha=0.5f))
+                Icon(
+                    Icons.Default.Remove,
+                    contentDescription = "Decrease",
+                    tint = if (groupSize > 0) GoTogetherOrange else GoTogetherTheme.colors.textSecondary.copy(
+                        alpha = 0.5f
+                    )
+                )
             }
-            
+
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text(
-                    if (groupSize == 0) "Any Size" else "$groupSize", 
-                    fontSize = 20.sp, 
+                    if (groupSize == 0) "Any Size" else "$groupSize",
+                    fontSize = 20.sp,
                     fontWeight = FontWeight.Bold,
                     color = GoTogetherTheme.colors.textPrimary
                 )
                 if (groupSize > 0) {
-                    Text("Travelers", fontSize = 11.sp, color = GoTogetherTheme.colors.textSecondary)
+                    Text(
+                        "Travelers",
+                        fontSize = 11.sp,
+                        color = GoTogetherTheme.colors.textSecondary
+                    )
                 }
             }
 
@@ -332,47 +433,82 @@ fun GroupSizeSection(groupSize: Int, onValueChange: (Int) -> Unit) {
 @Composable
 fun InterestsSection(interests: List<String>, onAdd: (String) -> Unit, onRemove: (String) -> Unit) {
     Column {
-        Text("Interests", color = GoTogetherTheme.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp), fontSize = 14.sp)
-        
-        if(interests.isNotEmpty()) {
+        Text(
+            "Interests",
+            color = GoTogetherTheme.colors.textSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+            fontSize = 14.sp
+        )
+
+        if (interests.isNotEmpty()) {
             @OptIn(ExperimentalLayoutApi::class)
             FlowRow(
-                modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(bottom = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 interests.forEach { interest ->
                     Box(
                         modifier = Modifier
-                            .background(GoTogetherOrange.copy(alpha = 0.15f), RoundedCornerShape(50))
-                            .border(1.dp, GoTogetherOrange.copy(alpha = 0.5f), RoundedCornerShape(50))
+                            .background(
+                                GoTogetherOrange.copy(alpha = 0.15f),
+                                RoundedCornerShape(50)
+                            )
+                            .border(
+                                1.dp,
+                                GoTogetherOrange.copy(alpha = 0.5f),
+                                RoundedCornerShape(50)
+                            )
                             .clickable { onRemove(interest) }
                             .padding(horizontal = 14.dp, vertical = 8.dp)
                     ) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(interest, color = GoTogetherOrangeLight, fontSize = 13.sp, fontWeight = FontWeight.SemiBold)
+                            Text(
+                                interest,
+                                color = GoTogetherOrangeLight,
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.SemiBold
+                            )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Icon(Icons.Default.Close, "Remove", tint = GoTogetherOrangeLight, modifier = Modifier.size(14.dp))
+                            Icon(
+                                Icons.Default.Close,
+                                "Remove",
+                                tint = GoTogetherOrangeLight,
+                                modifier = Modifier.size(14.dp)
+                            )
                         }
                     }
                 }
             }
         }
-        
+
         var newInterest by remember { mutableStateOf("") }
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = newInterest,
                 onValueChange = { newInterest = it },
-                modifier = Modifier.weight(1f).height(60.dp),
-                placeholder = { Text("e.g. Hiking, Food, Museums", color = GoTogetherTheme.colors.textSecondary) },
+                modifier = Modifier
+                    .weight(1f)
+                    .height(60.dp),
+                placeholder = {
+                    Text(
+                        "e.g. Hiking, Food, Museums",
+                        color = GoTogetherTheme.colors.textSecondary
+                    )
+                },
                 colors = textFieldColors(),
                 shape = RoundedCornerShape(20.dp),
                 singleLine = true
             )
             Spacer(modifier = Modifier.width(12.dp))
             IconButton(
-                onClick = { if(newInterest.isNotBlank()) { onAdd(newInterest.trim()); newInterest = "" } },
+                onClick = {
+                    if (newInterest.isNotBlank()) {
+                        onAdd(newInterest.trim()); newInterest = ""
+                    }
+                },
                 modifier = Modifier
                     .size(60.dp)
                     .background(
@@ -381,8 +517,8 @@ fun InterestsSection(interests: List<String>, onAdd: (String) -> Unit, onRemove:
                     )
             ) {
                 Icon(
-                    Icons.Default.Add, 
-                    contentDescription = "Add", 
+                    Icons.Default.Add,
+                    contentDescription = "Add",
                     tint = if (newInterest.isNotBlank()) Color.White else GoTogetherTheme.colors.textSecondary
                 )
             }
@@ -393,7 +529,12 @@ fun InterestsSection(interests: List<String>, onAdd: (String) -> Unit, onRemove:
 @Composable
 fun PhotoSection(uri: android.net.Uri?, onPickerLaunch: () -> Unit, onRemove: () -> Unit) {
     Column {
-        Text("Destination Cover Photo", color = GoTogetherTheme.colors.textSecondary, modifier = Modifier.padding(start = 4.dp, bottom = 8.dp), fontSize = 14.sp)
+        Text(
+            "Destination Cover Photo",
+            color = GoTogetherTheme.colors.textSecondary,
+            modifier = Modifier.padding(start = 4.dp, bottom = 8.dp),
+            fontSize = 14.sp
+        )
         if (uri != null) {
             Box(
                 modifier = Modifier
@@ -402,18 +543,28 @@ fun PhotoSection(uri: android.net.Uri?, onPickerLaunch: () -> Unit, onRemove: ()
                     .clip(RoundedCornerShape(24.dp))
                     .clickable(onClick = onPickerLaunch)
             ) {
-                AsyncImage(model = uri, contentDescription = "Selected photo", modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
-                
+                AsyncImage(
+                    model = uri,
+                    contentDescription = "Selected photo",
+                    modifier = Modifier.fillMaxSize(),
+                    contentScale = ContentScale.Crop
+                )
+
                 // Remove Button
                 IconButton(
-                    onClick = onRemove, 
+                    onClick = onRemove,
                     modifier = Modifier
                         .align(Alignment.TopEnd)
                         .padding(12.dp)
                         .background(Color.Black.copy(alpha = 0.6f), CircleShape)
                         .size(36.dp)
                 ) {
-                    Icon(Icons.Default.Close, "Remove photo", tint = Color.White, modifier = Modifier.size(18.dp))
+                    Icon(
+                        Icons.Default.Close,
+                        "Remove photo",
+                        tint = Color.White,
+                        modifier = Modifier.size(18.dp)
+                    )
                 }
             }
         } else {
@@ -423,7 +574,7 @@ fun PhotoSection(uri: android.net.Uri?, onPickerLaunch: () -> Unit, onRemove: ()
                     .height(180.dp)
                     .background(GoTogetherTheme.colors.card, RoundedCornerShape(24.dp))
                     .border(2.dp, GoTogetherTheme.colors.surfaceVariant, RoundedCornerShape(24.dp))
-                    .clickable(onClick = onPickerLaunch), 
+                    .clickable(onClick = onPickerLaunch),
                 contentAlignment = Alignment.Center
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -433,12 +584,26 @@ fun PhotoSection(uri: android.net.Uri?, onPickerLaunch: () -> Unit, onRemove: ()
                             .background(GoTogetherTheme.colors.surfaceVariant, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.AddPhotoAlternate, "Camera", tint = GoTogetherOrange, modifier = Modifier.size(32.dp))
+                        Icon(
+                            Icons.Default.AddPhotoAlternate,
+                            "Camera",
+                            tint = GoTogetherOrange,
+                            modifier = Modifier.size(32.dp)
+                        )
                     }
                     Spacer(modifier = Modifier.height(16.dp))
-                    Text("Tap to upload cover photo", color = GoTogetherTheme.colors.textPrimary, fontWeight = FontWeight.SemiBold, fontSize = 16.sp)
+                    Text(
+                        "Tap to upload cover photo",
+                        color = GoTogetherTheme.colors.textPrimary,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 16.sp
+                    )
                     Spacer(modifier = Modifier.height(4.dp))
-                    Text("High quality images make trips stand out", color = GoTogetherTheme.colors.textSecondary, fontSize = 13.sp)
+                    Text(
+                        "High quality images make trips stand out",
+                        color = GoTogetherTheme.colors.textSecondary,
+                        fontSize = 13.sp
+                    )
                 }
             }
         }

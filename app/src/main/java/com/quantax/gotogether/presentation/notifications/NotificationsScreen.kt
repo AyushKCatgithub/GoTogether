@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -35,7 +34,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -68,7 +66,7 @@ fun NotificationsScreen(
     viewModel: NotificationsViewModel = hiltViewModel(),
     onNavigateToChatroom: (String) -> Unit = {}
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val allNotifications = state.allNotifications
     val isLoading = state.isLoading
     val actionMessage = state.actionMessage
@@ -119,9 +117,11 @@ fun NotificationsScreen(
                         }
                     }
                 }
+
                 allNotifications.isEmpty() -> {
                     EmptyNotifications()
                 }
+
                 else -> {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -132,15 +132,32 @@ fun NotificationsScreen(
                                 is NotificationItem.JoinRequestItem -> {
                                     JoinRequestCard(
                                         request = item.request,
-                                        onApprove = { viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.ApproveRequest(item.request)) },
-                                        onDeny = { viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.DenyRequest(item.request)) }
+                                        onApprove = {
+                                            viewModel.onEvent(
+                                                com.quantax.gotogether.presentation.notifications.NotificationsEvent.ApproveRequest(
+                                                    item.request
+                                                )
+                                            )
+                                        },
+                                        onDeny = {
+                                            viewModel.onEvent(
+                                                com.quantax.gotogether.presentation.notifications.NotificationsEvent.DenyRequest(
+                                                    item.request
+                                                )
+                                            )
+                                        }
                                     )
                                 }
+
                                 is NotificationItem.GeneralNotificationItem -> {
                                     GeneralNotificationCard(
                                         notification = item.notification,
                                         onNavigateToChatroom = {
-                                            viewModel.onEvent(com.quantax.gotogether.presentation.notifications.NotificationsEvent.MarkAsRead(item.notification.id))
+                                            viewModel.onEvent(
+                                                com.quantax.gotogether.presentation.notifications.NotificationsEvent.MarkAsRead(
+                                                    item.notification.id
+                                                )
+                                            )
                                             onNavigateToChatroom(item.notification.chatroomId)
                                         }
                                     )
@@ -178,7 +195,10 @@ private fun JoinRequestCard(
             // Avatar
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(request.requesterImageUrl ?: "https://ui-avatars.com/api/?name=${request.requesterName}&background=E8632B&color=fff&size=80")
+                    .data(
+                        request.requesterImageUrl
+                            ?: "https://ui-avatars.com/api/?name=${request.requesterName}&background=E8632B&color=fff&size=80"
+                    )
                     .crossfade(true)
                     .build(),
                 contentDescription = "Requester Avatar",
@@ -309,7 +329,10 @@ private fun GeneralNotificationCard(
             // Avatar
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
-                    .data(notification.senderImageUrl ?: "https://ui-avatars.com/api/?name=${notification.senderName}&background=E8632B&color=fff&size=80")
+                    .data(
+                        notification.senderImageUrl
+                            ?: "https://ui-avatars.com/api/?name=${notification.senderName}&background=E8632B&color=fff&size=80"
+                    )
                     .crossfade(true)
                     .build(),
                 contentDescription = "Sender Avatar",
@@ -406,10 +429,10 @@ private fun EmptyNotifications() {
             Box(
                 modifier = Modifier
                     .size(80.dp)
-                .background(
-                    GoTogetherOrange.copy(alpha = 0.08f),
-                    RoundedCornerShape(24.dp)
-                ),
+                    .background(
+                        GoTogetherOrange.copy(alpha = 0.08f),
+                        RoundedCornerShape(24.dp)
+                    ),
                 contentAlignment = Alignment.Center
             ) {
                 Icon(

@@ -7,7 +7,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -20,15 +19,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.filled.AlternateEmail
 import androidx.compose.material.icons.filled.CameraAlt
-import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Email
-import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.LocationOn
-import androidx.compose.material.icons.filled.Person
-import androidx.compose.material.icons.filled.Phone
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -45,7 +37,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -53,7 +44,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -62,7 +52,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
-import com.quantax.gotogether.ui.theme.VerifiedCyan
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -70,7 +59,7 @@ fun EditProfileScreen(
     onNavigateBack: () -> Unit,
     viewModel: ProfileViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val profile = state.profile
 
     var name by remember(profile) { mutableStateOf(profile?.name ?: "") }
@@ -99,7 +88,14 @@ fun EditProfileScreen(
         containerColor = GoTogetherTheme.colors.background,
         topBar = {
             TopAppBar(
-                title = { Text("SETTINGS", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Black, letterSpacing = 2.sp) },
+                title = {
+                    Text(
+                        "SETTINGS",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 2.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -139,7 +135,12 @@ fun EditProfileScreen(
                             contentScale = ContentScale.Crop
                         )
                     } else {
-                        Icon(Icons.Default.CameraAlt, contentDescription = null, modifier = Modifier.padding(32.dp), tint = Color.LightGray)
+                        Icon(
+                            Icons.Default.CameraAlt,
+                            contentDescription = null,
+                            modifier = Modifier.padding(32.dp),
+                            tint = Color.LightGray
+                        )
                     }
                 }
                 Surface(
@@ -147,24 +148,68 @@ fun EditProfileScreen(
                     shape = CircleShape,
                     color = Color.Black
                 ) {
-                    Icon(Icons.Default.Edit, contentDescription = null, modifier = Modifier.padding(8.dp), tint = Color.White)
+                    Icon(
+                        Icons.Default.Edit,
+                        contentDescription = null,
+                        modifier = Modifier.padding(8.dp),
+                        tint = Color.White
+                    )
                 }
             }
 
             Spacer(modifier = Modifier.height(40.dp))
 
             // Minimalist Form
-            Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.fillMaxWidth()) {
-                GenZTextField(value = name, onValueChange = { name = it }, label = "NAME", placeholder = "Your legal name")
-                GenZTextField(value = username, onValueChange = { username = it }, label = "USERNAME", placeholder = "vibe_checker")
-                GenZTextField(value = email, onValueChange = { email = it }, label = "EMAIL", placeholder = "hello@travel.com")
-                GenZTextField(value = phone, onValueChange = { phone = it }, label = "PHONE", placeholder = "+1 234 ...")
-                GenZTextField(value = bio, onValueChange = { bio = it }, label = "BIO", placeholder = "Tell your story...", singleLine = false)
-                GenZTextField(value = address, onValueChange = { address = it }, label = "LOCATION", placeholder = "Earth")
+            Column(
+                verticalArrangement = Arrangement.spacedBy(24.dp),
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                GenZTextField(
+                    value = name,
+                    onValueChange = { name = it },
+                    label = "NAME",
+                    placeholder = "Your legal name"
+                )
+                GenZTextField(
+                    value = username,
+                    onValueChange = { username = it },
+                    label = "USERNAME",
+                    placeholder = "vibe_checker"
+                )
+                GenZTextField(
+                    value = email,
+                    onValueChange = { email = it },
+                    label = "EMAIL",
+                    placeholder = "hello@travel.com"
+                )
+                GenZTextField(
+                    value = phone,
+                    onValueChange = { phone = it },
+                    label = "PHONE",
+                    placeholder = "+1 234 ..."
+                )
+                GenZTextField(
+                    value = bio,
+                    onValueChange = { bio = it },
+                    label = "BIO",
+                    placeholder = "Tell your story...",
+                    singleLine = false
+                )
+                GenZTextField(
+                    value = address,
+                    onValueChange = { address = it },
+                    label = "LOCATION",
+                    placeholder = "Earth"
+                )
             }
 
             if (state.error != null) {
-                Text(state.error!!, color = Color.Red, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top = 16.dp))
+                Text(
+                    state.error!!,
+                    color = Color.Red,
+                    style = MaterialTheme.typography.labelSmall,
+                    modifier = Modifier.padding(top = 16.dp)
+                )
             }
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -191,7 +236,9 @@ fun EditProfileScreen(
                     )
                     viewModel.onEvent(ProfileEvent.SaveProfile(updatedProfile))
                 },
-                modifier = Modifier.fillMaxWidth().height(64.dp),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(64.dp),
                 shape = RoundedCornerShape(20.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
                 enabled = !state.isSaving && name.isNotBlank()
@@ -199,10 +246,15 @@ fun EditProfileScreen(
                 if (state.isSaving) {
                     CircularProgressIndicator(color = Color.White, modifier = Modifier.size(24.dp))
                 } else {
-                    Text("SAVE CHANGES", fontWeight = FontWeight.Black, fontSize = 16.sp, letterSpacing = 1.sp)
+                    Text(
+                        "SAVE CHANGES",
+                        fontWeight = FontWeight.Black,
+                        fontSize = 16.sp,
+                        letterSpacing = 1.sp
+                    )
                 }
             }
-            
+
             Spacer(modifier = Modifier.height(40.dp))
         }
     }

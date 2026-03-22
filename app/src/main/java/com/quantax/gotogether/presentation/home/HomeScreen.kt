@@ -44,6 +44,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quantax.gotogether.presentation.components.LocationSearchDialog
 import com.quantax.gotogether.presentation.components.TripCardShimmer
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
@@ -59,19 +60,20 @@ fun HomeScreen(
     onNavigateToPublicProfile: (String) -> Unit = {},
     viewModel: HomeViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val searchFrom by viewModel.searchFrom.collectAsState()
-    val searchTo by viewModel.searchTo.collectAsState()
-    val searchBudget by viewModel.searchBudget.collectAsState()
-    val searchGroupSize by viewModel.searchGroupSize.collectAsState()
-    val searchQuery by viewModel.searchQuery.collectAsState()
-    val isRefreshing by viewModel.isRefreshing.collectAsState()
-    val selectedCategory by viewModel.selectedCategory.collectAsState()
+    val searchTo by viewModel.searchTo.collectAsStateWithLifecycle()
+    val searchBudget by viewModel.searchBudget.collectAsStateWithLifecycle()
+    val searchGroupSize by viewModel.searchGroupSize.collectAsStateWithLifecycle()
+    val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
+    val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
+    val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
 
     var showFilterSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var showingLocationPickerFor by remember { mutableStateOf<String?>(null) }
-    val categories = listOf("All", "Adventure", "Relaxation", "Cultural", "Budget Friendly", "Solo", "Group")
+    val categories =
+        listOf("All", "Adventure", "Relaxation", "Cultural", "Budget Friendly", "Solo", "Group")
 
     val context = LocalContext.current
 
@@ -80,9 +82,12 @@ fun HomeScreen(
         if (granted) {
             PermissionUtils.fetchLocation(
                 context = context,
-                onLocationDetailsFetched = { full, city -> viewModel.updateLocationText(full, city) },
-                onError = { viewModel.updateLocationText(it) }
-            )
+                onLocationDetailsFetched = { full, city ->
+                    viewModel.updateLocationText(
+                        full, city
+                    )
+                },
+                onError = { viewModel.updateLocationText(it) })
         } else {
             viewModel.updateLocationText("Location permission denied")
         }
@@ -92,44 +97,50 @@ fun HomeScreen(
         if (PermissionUtils.hasLocationPermission(context)) {
             PermissionUtils.fetchLocation(
                 context = context,
-                onLocationDetailsFetched = { full, city -> viewModel.updateLocationText(full, city) },
-                onError = { viewModel.updateLocationText("Location not available") }
-            )
+                onLocationDetailsFetched = { full, city ->
+                    viewModel.updateLocationText(
+                        full, city
+                    )
+                },
+                onError = { viewModel.updateLocationText("Location not available") })
         } else {
             permissionLauncher.launch(PermissionUtils.locationPermissions)
         }
     }
 
-    Scaffold(
-        containerColor = GoTogetherTheme.colors.background,
-        topBar = {
-            val locationText = when (val s = state) {
-                is HomeState.Success -> s.locationText
-                else -> "Loading location..."
-            }
-            HomeTopAppBar(
-                locationText = locationText,
-                onLogoClick = { viewModel.loadTrips() },
-                onMessagesClick = onNavigateToMessages
+    Scaffold(containerColor = GoTogetherTheme.colors.background, topBar = {
+        val locationText = when (val s = state) {
+            is HomeState.Success -> s.locationText
+            else -> "Loading location..."
+        }
+        HomeTopAppBar(
+            locationText = locationText,
+            onLogoClick = { viewModel.loadTrips() },
+            onMessagesClick = onNavigateToMessages
+        )
+    }, floatingActionButton = {
+        FloatingActionButton(
+            onClick = onNavigateToCreateTrip,
+            containerColor = GoTogetherOrange,
+            contentColor = Color.White,
+            shape = RoundedCornerShape(18.dp),
+            modifier = Modifier.shadow(
+                12.dp,
+                RoundedCornerShape(18.dp),
+                ambientColor = GoTogetherOrange.copy(alpha = 0.5f),
+                spotColor = GoTogetherOrange.copy(alpha = 0.8f)
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = onNavigateToCreateTrip,
-                containerColor = GoTogetherOrange,
-                contentColor = Color.White,
-                shape = RoundedCornerShape(18.dp),
-                modifier = Modifier
-                    .shadow(12.dp, RoundedCornerShape(18.dp), ambientColor = GoTogetherOrange.copy(alpha = 0.5f), spotColor = GoTogetherOrange.copy(alpha = 0.8f))
+        ) {
+            Row(
+                modifier = Modifier.padding(horizontal = 16.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(modifier = Modifier.padding(horizontal = 16.dp), verticalAlignment = Alignment.CenterVertically) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Create Trip", fontWeight = FontWeight.ExtraBold)
-                }
+                Icon(Icons.Default.Add, contentDescription = null)
+                Spacer(modifier = Modifier.width(8.dp))
+                Text("Create Trip", fontWeight = FontWeight.ExtraBold)
             }
         }
-    ) { paddingValues ->
+    }) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { viewModel.loadTrips() },
@@ -138,8 +149,7 @@ fun HomeScreen(
                 .padding(paddingValues)
         ) {
             LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(bottom = 100.dp)
+                modifier = Modifier.fillMaxSize(), contentPadding = PaddingValues(bottom = 100.dp)
             ) {
                 // 1. Premium Greeting & Search
                 item {
@@ -166,8 +176,7 @@ fun HomeScreen(
                     HomeSearchBar(
                         query = searchQuery,
                         onQueryChange = viewModel::onSearchQueryChange,
-                        onFilterClick = { showFilterSheet = true }
-                    )
+                        onFilterClick = { showFilterSheet = true })
                 }
 
                 // 2. Interactive Category Filter
@@ -189,31 +198,36 @@ fun HomeScreen(
                 // 5. Success / Loading / Error States
                 when (val currentState = state) {
                     is HomeState.Loading -> {
-                        items(3) { 
+                        items(3) {
                             Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
-                                TripCardShimmer() 
+                                TripCardShimmer()
                             }
                         }
                     }
+
                     is HomeState.Error -> {
                         item {
                             ErrorHomeView(
-                                message = currentState.message,
-                                onRetry = { viewModel.loadTrips() }
-                            )
+                                message = currentState.message, onRetry = { viewModel.loadTrips() })
                         }
                     }
+
                     is HomeState.Success -> {
                         if (currentState.trips.isEmpty()) {
                             item { EmptyTripsView() }
                         } else {
-                            items(currentState.trips, key = { it.id }) { trip ->
-                                Box(modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+                            items(
+                                currentState.trips, key = { it.id }, contentType = { "TripCard" }
+                            ) { trip ->
+                                Box(
+                                    modifier = Modifier.padding(
+                                        horizontal = 16.dp, vertical = 12.dp
+                                    )
+                                ) {
                                     TripCard(
                                         trip = trip,
                                         onClick = { onNavigateToTripDetail(trip.id) },
-                                        onHostClick = { onNavigateToPublicProfile(trip.hostId) }
-                                    )
+                                        onHostClick = { onNavigateToPublicProfile(trip.hostId) })
                                 }
                             }
                         }
@@ -234,8 +248,7 @@ fun HomeScreen(
                     viewModel.onSearchToChange(selectedLocation)
                 }
                 showingLocationPickerFor = null
-            }
-        )
+            })
     }
 
     if (showFilterSheet) {
@@ -243,8 +256,7 @@ fun HomeScreen(
             onDismissRequest = { showFilterSheet = false },
             sheetState = sheetState,
             containerColor = GoTogetherTheme.colors.background,
-            dragHandle = { BottomSheetDefaults.DragHandle() }
-        ) {
+            dragHandle = { BottomSheetDefaults.DragHandle() }) {
             FilterSection(
                 searchFrom = searchFrom,
                 searchTo = searchTo,
@@ -258,25 +270,21 @@ fun HomeScreen(
                 onApplyFilters = {
                     viewModel.applyFilters()
                     showFilterSheet = false
-                }
-            )
+                })
         }
     }
 }
 
 @Composable
 private fun SectionHeader(
-    title: String,
-    onSeeAllClick: (() -> Unit)? = null,
-    hideSeeAll: Boolean = false
+    title: String, onSeeAllClick: (() -> Unit)? = null, hideSeeAll: Boolean = false
 ) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(start = 16.dp,
-                end = 16.dp,
-                top = 24.dp,
-                bottom = 16.dp),
+            .padding(
+                start = 16.dp, end = 16.dp, top = 24.dp, bottom = 16.dp
+            ),
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -295,7 +303,7 @@ private fun SectionHeader(
                 color = GoTogetherTheme.colors.textPrimary
             )
         }
-        
+
         if (!hideSeeAll && onSeeAllClick != null) {
             TextButton(onClick = onSeeAllClick) {
                 Text(
@@ -305,25 +313,6 @@ private fun SectionHeader(
                     fontSize = 14.sp
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun FeaturedTripsRow(
-    trips: List<com.quantax.gotogether.domain.model.Trip>,
-    onTripClick: (String) -> Unit
-) {
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(16.dp),
-        modifier = Modifier.fillMaxWidth()
-    ) {
-        items(trips) { trip ->
-            FeaturedTripCard(
-                trip = trip,
-                onClick = { onTripClick(trip.id) }
-            )
         }
     }
 }

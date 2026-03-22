@@ -40,7 +40,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -55,6 +54,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.quantax.gotogether.domain.model.ChatMessage
 import com.quantax.gotogether.domain.model.Chatroom
@@ -72,7 +72,7 @@ fun ChatroomScreen(
     onNavigateBack: () -> Unit,
     viewModel: ChatViewModel = hiltViewModel()
 ) {
-    val uiState by viewModel.state.collectAsState()
+    val uiState by viewModel.state.collectAsStateWithLifecycle()
     val currentUserId = viewModel.getCurrentUserId()
     val snackbarHostState = remember { SnackbarHostState() }
     var messageText by remember { mutableStateOf("") }
@@ -217,7 +217,7 @@ private fun ChatTopBar(
                             }
                         }
                     }
-                    
+
                     Column {
                         Text(
                             chatroom?.tripTitle?.uppercase() ?: "CHAT",
@@ -324,9 +324,17 @@ private fun MessageBubble(
                 bottomEnd = if (isCurrentUser) 4.dp else 28.dp
             ),
             modifier = if (isCurrentUser) {
-                Modifier.shadow(8.dp, RoundedCornerShape(28.dp), spotColor = Color.Black.copy(alpha = 0.2f))
+                Modifier.shadow(
+                    8.dp,
+                    RoundedCornerShape(28.dp),
+                    spotColor = Color.Black.copy(alpha = 0.2f)
+                )
             } else {
-                Modifier.shadow(2.dp, RoundedCornerShape(28.dp), spotColor = Color.Gray.copy(alpha = 0.1f))
+                Modifier.shadow(
+                    2.dp,
+                    RoundedCornerShape(28.dp),
+                    spotColor = Color.Gray.copy(alpha = 0.1f)
+                )
             }
         ) {
             Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) {

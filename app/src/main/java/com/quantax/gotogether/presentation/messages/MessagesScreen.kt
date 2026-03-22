@@ -15,7 +15,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -30,7 +29,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -63,7 +61,7 @@ fun MessagesScreen(
     onNavigateToChatroom: (String) -> Unit = {},
     viewModel: MessagesViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
     val chatrooms = state.chatrooms
     val isLoading = state.isLoading
 
@@ -108,9 +106,11 @@ fun MessagesScreen(
                         }
                     }
                 }
+
                 chatrooms.isEmpty() -> {
                     EmptyMessages()
                 }
+
                 else -> {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -139,9 +139,11 @@ private fun ChatroomListItem(
             val now = System.currentTimeMillis()
             val diff = now - chatroom.lastMessageTimestamp
             if (diff < 86_400_000L) {
-                android.text.format.DateFormat.format("hh:mm a", chatroom.lastMessageTimestamp).toString()
+                android.text.format.DateFormat.format("hh:mm a", chatroom.lastMessageTimestamp)
+                    .toString()
             } else {
-                android.text.format.DateFormat.format("MMM dd", chatroom.lastMessageTimestamp).toString()
+                android.text.format.DateFormat.format("MMM dd", chatroom.lastMessageTimestamp)
+                    .toString()
             }
         } else ""
     }
@@ -182,7 +184,12 @@ private fun ChatroomListItem(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                Brush.linearGradient(listOf(GoTogetherOrange, GoTogetherOrangeDark)),
+                                Brush.linearGradient(
+                                    listOf(
+                                        GoTogetherOrange,
+                                        GoTogetherOrangeDark
+                                    )
+                                ),
                                 RoundedCornerShape(14.dp)
                             ),
                         contentAlignment = Alignment.Center

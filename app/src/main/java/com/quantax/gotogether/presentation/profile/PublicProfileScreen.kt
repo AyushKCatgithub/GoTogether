@@ -39,7 +39,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -54,6 +53,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
@@ -68,7 +68,7 @@ fun PublicProfileScreen(
     onNavigateBack: () -> Unit,
     viewModel: PublicProfileViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(userId) {
         viewModel.loadProfile(userId)
@@ -109,6 +109,7 @@ fun PublicProfileScreen(
                     CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 3.dp)
                 }
             }
+
             state.error != null -> {
                 Box(
                     modifier = Modifier
@@ -117,18 +118,27 @@ fun PublicProfileScreen(
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(state.error!!, color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
+                        Text(
+                            state.error!!,
+                            color = GoTogetherTheme.colors.textSecondary,
+                            fontSize = 14.sp
+                        )
                         Spacer(modifier = Modifier.height(16.dp))
                         Button(
                             onClick = { viewModel.loadProfile(userId) },
                             colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
                             shape = RoundedCornerShape(12.dp)
                         ) {
-                            Text("Retry", color = GoTogetherTheme.colors.textOnPrimary, fontWeight = FontWeight.Bold)
+                            Text(
+                                "Retry",
+                                color = GoTogetherTheme.colors.textOnPrimary,
+                                fontWeight = FontWeight.Bold
+                            )
                         }
                     }
                 }
             }
+
             else -> {
                 val profile = state.profile
                 Box(
@@ -182,7 +192,10 @@ fun PublicProfileScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(GoTogetherTheme.colors.surface, CircleShape),
+                                                .background(
+                                                    GoTogetherTheme.colors.surface,
+                                                    CircleShape
+                                                ),
                                             contentAlignment = Alignment.Center
                                         ) {
                                             CircularProgressIndicator(
@@ -196,7 +209,10 @@ fun PublicProfileScreen(
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxSize()
-                                                .background(GoTogetherTheme.colors.surface, CircleShape)
+                                                .background(
+                                                    GoTogetherTheme.colors.surface,
+                                                    CircleShape
+                                                )
                                                 .border(3.dp, GoTogetherOrange, CircleShape),
                                             contentAlignment = Alignment.Center
                                         ) {
@@ -254,7 +270,9 @@ fun PublicProfileScreen(
                             Row(
                                 modifier = Modifier
                                     .background(
-                                        if (profile.isVerified) VerifiedCyan.copy(alpha = 0.12f) else WarningYellow.copy(alpha = 0.12f),
+                                        if (profile.isVerified) VerifiedCyan.copy(alpha = 0.12f) else WarningYellow.copy(
+                                            alpha = 0.12f
+                                        ),
                                         RoundedCornerShape(50)
                                     )
                                     .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -337,14 +355,21 @@ private fun PublicProfileInfoCard(
                     .background(GoTogetherOrange.copy(alpha = 0.1f), RoundedCornerShape(12.dp)),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(icon, contentDescription = null, tint = GoTogetherOrange, modifier = Modifier.size(20.dp))
+                Icon(
+                    icon,
+                    contentDescription = null,
+                    tint = GoTogetherOrange,
+                    modifier = Modifier.size(20.dp)
+                )
             }
             Column {
                 Text(label, color = GoTogetherTheme.colors.textSecondary, fontSize = 12.sp)
                 Spacer(modifier = Modifier.height(2.dp))
                 Text(
                     text = value.ifBlank { "Not provided" },
-                    color = if (value.isNotBlank()) GoTogetherTheme.colors.textPrimary else GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f),
+                    color = if (value.isNotBlank()) GoTogetherTheme.colors.textPrimary else GoTogetherTheme.colors.textSecondary.copy(
+                        alpha = 0.5f
+                    ),
                     fontSize = 15.sp,
                     fontWeight = FontWeight.Medium
                 )

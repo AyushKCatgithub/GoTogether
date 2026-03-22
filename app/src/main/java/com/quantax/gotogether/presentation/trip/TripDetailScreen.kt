@@ -34,13 +34,11 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
 import androidx.compose.material.icons.filled.StarBorder
-import androidx.compose.material.icons.filled.Upload
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -56,7 +54,6 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -93,8 +90,8 @@ fun TripDetailScreen(
     onNavigateToPublicProfile: (String) -> Unit = {},
     viewModel: TripDetailViewModel = hiltViewModel()
 ) {
-    val state by viewModel.state.collectAsState()
-    val actionMessage by viewModel.actionMessage.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val actionMessage by viewModel.actionMessage.collectAsStateWithLifecycle()
     val snackbarHostState = remember { SnackbarHostState() }
     val context = LocalContext.current
     val scrollState = rememberScrollState()

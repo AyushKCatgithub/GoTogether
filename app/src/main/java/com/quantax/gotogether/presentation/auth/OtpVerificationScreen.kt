@@ -33,7 +33,6 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -49,6 +48,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
@@ -64,7 +64,7 @@ fun OtpVerificationScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     var otpCode by remember { mutableStateOf("") }
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     LaunchedEffect(state.isAuthSuccess) {
         if (state.isAuthSuccess) {
@@ -131,7 +131,7 @@ fun OtpVerificationScreen(
                     color = GoTogetherTheme.colors.textSecondary,
                     textAlign = TextAlign.Center
                 )
-                
+
                 Text(
                     text = phoneNumber,
                     fontSize = 16.sp,
@@ -195,7 +195,12 @@ fun OtpVerificationScreen(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                Brush.linearGradient(listOf(GoTogetherOrange, GoTogetherOrangeLight))
+                                Brush.linearGradient(
+                                    listOf(
+                                        GoTogetherOrange,
+                                        GoTogetherOrangeLight
+                                    )
+                                )
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -235,7 +240,10 @@ fun OtpVerificationScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(Color(0xFFFF5252).copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                            .background(
+                                Color(0xFFFF5252).copy(alpha = 0.1f),
+                                RoundedCornerShape(12.dp)
+                            )
                             .padding(16.dp)
                     ) {
                         Text(

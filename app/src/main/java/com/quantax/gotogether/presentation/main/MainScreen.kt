@@ -19,7 +19,6 @@ import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -53,8 +52,18 @@ data class BottomNavItem(
 
 private val bottomNavItems = listOf(
     BottomNavItem("Home", Routes.Home.route, Icons.Filled.Home, Icons.Outlined.Home),
-    BottomNavItem("Alerts", Routes.Notifications.route, Icons.Filled.Notifications, Icons.Outlined.Notifications),
-    BottomNavItem("My Trips", Routes.MyTrips.route, Icons.AutoMirrored.Filled.FormatListBulleted, Icons.AutoMirrored.Outlined.FormatListBulleted),
+    BottomNavItem(
+        "Alerts",
+        Routes.Notifications.route,
+        Icons.Filled.Notifications,
+        Icons.Outlined.Notifications
+    ),
+    BottomNavItem(
+        "My Trips",
+        Routes.MyTrips.route,
+        Icons.AutoMirrored.Filled.FormatListBulleted,
+        Icons.AutoMirrored.Outlined.FormatListBulleted
+    ),
     BottomNavItem("Profile", Routes.Profile.route, Icons.Filled.Person, Icons.Outlined.Person)
 )
 
@@ -72,9 +81,9 @@ fun MainScreen(
     val navController = rememberNavController()
     val navBackStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = navBackStackEntry?.destination
-    
+
     val notificationsViewModel: NotificationsViewModel = hiltViewModel()
-    val notificationsState by notificationsViewModel.state.collectAsState()
+    val notificationsState by notificationsViewModel.state.collectAsStateWithLifecycle()
     val unreadCount = notificationsState.unreadCount
 
     Scaffold(
@@ -86,8 +95,9 @@ fun MainScreen(
                 tonalElevation = 8.dp
             ) {
                 bottomNavItems.forEach { item ->
-                    val isSelected = currentDestination?.hierarchy?.any { it.route == item.route } == true
-                    
+                    val isSelected =
+                        currentDestination?.hierarchy?.any { it.route == item.route } == true
+
                     NavigationBarItem(
                         selected = isSelected,
                         onClick = {
@@ -107,7 +117,11 @@ fun MainScreen(
                                 BadgedBox(
                                     badge = {
                                         Badge(containerColor = GoTogetherOrange) {
-                                            Text(unreadCount.toString(), color = Color.White, fontSize = 10.sp)
+                                            Text(
+                                                unreadCount.toString(),
+                                                color = Color.White,
+                                                fontSize = 10.sp
+                                            )
                                         }
                                     }
                                 ) {

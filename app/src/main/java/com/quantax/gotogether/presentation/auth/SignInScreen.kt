@@ -38,11 +38,9 @@ import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -57,6 +55,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quantax.gotogether.R
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
@@ -70,11 +69,16 @@ fun SignInScreen(
     viewModel: AuthViewModel = hiltViewModel()
 ) {
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val state by viewModel.state.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
 
     var phoneNumber by remember { mutableStateOf("") }
-    val countryCodes = listOf("+91" to "India", "+1" to "USA", "+44" to "UK", "+61" to "Australia", "+81" to "Japan")
+    val countryCodes = listOf(
+        "+91" to "India",
+        "+1" to "USA",
+        "+44" to "UK",
+        "+61" to "Australia",
+        "+81" to "Japan"
+    )
     var selectedCountryCode by remember { mutableStateOf(countryCodes[0].first) }
 
     LaunchedEffect(state.isAuthSuccess) {
@@ -120,12 +124,12 @@ fun SignInScreen(
                 selectedCountryCode = selectedCountryCode,
                 countryCodes = countryCodes,
                 isLoading = state.isLoading,
-                onPhoneNumberChange = { 
+                onPhoneNumberChange = {
                     if (it.length <= 10) {
                         phoneNumber = it
                     }
                 },
-                onCountryCodeChange = { 
+                onCountryCodeChange = {
                     selectedCountryCode = it
                 },
                 onSendOtp = {
@@ -277,7 +281,12 @@ fun PhoneSignInSection(
                     ) {
                         countryCodes.forEach { (code, country) ->
                             DropdownMenuItem(
-                                text = { Text("$code ($country)", color = GoTogetherTheme.colors.textPrimary) },
+                                text = {
+                                    Text(
+                                        "$code ($country)",
+                                        color = GoTogetherTheme.colors.textPrimary
+                                    )
+                                },
                                 onClick = {
                                     onCountryCodeChange(code)
                                     expandedCountryMenu = false
