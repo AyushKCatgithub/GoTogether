@@ -6,20 +6,28 @@ import com.google.firebase.storage.FirebaseStorage
 import kotlinx.coroutines.tasks.await
 import java.util.UUID
 
-class StorageService {
-    private val storage = FirebaseStorage.getInstance()
-    private val auth = FirebaseAuth.getInstance()
+import javax.inject.Inject
+import javax.inject.Singleton
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+
+@Singleton
+class StorageService @Inject constructor(
+    private val storage: FirebaseStorage,
+    private val auth: FirebaseAuth
+) {
+
 
     /**
      * Uploads an image URI to Firebase Storage and returns the public download URL.
      * @param uri The local content:// URI of the image
      * @param folder The folder name in Storage (e.g., "profile_images" or "trip_images")
-     * @return The public HTTP download URL, or null if upload fails
+     * @return Result containing the public HTTP download URL
      */
-    suspend fun uploadImage(uri: Uri, folder: String): String? {
-        val user = auth.currentUser ?: return null
+    suspend fun uploadImage(uri: Uri, folder: String): Result<String> = withContext(Dispatchers.IO) {
+        val user = auth.currentUser ?: return@withContext Result.failure(Exception("User not authenticated"))
         
-        return try {
+        try {
             // Create a unique filename: timestamp_uuid.jpg
             val fileName = "${System.currentTimeMillis()}_${UUID.randomUUID()}.jpg"
             
@@ -31,11 +39,25 @@ class StorageService {
             
             // Get the download URL
             val downloadUrl = storageRef.downloadUrl.await()
-            downloadUrl.toString()
+            Result.success(downloadUrl.toString())
         } catch (e: Exception) {
             android.util.Log.e("StorageService", "Failed to upload image: ${e.message}", e)
-            e.printStackTrace()
-            null
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Deletes an image from Firebase Storage by its URL.
+     * @param imageUrl The public download URL of the image
+     */
+    suspend fun deleteImage(imageUrl: String): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val storageRef = storage.getReferenceFromUrl(imageUrl)
+            storageRef.delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            android.util.Log.e("StorageService", "Failed to delete image: ${e.message}", e)
+            Result.failure(e)
         }
     }
     

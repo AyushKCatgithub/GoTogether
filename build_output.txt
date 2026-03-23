@@ -1,0 +1,24 @@
+
+> Configure project :app
+e: file:///Users/sakshamsharma/Saksham/Projects/GoTogether/app/build.gradle.kts:4:29: Unresolved reference 'android'.
+
+FAILURE: Build failed with an exception.
+
+* Where:
+Build file '/Users/sakshamsharma/Saksham/Projects/GoTogether/app/build.gradle.kts' line: 4
+
+* What went wrong:
+Script compilation error:
+
+  Line 4:     alias(libs.plugins.hilt.android)
+                                      ^ Unresolved reference 'android'.
+
+1 error
+
+* Try:
+> Run with --stacktrace option to get the stack trace.
+> Run with --info or --debug option to get more log output.
+> Run with --scan to get full insights from a Build Scan (powered by Develocity).
+> Get more help at https://help.gradle.org.
+
+BUILD FAILED in 744ms

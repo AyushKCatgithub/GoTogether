@@ -8,6 +8,9 @@ import androidx.navigation.compose.rememberNavController
 import com.quantax.gotogether.navigation.GoTogetherNavGraph
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 
+import dagger.hilt.android.AndroidEntryPoint
+
+@AndroidEntryPoint
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)

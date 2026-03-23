@@ -2,16 +2,36 @@ package com.quantax.gotogether.presentation.messages
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Text
+import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -24,24 +44,28 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.Chatroom
-import com.quantax.gotogether.ui.theme.*
-import java.text.SimpleDateFormat
-import java.util.Date
-import java.util.Locale
+import com.quantax.gotogether.presentation.components.MessageShimmerItem
+import com.quantax.gotogether.ui.theme.AccentBlue
+import com.quantax.gotogether.ui.theme.GoTogetherOrange
+import com.quantax.gotogether.ui.theme.GoTogetherOrangeDark
+import com.quantax.gotogether.ui.theme.GoTogetherTheme
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MessagesScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToChatroom: (String) -> Unit = {},
-    viewModel: MessagesViewModel = viewModel()
+    viewModel: MessagesViewModel = hiltViewModel()
 ) {
-    val chatrooms by viewModel.chatrooms.collectAsState()
-    val isLoading by viewModel.isLoading.collectAsState()
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val chatrooms = state.chatrooms
+    val isLoading = state.isLoading
 
     Scaffold(
         containerColor = GoTogetherTheme.colors.background,
@@ -74,16 +98,21 @@ fun MessagesScreen(
         ) {
             when {
                 isLoading -> {
-                    Box(
-                        modifier = Modifier.fillMaxSize(),
-                        contentAlignment = Alignment.Center
+                    LazyColumn(
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.fillMaxSize()
                     ) {
-                        CircularProgressIndicator(color = GoTogetherOrange)
+                        items(4) {
+                            MessageShimmerItem()
+                        }
                     }
                 }
+
                 chatrooms.isEmpty() -> {
                     EmptyMessages()
                 }
+
                 else -> {
                     LazyColumn(
                         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
@@ -107,18 +136,19 @@ private fun ChatroomListItem(
     chatroom: Chatroom,
     onClick: () -> Unit
 ) {
-    val timeFormat = remember { SimpleDateFormat("hh:mm a", Locale.getDefault()) }
-    val dateFormat = remember { SimpleDateFormat("MMM dd", Locale.getDefault()) }
-
-    val timestampText = if (chatroom.lastMessageTimestamp > 0) {
-        val now = System.currentTimeMillis()
-        val diff = now - chatroom.lastMessageTimestamp
-        if (diff < 24 * 60 * 60 * 1000) {
-            timeFormat.format(Date(chatroom.lastMessageTimestamp))
-        } else {
-            dateFormat.format(Date(chatroom.lastMessageTimestamp))
-        }
-    } else ""
+    val timestampText = remember(chatroom.lastMessageTimestamp) {
+        if (chatroom.lastMessageTimestamp > 0) {
+            val now = System.currentTimeMillis()
+            val diff = now - chatroom.lastMessageTimestamp
+            if (diff < 86_400_000L) {
+                android.text.format.DateFormat.format("hh:mm a", chatroom.lastMessageTimestamp)
+                    .toString()
+            } else {
+                android.text.format.DateFormat.format("MMM dd", chatroom.lastMessageTimestamp)
+                    .toString()
+            }
+        } else ""
+    }
 
     Card(
         modifier = Modifier
@@ -156,7 +186,12 @@ private fun ChatroomListItem(
                         modifier = Modifier
                             .fillMaxSize()
                             .background(
-                                Brush.linearGradient(listOf(GoTogetherOrange, GoTogetherOrangeDark)),
+                                Brush.linearGradient(
+                                    listOf(
+                                        GoTogetherOrange,
+                                        GoTogetherOrangeDark
+                                    )
+                                ),
                                 RoundedCornerShape(14.dp)
                             ),
                         contentAlignment = Alignment.Center

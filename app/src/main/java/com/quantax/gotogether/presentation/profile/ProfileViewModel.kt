@@ -1,18 +1,22 @@
 package com.quantax.gotogether.presentation.profile
 
-import com.quantax.gotogether.domain.model.*
-
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.UserProfile
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class ProfileState(
     val isLoading: Boolean = false,
@@ -22,96 +26,170 @@ data class ProfileState(
     val saveSuccess: Boolean = false
 )
 
-class ProfileViewModel : ViewModel() {
-    private val auth = FirebaseAuth.getInstance()
-    private val repository = UserProfileRepository()
-    private val storageService = StorageService()
+sealed class ProfileEvent {
+    object LoadProfile : ProfileEvent()
+    data class SaveProfile(val profile: UserProfile) : ProfileEvent()
+    object ResetSaveSuccess : ProfileEvent()
+    object SignOut : ProfileEvent()
+    object ClearError : ProfileEvent()
+}
+
+@HiltViewModel
+class ProfileViewModel @Inject constructor(
+    private val repository: UserProfileRepository,
+    private val storageService: StorageService,
+    private val authManager: AuthManager
+) : ViewModel() {
 
     private val _state = MutableStateFlow(ProfileState())
     val state: StateFlow<ProfileState> = _state.asStateFlow()
 
     init {
-        loadProfile()
+        val user = authManager.currentUser
+        if (user != null) {
+            _state.value = _state.value.copy(isLoading = true)
+            repository.getProfileFlow(user.uid)
+                .onEach { profile ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        profile = profile ?: UserProfile(uid = user.uid, email = user.email ?: ""),
+                        error = null
+                    )
+                    // Self-backfill usernameLower when missing so uniqueness checks work
+                    if (profile != null && profile.username.isNotBlank() && profile.usernameLower.isBlank()) {
+                        viewModelScope.launch {
+                            repository.updateUsernameLowerIfNeeded(profile.uid, profile.username)
+                        }
+                    }
+                }
+                .catch { e ->
+                    _state.value = _state.value.copy(
+                        isLoading = false,
+                        error = e.localizedMessage ?: "Failed to load profile"
+                    )
+                }
+                .launchIn(viewModelScope)
+        } else {
+            _state.value = _state.value.copy(error = "User not logged in", isLoading = false)
+        }
     }
 
-    fun loadProfile() {
-        val user = auth.currentUser
+    fun onEvent(event: ProfileEvent) {
+        when (event) {
+            is ProfileEvent.LoadProfile -> loadProfile()
+            is ProfileEvent.SaveProfile -> saveProfile(event.profile)
+            is ProfileEvent.ResetSaveSuccess -> resetSaveSuccess()
+            is ProfileEvent.SignOut -> signOut()
+            is ProfileEvent.ClearError -> _state.value = _state.value.copy(error = null)
+        }
+    }
+
+    private fun loadProfile() {
+        val user = authManager.currentUser
         if (user == null) {
-            _state.value = _state.value.copy(error = "User not logged in")
+            _state.update { it.copy(error = "User not logged in", isLoading = false) }
             return
         }
 
-        _state.value = _state.value.copy(isLoading = true, error = null)
-        
+        _state.update { it.copy(isLoading = true, error = null) }
+
         viewModelScope.launch {
-            try {
-                val profileResult = repository.getProfile(user.uid)
-                if (profileResult.isSuccess) {
-                    val profile = profileResult.getOrNull()
-                    if (profile != null) {
-                        _state.value = _state.value.copy(isLoading = false, profile = profile)
-                    } else {
-                        // Create an empty profile for new users
-                        val newProfile = UserProfile(uid = user.uid, email = user.email ?: "")
-                        _state.value = _state.value.copy(isLoading = false, profile = newProfile)
-                    }
-                } else {
-                    _state.value = _state.value.copy(isLoading = false, error = profileResult.exceptionOrNull()?.localizedMessage ?: "Failed to load profile")
+            repository.getProfile(user.uid).onSuccess { profile ->
+                val finalProfile = profile ?: UserProfile(uid = user.uid, email = user.email ?: "")
+                _state.update { it.copy(isLoading = false, profile = finalProfile) }
+            }.onFailure { e ->
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = e.localizedMessage ?: "Failed to load profile"
+                    )
                 }
-            } catch (e: Exception) {
-                _state.value = _state.value.copy(isLoading = false, error = e.localizedMessage ?: "Failed to load profile")
             }
         }
     }
 
-    fun saveProfile(profile: UserProfile) {
-        val user = auth.currentUser
+    private fun saveProfile(profile: UserProfile) {
+        val user = authManager.currentUser
         if (user == null) {
-            _state.value = _state.value.copy(error = "User not logged in")
+            _state.update { it.copy(error = "User not logged in", isSaving = false) }
             return
         }
 
-        _state.value = _state.value.copy(isSaving = true, saveSuccess = false, error = null)
+        _state.update { it.copy(isSaving = true, saveSuccess = false, error = null) }
 
         viewModelScope.launch {
             try {
                 var updatedProfile = profile.copy(uid = user.uid)
-                
+
                 // If the profile image is a new local content URI, upload it to Storage first
                 if (storageService.isLocalUri(profile.profileImageUrl)) {
                     val uri = Uri.parse(profile.profileImageUrl)
-                    val publicUrl = storageService.uploadImage(uri, "profile_images")
-                    
-                    if (publicUrl != null) {
-                        updatedProfile = updatedProfile.copy(profileImageUrl = publicUrl)
+                    val uploadResult = storageService.uploadImage(uri, "profile_images")
+                    if (uploadResult.isSuccess) {
+                        val publicUrl = uploadResult.getOrNull()
+                        if (publicUrl != null) {
+                            updatedProfile = updatedProfile.copy(profileImageUrl = publicUrl)
+                        }
                     } else {
-                        // If upload fails, fallback to keeping the original (or throwing an error)
-                        _state.value = _state.value.copy(
-                            isSaving = false, 
-                            error = "Failed to upload profile photo. Please try again."
-                        )
+                        _state.update {
+                            it.copy(
+                                isSaving = false,
+                                error = uploadResult.exceptionOrNull()?.message ?: "Failed to upload profile photo"
+                            )
+                        }
                         return@launch
                     }
                 }
 
-                repository.saveProfile(updatedProfile)
-                _state.value = _state.value.copy(
-                    isSaving = false, 
-                    saveSuccess = true, 
-                    profile = updatedProfile
+                // Upload any local verification/background photo URIs and collect public URLs
+                val verificationUrls = profile.verificationPhotoUrls.map { url ->
+                    if (storageService.isLocalUri(url)) {
+                        val uri = Uri.parse(url)
+                        storageService.uploadImage(uri, "verification_photos").getOrDefault(url)
+                    } else {
+                        url
+                    }
+                }
+                updatedProfile = updatedProfile.copy(verificationPhotoUrls = verificationUrls)
+
+                val oldUsername = _state.value.profile?.username
+                val saveResult = repository.saveProfile(updatedProfile, oldUsername)
+                saveResult.fold(
+                    onSuccess = {
+                        _state.update {
+                            it.copy(
+                                isSaving = false,
+                                saveSuccess = true,
+                                profile = updatedProfile
+                            )
+                        }
+                    },
+                    onFailure = { e ->
+                        _state.update {
+                            it.copy(
+                                isSaving = false,
+                                error = e.message ?: e.localizedMessage ?: "Failed to save profile"
+                            )
+                        }
+                    }
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(isSaving = false, error = e.localizedMessage ?: "Failed to save profile")
+                _state.update {
+                    it.copy(
+                        isSaving = false,
+                        error = e.message ?: e.localizedMessage ?: "Failed to save profile"
+                    )
+                }
             }
         }
     }
 
-    fun resetSaveSuccess() {
-        _state.value = _state.value.copy(saveSuccess = false)
+    private fun resetSaveSuccess() {
+        _state.update { it.copy(saveSuccess = false) }
     }
 
-    fun signOut() {
-        auth.signOut()
+    private fun signOut() {
+        authManager.signOut()
     }
 }

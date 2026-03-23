@@ -1,5 +1,8 @@
 package com.quantax.gotogether.domain.model
 
+import androidx.compose.runtime.Immutable
+
+@Immutable
 data class Trip(
     val id: String = "",
     val hostId: String = "",

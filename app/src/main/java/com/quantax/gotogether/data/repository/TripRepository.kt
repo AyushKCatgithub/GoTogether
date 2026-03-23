@@ -1,48 +1,123 @@
 package com.quantax.gotogether.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.Query
 import com.quantax.gotogether.domain.model.Trip
+import com.quantax.gotogether.domain.model.UserProfile
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
+import kotlinx.coroutines.withContext
+import javax.inject.Inject
+import javax.inject.Singleton
 
-class TripRepository {
-    private val firestore = FirebaseFirestore.getInstance()
+@Singleton
+class TripRepository @Inject constructor(
+    private val firestore: FirebaseFirestore
+) {
     private val tripsCollection = firestore.collection("trips")
+    private val usersCollection = firestore.collection("users")
 
-    suspend fun getTrips(): Result<List<Trip>> {
-        return try {
+    fun getTripsFlow(): Flow<List<Trip>> = callbackFlow {
+        val listener = tripsCollection
+            .orderBy("createdAt", Query.Direction.DESCENDING)
+            .limit(50)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+
+                val trips = snapshot?.toObjects(Trip::class.java) ?: emptyList()
+                if (trips.isEmpty()) {
+                    trySend(emptyList())
+                    return@addSnapshotListener
+                }
+
+                // Batch fetch host profiles for enrichment
+                val hostIds = trips.map { it.hostId }.distinct().filter { it.isNotBlank() }
+
+                // We use a coroutine to fetch profiles and then send the enriched list
+                val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO)
+                scope.launch {
+                    val hostProfiles = mutableMapOf<String, UserProfile>()
+                    if (hostIds.isNotEmpty()) {
+                        hostIds.chunked(30).forEach { chunk ->
+                            try {
+                                val usersSnapshot = usersCollection
+                                    .whereIn(
+                                        com.google.firebase.firestore.FieldPath.documentId(),
+                                        chunk
+                                    )
+                                    .get()
+                                    .await()
+                                usersSnapshot.toObjects(UserProfile::class.java)
+                                    .forEach { profile ->
+                                        hostProfiles[profile.uid] = profile
+                                    }
+                            } catch (e: Exception) {
+                            }
+                        }
+                    }
+
+                    val updatedTrips = trips.map { trip ->
+                        val profile = hostProfiles[trip.hostId]
+                        trip.copy(
+                            hostName = profile?.name ?: trip.hostName,
+                            hostImageUrl = profile?.profileImageUrl?.takeIf { it.isNotBlank() }
+                                ?: trip.hostImageUrl,
+                            hostVerified = profile?.isVerified ?: trip.hostVerified
+                        )
+                    }
+                    trySend(updatedTrips)
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun getTrips(): Result<List<Trip>> = withContext(Dispatchers.IO) {
+        try {
             val snapshot = tripsCollection
-                .orderBy("createdAt", com.google.firebase.firestore.Query.Direction.DESCENDING)
+                .orderBy("createdAt", Query.Direction.DESCENDING)
+                .limit(50)
                 .get()
                 .await()
             val trips = snapshot.toObjects(Trip::class.java)
 
-            // Fetch host profiles by document ID to get current profile images
+            if (trips.isEmpty()) return@withContext Result.success(emptyList())
+
+            // Optimize: Fetch host profiles in batches (Firestore 'whereIn' supports up to 30 items)
             val hostIds = trips.map { it.hostId }.distinct().filter { it.isNotBlank() }
-            val hostProfiles = mutableMapOf<String, com.quantax.gotogether.domain.model.UserProfile>()
-            val usersCollection = firestore.collection("users")
-            hostIds.forEach { uid ->
-                try {
-                    val doc = usersCollection.document(uid).get().await()
-                    val profile = doc.toObject(com.quantax.gotogether.domain.model.UserProfile::class.java)
-                    if (profile != null) {
-                        hostProfiles[profile.uid] = profile
+            val hostProfiles = mutableMapOf<String, UserProfile>()
+
+            if (hostIds.isNotEmpty()) {
+                hostIds.chunked(30).forEach { chunk ->
+                    try {
+                        val usersSnapshot = usersCollection
+                            .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
+                            .get()
+                            .await()
+                        usersSnapshot.toObjects(UserProfile::class.java).forEach { profile ->
+                            hostProfiles[profile.uid] = profile
+                        }
+                    } catch (e: Exception) {
+                        // Continue even if profile enrichment fails for some users
                     }
-                } catch (_: Exception) {
-                    // Skip if individual profile fetch fails
                 }
             }
 
-            // Override hostImageUrl and hostVerified with live data
+            // Map trips with live host data
             val updatedTrips = trips.map { trip ->
-                val hostProfile = hostProfiles[trip.hostId]
-                if (hostProfile != null) {
-                    trip.copy(
-                        hostImageUrl = hostProfile.profileImageUrl.ifBlank { trip.hostImageUrl },
-                        hostVerified = hostProfile.isVerified
-                    )
-                } else {
-                    trip
-                }
+                val profile = hostProfiles[trip.hostId]
+                trip.copy(
+                    hostName = profile?.name ?: trip.hostName,
+                    hostImageUrl = profile?.profileImageUrl?.takeIf { it.isNotBlank() }
+                        ?: trip.hostImageUrl,
+                    hostVerified = profile?.isVerified ?: trip.hostVerified
+                )
             }
 
             Result.success(updatedTrips)
@@ -51,33 +126,40 @@ class TripRepository {
         }
     }
 
-    suspend fun createTrip(trip: Trip): Result<String> {
-        return try {
-            val documentRef = tripsCollection.document()
-            val newTrip = trip.copy(id = documentRef.id)
-            documentRef.set(newTrip).await()
-            Result.success(newTrip.id)
+    suspend fun createTrip(trip: Trip): Result<String> = withContext(Dispatchers.IO) {
+        if (trip.title.isBlank() || trip.destination.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Title and destination are required"))
+        }
+
+        try {
+            val docRef = tripsCollection.document()
+            val finalTrip = trip.copy(id = docRef.id)
+            docRef.set(finalTrip).await()
+            Result.success(finalTrip.id)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun getUserTrips(userId: String): Result<List<Trip>> {
-        return try {
+    suspend fun getUserTrips(userId: String): Result<List<Trip>> = withContext(Dispatchers.IO) {
+        if (userId.isBlank()) return@withContext Result.failure(IllegalArgumentException("User ID cannot be blank"))
+
+        try {
             val snapshot = tripsCollection
                 .whereEqualTo("hostId", userId)
                 .get()
                 .await()
-            val trips = snapshot.toObjects(Trip::class.java)
-                .sortedByDescending { it.createdAt }
+            val trips = snapshot.toObjects(Trip::class.java).sortedByDescending { it.createdAt }
             Result.success(trips)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    suspend fun deleteTrip(tripId: String): Result<Unit> {
-        return try {
+    suspend fun deleteTrip(tripId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        if (tripId.isBlank()) return@withContext Result.failure(IllegalArgumentException("Trip ID cannot be blank"))
+
+        try {
             tripsCollection.document(tripId).delete().await()
             Result.success(Unit)
         } catch (e: Exception) {
@@ -85,10 +167,29 @@ class TripRepository {
         }
     }
 
-    suspend fun getTripById(tripId: String): Result<Trip?> {
-        return try {
-            val snapshot = tripsCollection.document(tripId).get().await()
-            val trip = snapshot.toObject(Trip::class.java)
+    fun getTripByIdFlow(tripId: String): Flow<Trip?> = callbackFlow {
+        if (tripId.isBlank()) {
+            trySend(null)
+            close()
+            return@callbackFlow
+        }
+        val listener = tripsCollection.document(tripId)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                trySend(snapshot?.toObject(Trip::class.java))
+            }
+        awaitClose { listener.remove() }
+    }
+
+    suspend fun getTripById(tripId: String): Result<Trip?> = withContext(Dispatchers.IO) {
+        if (tripId.isBlank()) return@withContext Result.success(null)
+
+        try {
+            val doc = tripsCollection.document(tripId).get().await()
+            val trip = doc.toObject(Trip::class.java)
             Result.success(trip)
         } catch (e: Exception) {
             Result.failure(e)

@@ -2,13 +2,14 @@ package com.quantax.gotogether.presentation.profile
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.UserProfile
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
 data class PublicProfileState(
     val isLoading: Boolean = false,
@@ -16,8 +17,10 @@ data class PublicProfileState(
     val error: String? = null
 )
 
-class PublicProfileViewModel : ViewModel() {
-    private val repository = UserProfileRepository()
+@HiltViewModel
+class PublicProfileViewModel @Inject constructor(
+    private val repository: UserProfileRepository
+) : ViewModel() {
 
     private val _state = MutableStateFlow(PublicProfileState())
     val state: StateFlow<PublicProfileState> = _state.asStateFlow()

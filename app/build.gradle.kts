@@ -1,6 +1,8 @@
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
+    alias(libs.plugins.hilt)
+    alias(libs.plugins.devtools.ksp)
     id("com.google.gms.google-services")
 }
 
@@ -11,7 +13,7 @@ android {
     defaultConfig {
         applicationId = "com.quantax.gotogether"
         minSdk = 29
-        targetSdk = 35
+        targetSdk = 36
         versionCode = 1
         versionName = "1.0"
 
@@ -20,20 +22,30 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isDebuggable = false
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
             )
         }
+        debug {
+            isMinifyEnabled = false
+            isDebuggable = true
+        }
     }
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_11
-        targetCompatibility = JavaVersion.VERSION_11
+        sourceCompatibility = JavaVersion.VERSION_17
+        targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
+}
+
+kotlin {
+    jvmToolchain(17)
 }
 
 dependencies {
@@ -46,7 +58,10 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
+    implementation(libs.androidx.lifecycle.runtime.compose)
     testImplementation(libs.junit)
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("io.mockk:mockk:1.13.13")
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.espresso.core)
     androidTestImplementation(platform(libs.androidx.compose.bom))
@@ -57,24 +72,25 @@ dependencies {
     //HorizontalPager
     implementation(libs.androidx.compose.foundation)
 
-    //Navigation
-    implementation(libs.androidx.navigation.compose)
+    // Coil (core for ImageLoaderFactory + compose for AsyncImage)
+    implementation(libs.coil)
+    implementation(libs.coil.compose)
 
-    //Firebase
+    // Hilt
+    implementation(libs.hilt.android)
+    ksp(libs.hilt.android.compiler)
+    implementation(libs.hilt.navigation.compose)
+
+    // Google Sign-In (GoogleSignIn, GoogleSignInOptions)
+    implementation(libs.play.services.auth)
+    // Play Services Location (LocationServices, FusedLocationProviderClient)
+    implementation(libs.play.services.location)
+
+    // Firebase (required for AppModule + KSP can resolve types)
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.analytics)
     implementation(libs.firebase.auth)
     implementation(libs.firebase.firestore)
-    implementation(libs.firebase.storage)
     implementation(libs.firebase.database)
-    implementation(libs.coil.compose)
-
-    //Google Sign-In (Credential Manager)
-    implementation(libs.credentials)
-    implementation(libs.credentials.play.services.auth)
-    implementation(libs.googleid)
-
-    //GMS
-    implementation(libs.play.services.auth)
-    implementation(libs.play.services.location)
+    implementation(libs.firebase.storage)
 }

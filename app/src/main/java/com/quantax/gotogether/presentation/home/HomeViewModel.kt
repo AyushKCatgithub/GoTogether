@@ -4,72 +4,140 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.domain.model.Trip
+import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-sealed class HomeState {
-    object Loading : HomeState()
-    data class Success(val trips: List<Trip>, val locationText: String = "Current Location, Destination") : HomeState()
-    data class Error(val message: String) : HomeState()
-}
+@OptIn(FlowPreview::class)
+@HiltViewModel
+class HomeViewModel @Inject constructor(
+    private val repository: TripRepository
+) : ViewModel() {
 
-class HomeViewModel : ViewModel() {
-    private val repository = TripRepository()
-    private val _state = MutableStateFlow<HomeState>(HomeState.Loading)
-    val state: StateFlow<HomeState> = _state.asStateFlow()
-
-    private var allTrips: List<Trip> = emptyList()
-
-    private val _searchFrom = MutableStateFlow("")
-    val searchFrom: StateFlow<String> = _searchFrom.asStateFlow()
-
-    private val _searchTo = MutableStateFlow("")
-    val searchTo: StateFlow<String> = _searchTo.asStateFlow()
-
-    private val _searchBudget = MutableStateFlow("")
-    val searchBudget: StateFlow<String> = _searchBudget.asStateFlow()
-
-    private val _searchGroupSize = MutableStateFlow(0)
-    val searchGroupSize: StateFlow<Int> = _searchGroupSize.asStateFlow()
-
-    private val _appliedFrom = MutableStateFlow("")
-    val appliedFrom: StateFlow<String> = _appliedFrom.asStateFlow()
-
-    private val _appliedTo = MutableStateFlow("")
-    val appliedTo: StateFlow<String> = _appliedTo.asStateFlow()
+    private val _allTrips = MutableStateFlow<List<Trip>?>(null)
+    private val _isRefreshing = MutableStateFlow(false)
+    val isRefreshing = _isRefreshing.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
-    val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
+    val searchQuery = _searchQuery.asStateFlow()
 
-    private val _isRefreshing = MutableStateFlow(false)
-    val isRefreshing: StateFlow<Boolean> = _isRefreshing.asStateFlow()
+    private val _searchFrom = MutableStateFlow("")
+    val searchFrom = _searchFrom.asStateFlow()
+
+    private val _searchTo = MutableStateFlow("")
+    val searchTo = _searchTo.asStateFlow()
+
+    private val _searchBudget = MutableStateFlow("")
+    val searchBudget = _searchBudget.asStateFlow()
+
+    private val _searchGroupSize = MutableStateFlow(0)
+    val searchGroupSize = _searchGroupSize.asStateFlow()
+
+    private val _selectedCategory = MutableStateFlow("All")
+    val selectedCategory = _selectedCategory.asStateFlow()
+
+    private val _locationText = MutableStateFlow("Detecting location...")
+    private val _currentCity = MutableStateFlow<String?>(null)
+    private val _error = MutableStateFlow<String?>(null)
+
+    // Main state combining trips and filters
+    val state: StateFlow<HomeState> = combine(
+        _allTrips,
+        _searchQuery.debounce(300L),
+        _searchFrom.debounce(300L),
+        _searchTo.debounce(300L),
+        _searchBudget.debounce(300L),
+        _searchGroupSize,
+        _locationText,
+        _currentCity,
+        _selectedCategory,
+        _error
+    ) { args: Array<Any?> ->
+        val trips = args[0] as? List<Trip>
+        val query = args[1] as String
+        val from = args[2] as String
+        val to = args[3] as String
+        val budget = args[4] as String
+        val size = args[5] as Int
+        val loc = args[6] as String
+        val currentCity = args[7] as String?
+        val category = args[8] as String
+        val errorMsg = args[9] as String?
+
+        if (errorMsg != null) return@combine HomeState.Error(errorMsg)
+        if (trips == null) return@combine HomeState.Loading
+
+        val displayTitle = when {
+            from.isNotBlank() && to.isNotBlank() -> "$from → $to"
+            from.isNotBlank() -> "$from → Anywhere"
+            to.isNotBlank() -> "Anywhere → $to"
+            loc != "Detecting location..." && loc != "Location permission denied" -> loc
+            else -> "Search journeys..."
+        }
+
+        // Sort trips by current location if no specific 'from' filter is applied
+        val sortedTrips = if (from.isBlank() && _currentCity.value != null) {
+            val current = _currentCity.value!!
+            trips.sortedWith(compareByDescending<Trip> {
+                it.startingLocation.contains(
+                    current,
+                    ignoreCase = true
+                ) || current.contains(it.startingLocation, ignoreCase = true)
+            }.thenByDescending { it.createdAt })
+        } else {
+            trips
+        }
+
+        val filtered = sortedTrips.filter { trip ->
+            val matchesSearch = trip.matchesFilter(query, from, to, budget, size)
+            val matchesCategory = category == "All" ||
+                    trip.title.contains(category, ignoreCase = true) ||
+                    trip.description.contains(category, ignoreCase = true) ||
+                    trip.interests.any { it.contains(category, ignoreCase = true) }
+
+            matchesSearch && matchesCategory
+        }
+
+        HomeState.Success(filtered, displayTitle)
+    }.stateIn(
+        scope = viewModelScope,
+        started = SharingStarted.WhileSubscribed(5000),
+        initialValue = HomeState.Loading
+    )
 
     init {
         loadTrips()
     }
 
     fun loadTrips() {
-        viewModelScope.launch {
-            if (_state.value is HomeState.Success) {
-                _isRefreshing.value = true
-            } else {
-                _state.value = HomeState.Loading
+        _error.value = null
+        _isRefreshing.value = true
+        repository.getTripsFlow()
+            .onEach { trips ->
+                _allTrips.value = trips
+                _isRefreshing.value = false
             }
-            val result = repository.getTrips()
-            result.fold(
-                onSuccess = { trips ->
-                    allTrips = trips
-                    applyFilters()
-                    _isRefreshing.value = false
-                },
-                onFailure = { error ->
-                    _state.value = HomeState.Error(error.message ?: "Failed to fetch trips")
-                    _isRefreshing.value = false
-                }
-            )
-        }
+            .catch { error ->
+                _error.value = error.localizedMessage ?: "Failed to load trips"
+                _isRefreshing.value = false
+            }
+            .launchIn(viewModelScope)
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
     }
 
     fun onSearchFromChange(query: String) {
@@ -85,59 +153,11 @@ class HomeViewModel : ViewModel() {
     }
 
     fun onSearchGroupSizeChange(size: Int) {
-        if (size >= 0) {
-            _searchGroupSize.value = size
-        }
+        if (size >= 0) _searchGroupSize.value = size
     }
 
-    fun onSearchQueryChange(query: String) {
-        _searchQuery.value = query
-        applyFilters()
-    }
-
-    fun applyFilters() {
-        val fromQuery = _searchFrom.value.trim()
-        val toQuery = _searchTo.value.trim()
-        val budgetQuery = _searchBudget.value.trim()
-        val groupSizeQuery = _searchGroupSize.value
-        val searchQuery = _searchQuery.value.trim()
-
-        val filtered = allTrips.filter { trip ->
-            val matchesFrom = fromQuery.isEmpty() || trip.startingLocation.contains(fromQuery, ignoreCase = true)
-            val matchesTo = toQuery.isEmpty() || trip.destination.contains(toQuery, ignoreCase = true)
-            
-            val matchesSearch = searchQuery.isEmpty() || 
-                    trip.destination.contains(searchQuery, ignoreCase = true) || 
-                    trip.startingLocation.contains(searchQuery, ignoreCase = true) ||
-                    trip.title.contains(searchQuery, ignoreCase = true)
-
-            val maxBudget = budgetQuery.toIntOrNull()
-            val matchesBudget = if (maxBudget != null) {
-                val tripMaxBudget = "\\d+".toRegex().findAll(trip.budgetRange).map { it.value.toInt() }.maxOrNull()
-                if (tripMaxBudget != null) {
-                    tripMaxBudget <= maxBudget
-                } else {
-                    trip.budgetRange.isEmpty() || trip.budgetRange.contains("flex", ignoreCase = true) || trip.budgetRange.contains("free", ignoreCase = true)
-                }
-            } else if (budgetQuery.isNotEmpty()) {
-                trip.budgetRange.contains(budgetQuery, ignoreCase = true)
-            } else {
-                true
-            }
-
-            val matchesGroupSize = groupSizeQuery == 0 || (trip.groupSize in 1..groupSizeQuery)
-            matchesFrom && matchesTo && matchesBudget && matchesGroupSize && matchesSearch
-        }
-        
-        _appliedFrom.value = fromQuery
-        _appliedTo.value = toQuery
-
-        val currentState = _state.value
-        if (currentState is HomeState.Success) {
-            _state.value = currentState.copy(trips = filtered)
-        } else {
-            _state.value = HomeState.Success(filtered)
-        }
+    fun onCategorySelected(category: String) {
+        _selectedCategory.value = category
     }
 
     fun clearFilters() {
@@ -145,63 +165,59 @@ class HomeViewModel : ViewModel() {
         _searchTo.value = ""
         _searchBudget.value = ""
         _searchGroupSize.value = 0
-        applyFilters()
     }
 
-    @android.annotation.SuppressLint("MissingPermission")
-    fun fetchLocation(context: android.content.Context) {
-        val currentState = _state.value
-        if (currentState is HomeState.Success) {
-            _state.value = currentState.copy(locationText = "Fetching location...")
-        }
-
-        val fusedLocationClient = com.google.android.gms.location.LocationServices.getFusedLocationProviderClient(context)
-        fusedLocationClient.lastLocation.addOnSuccessListener { location ->
-            if (location != null) {
-                try {
-                    val geocoder = android.location.Geocoder(context, java.util.Locale.getDefault())
-                    if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.TIRAMISU) {
-                        geocoder.getFromLocation(location.latitude, location.longitude, 1) { addresses ->
-                            val address = addresses.firstOrNull()
-                            updateLocationText(address?.locality, address?.countryName)
-                        }
-                    } else {
-                        @Suppress("DEPRECATION")
-                        val addresses = geocoder.getFromLocation(location.latitude, location.longitude, 1)
-                        val address = addresses?.firstOrNull()
-                        updateLocationText(address?.locality, address?.countryName)
-                    }
-                } catch (e: Exception) {
-                    updateLocationText(null, null)
-                }
-            } else {
-                setLocationError("Location unavailable")
-            }
-        }.addOnFailureListener {
-            setLocationError("Failed to get location")
-        }
+    fun applyFilters() {
+        // combine handles this reactively now
     }
 
-    private fun updateLocationText(city: String?, country: String?) {
-        val text = if (city != null && country != null) {
-            "$city, $country"
-        } else if (city != null) {
-            city
-        } else if (country != null) {
-            country
-        } else {
-            "Location unavailable"
-        }
-        val currentState = _state.value
-        if (currentState is HomeState.Success) {
-            _state.value = currentState.copy(locationText = text)
-        }
+    fun updateLocationText(text: String, cityOnly: String? = null) {
+        _locationText.value = text
+        cityOnly?.let { _currentCity.value = it }
     }
-    
-    fun setLocationError(message: String) {
-        val currentState = _state.value
-        if (currentState is HomeState.Success) {
-            _state.value = currentState.copy(locationText = message)
-        }
+
+    private fun Trip.matchesFilter(
+        query: String,
+        from: String,
+        to: String,
+        budget: String,
+        size: Int
+    ): Boolean {
+        val matchesFrom = from.isBlank() ||
+                startingLocation.contains(
+                    from.split(",").getOrNull(0)?.trim() ?: from,
+                    ignoreCase = true
+                ) ||
+                from.contains(startingLocation, ignoreCase = true)
+        val matchesTo = to.isBlank() ||
+                destination.contains(to.split(",").getOrNull(0)?.trim() ?: to, ignoreCase = true) ||
+                to.contains(destination, ignoreCase = true)
+        val matchesSearch = query.isEmpty() || (
+                destination.contains(query, ignoreCase = true) ||
+                        startingLocation.contains(query, ignoreCase = true) ||
+                        title.contains(query, ignoreCase = true)
+                )
+        val matchesBudget = budget.isEmpty() || matchesBudgetRange(budget)
+        val matchesGroupSize = size == 0 || (groupSize <= size)
+
+        return matchesFrom && matchesTo && matchesSearch && matchesBudget && matchesGroupSize
+    }
+
+    private val budgetRegex = "\\d+".toRegex()
+
+    private fun Trip.matchesBudgetRange(maxBudgetStr: String): Boolean {
+        val maxBudget = maxBudgetStr.toIntOrNull() ?: return true
+
+        // Performance: Reusing regex and avoiding expensive operations
+        val tripMaxBudget = budgetRegex.findAll(budgetRange)
+            .map { it.value.toIntOrNull() }
+            .filterNotNull()
+            .maxOrNull()
+
+        return tripMaxBudget?.let { it <= maxBudget } ?: (
+                budgetRange.isEmpty() ||
+                        budgetRange.contains("flex", ignoreCase = true) ||
+                        budgetRange.contains("free", ignoreCase = true)
+                )
     }
 }

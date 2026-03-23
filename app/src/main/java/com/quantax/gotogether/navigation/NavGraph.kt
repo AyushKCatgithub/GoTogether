@@ -2,44 +2,40 @@ package com.quantax.gotogether.navigation
 
 import android.content.Context
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import com.quantax.gotogether.auth.AuthManager
-import com.quantax.gotogether.presentation.onboarding.isOnboardingCompleted
-import com.quantax.gotogether.presentation.onboarding.saveOnboardingCompleted
+import java.net.URLDecoder
+import com.quantax.gotogether.presentation.auth.AuthViewModel
+import com.quantax.gotogether.presentation.auth.OtpVerificationScreen
 import com.quantax.gotogether.presentation.auth.SignInScreen
-import com.quantax.gotogether.presentation.auth.RegisterScreen
-import com.quantax.gotogether.presentation.auth.OtpScreen
-import com.quantax.gotogether.presentation.trip.CreateTripScreen
-import com.quantax.gotogether.presentation.trip.TripDetailScreen
+import com.quantax.gotogether.presentation.main.MainScreen
+import com.quantax.gotogether.presentation.messages.MessagesScreen
+import com.quantax.gotogether.presentation.onboarding.SplashScreen
 import com.quantax.gotogether.presentation.profile.EditProfileScreen
 import com.quantax.gotogether.presentation.profile.PublicProfileScreen
-import com.quantax.gotogether.presentation.messages.MessagesScreen
-import com.quantax.gotogether.presentation.onboarding.OnboardingScreen
-import com.quantax.gotogether.presentation.onboarding.SplashScreen
-import com.quantax.gotogether.presentation.main.MainScreen
+import com.quantax.gotogether.presentation.trip.CreateTripScreen
+import com.quantax.gotogether.presentation.trip.TripDetailScreen
 
 @Composable
 fun GoTogetherNavGraph(
     navController: NavHostController,
     context: Context
 ) {
-    val authManager = remember { AuthManager() }
-
     NavHost(
         navController = navController,
         startDestination = Routes.Splash.route
     ) {
         composable(Routes.Splash.route) {
+            val authViewModel: AuthViewModel = hiltViewModel()
             SplashScreen {
-                val destination = when {
-                    authManager.isLoggedIn() -> Routes.Main.route
-                    isOnboardingCompleted(context) -> Routes.Register.route
-                    else -> Routes.Onboarding.route
+                val destination = if (authViewModel.isLoggedIn()) {
+                    Routes.Main.route
+                } else {
+                    Routes.SignIn.route
                 }
                 navController.navigate(destination) {
                     popUpTo(Routes.Splash.route) { inclusive = true }
@@ -47,44 +43,10 @@ fun GoTogetherNavGraph(
             }
         }
 
-        composable(Routes.Onboarding.route) {
-            OnboardingScreen {
-                saveOnboardingCompleted(context)
-                navController.navigate(Routes.Register.route) {
-                    popUpTo(Routes.Onboarding.route) { inclusive = true }
-                }
-            }
-        }
-
-        composable(Routes.Register.route) {
-            RegisterScreen(
-                authManager = authManager,
-                onNavigateToSignIn = {
-                    navController.navigate(Routes.SignIn.route) {
-                        popUpTo(Routes.Register.route) { inclusive = true }
-                    }
-                },
-                onNavigateToPhone = {
-                    navController.navigate(Routes.Otp.route)
-                },
-                onAuthSuccess = {
-                    navController.navigate(Routes.Main.route) {
-                        popUpTo(Routes.Register.route) { inclusive = true }
-                    }
-                }
-            )
-        }
-
         composable(Routes.SignIn.route) {
             SignInScreen(
-                authManager = authManager,
-                onNavigateToRegister = {
-                    navController.navigate(Routes.Register.route) {
-                        popUpTo(Routes.SignIn.route) { inclusive = true }
-                    }
-                },
-                onNavigateToPhone = {
-                    navController.navigate(Routes.Otp.route)
+                onNavigateToOtp = { vId, phone ->
+                    navController.navigate(Routes.Otp.createRoute(vId, phone))
                 },
                 onAuthSuccess = {
                     navController.navigate(Routes.Main.route) {
@@ -94,12 +56,32 @@ fun GoTogetherNavGraph(
             )
         }
 
-        composable(Routes.Otp.route) {
-            OtpScreen(
-                authManager = authManager,
+        composable(
+            route = Routes.Otp.route,
+            arguments = listOf(
+                navArgument("verificationId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("phoneNumber") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
+            )
+        ) { backStackEntry ->
+            val vId = backStackEntry.arguments?.getString("verificationId")
+                ?.let { URLDecoder.decode(it, "UTF-8") } ?: ""
+            val phone = backStackEntry.arguments?.getString("phoneNumber")
+                ?.let { URLDecoder.decode(it, "UTF-8") } ?: ""
+            OtpVerificationScreen(
+                verificationId = vId,
+                phoneNumber = phone,
+                onNavigateBack = { navController.popBackStack() },
                 onAuthSuccess = {
                     navController.navigate(Routes.Main.route) {
-                        popUpTo(Routes.Otp.route) { inclusive = true }
+                        popUpTo(Routes.SignIn.route) { inclusive = true }
                     }
                 }
             )
@@ -127,7 +109,7 @@ fun GoTogetherNavGraph(
                     navController.navigate(Routes.PublicProfile.createRoute(userId))
                 },
                 onSignOut = {
-                    navController.navigate(Routes.Register.route) {
+                    navController.navigate(Routes.SignIn.route) {
                         popUpTo(Routes.Main.route) { inclusive = true }
                     }
                 }

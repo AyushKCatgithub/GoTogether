@@ -1,7 +1,6 @@
 package com.quantax.gotogether.ui.theme
 
 import android.app.Activity
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -20,24 +19,24 @@ private val DarkColorScheme = darkColorScheme(
     primary = GoTogetherOrange,
     secondary = GoTogetherOrangeLight,
     tertiary = AccentBlue,
-    background = Color(0xFF0D0D1A),
-    surface = Color(0xFF1A1A2E),
+    background = Color(0xFF05050A),
+    surface = Color(0xFF101018),
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = Color(0xFFEEEEF2),
-    onSurface = Color(0xFFEEEEF2)
+    onBackground = Color(0xFFFFFFFF),
+    onSurface = Color(0xFFFFFFFF)
 )
 
 private val LightColorScheme = lightColorScheme(
     primary = GoTogetherOrange,
     secondary = GoTogetherOrangeDark,
     tertiary = AccentBlue,
-    background = Color(0xFFF5F5FA),
+    background = Color(0xFFF7F8FA),
     surface = Color(0xFFFFFFFF),
     onPrimary = Color.White,
     onSecondary = Color.White,
-    onBackground = Color(0xFF1A1A2E),
-    onSurface = Color(0xFF1A1A2E)
+    onBackground = Color(0xFF111418),
+    onSurface = Color(0xFF111418)
 )
 
 // ─── Theme Composable ───

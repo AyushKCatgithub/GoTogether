@@ -4,9 +4,12 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.data.repository.ChatRepository
+import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.Trip
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -14,6 +17,7 @@ import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
+import javax.inject.Inject
 
 data class CreateTripState(
     val startingLocation: String = "",
@@ -31,11 +35,14 @@ data class CreateTripState(
     val isSuccess: Boolean = false
 )
 
-class CreateTripViewModel : ViewModel() {
-    private val repository = TripRepository()
-    private val userProfileRepository = UserProfileRepository()
-    private val chatRepository = com.quantax.gotogether.data.repository.ChatRepository()
-    private val authManager = AuthManager()
+@HiltViewModel
+class CreateTripViewModel @Inject constructor(
+    private val repository: TripRepository,
+    private val userProfileRepository: UserProfileRepository,
+    private val chatRepository: ChatRepository,
+    private val authManager: AuthManager,
+    private val storageService: StorageService
+) : ViewModel() {
     private val dateFormatter = SimpleDateFormat("dd MMM yyyy", Locale.getDefault())
 
     private val _state = MutableStateFlow(CreateTripState())
@@ -101,12 +108,15 @@ class CreateTripViewModel : ViewModel() {
         viewModelScope.launch {
             _state.value = currentState.copy(isLoading = true, error = null)
             
-            // Fetch profile to determine verification status
             val profileResult = userProfileRepository.getProfile(currentUser.uid)
             val profile = profileResult.getOrNull()
+            // If profile fetch fails, fall back to FirebaseUser display name gracefully
             val isVerified = profile?.isVerified ?: false
-            val hostName = profile?.name?.ifBlank { null } ?: currentUser.displayName ?: "Traveler"
-            val hostImageUrl = profile?.profileImageUrl?.ifBlank { null } ?: currentUser.photoUrl?.toString()
+            val hostName = profile?.name?.takeIf { it.isNotBlank() }
+                ?: currentUser.displayName
+                ?: "Traveler"
+            val hostImageUrl = profile?.profileImageUrl?.takeIf { it.isNotBlank() }
+                ?: currentUser.photoUrl?.toString()
             
             // For MVP, we will use a dummy image if none provided
             val dummyImages = listOf(
@@ -120,14 +130,13 @@ class CreateTripViewModel : ViewModel() {
             // Handle image upload if a local URI was selected
             var finalImageUrl: String? = null
             if (currentState.selectedImageUri != null) {
-                val storageService = com.quantax.gotogether.data.repository.StorageService()
-                val uploadedUrl = storageService.uploadImage(currentState.selectedImageUri, "trip_images")
-                if (uploadedUrl != null) {
-                    finalImageUrl = uploadedUrl
+                val uploadResult = storageService.uploadImage(currentState.selectedImageUri, "trip_images")
+                if (uploadResult.isSuccess) {
+                    finalImageUrl = uploadResult.getOrNull()
                 } else {
                     _state.value = currentState.copy(
                         isLoading = false,
-                        error = "Failed to upload trip image. Please try again."
+                        error = uploadResult.exceptionOrNull()?.message ?: "Failed to upload trip image. Please try again."
                     )
                     return@launch
                 }
@@ -140,7 +149,11 @@ class CreateTripViewModel : ViewModel() {
                 hostName = hostName,
                 hostImageUrl = hostImageUrl,
                 hostVerified = isVerified,
-                title = "${currentState.destination}: An Exciting Trip",
+                // Use destination as the base title; user can refine via description
+                title = if (currentState.description.isNotBlank())
+                    "${currentState.destination}: ${currentState.description.take(40)}"
+                else
+                    "${currentState.destination} Adventure",
                 startingLocation = currentState.startingLocation,
                 destination = currentState.destination,
                 startDate = currentState.startDate,
@@ -167,7 +180,11 @@ class CreateTripViewModel : ViewModel() {
                     lastMessageTimestamp = System.currentTimeMillis(),
                     lastMessageSenderName = "System"
                 )
-                chatRepository.createChatroom(chatroom)
+                val chatroomResult = chatRepository.createChatroom(chatroom)
+                if (chatroomResult.isFailure) {
+                    // Non-fatal: trip is created, but chatroom failed. Log and continue.
+                    chatroomResult.exceptionOrNull()?.printStackTrace()
+                }
                 
                 _state.value = currentState.copy(isLoading = false, isSuccess = true)
             } else {

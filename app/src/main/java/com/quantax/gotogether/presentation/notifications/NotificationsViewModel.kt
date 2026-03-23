@@ -2,152 +2,223 @@ package com.quantax.gotogether.presentation.notifications
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.JoinRequestRepository
 import com.quantax.gotogether.data.repository.NotificationRepository
 import com.quantax.gotogether.domain.model.JoinRequest
 import com.quantax.gotogether.domain.model.Notification
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import javax.inject.Inject
 
-sealed interface NotificationItem {
-    val timestamp: Long
-    val id: String
-    
-    data class JoinRequestItem(val request: JoinRequest) : NotificationItem {
-        override val timestamp: Long = request.timestamp
-        override val id: String = request.id
-    }
-    data class GeneralNotificationItem(val notification: Notification) : NotificationItem {
-        override val timestamp: Long = notification.timestamp
-        override val id: String = notification.id
-    }
-}
 
-class NotificationsViewModel : ViewModel() {
-    private val joinRequestRepository = JoinRequestRepository()
-    private val chatRepository = ChatRepository()
-    private val notificationRepository = NotificationRepository()
-    private val auth = FirebaseAuth.getInstance()
+@HiltViewModel
+class NotificationsViewModel @Inject constructor(
+    private val joinRequestRepository: JoinRequestRepository,
+    private val chatRepository: ChatRepository,
+    private val notificationRepository: NotificationRepository,
+    private val authManager: AuthManager
+) : ViewModel() {
 
     private val _pendingRequests = MutableStateFlow<List<JoinRequest>>(emptyList())
-    // Keep for backward compatibility or specific uses
-    val pendingRequests: StateFlow<List<JoinRequest>> = _pendingRequests.asStateFlow()
-
     private val _generalNotifications = MutableStateFlow<List<Notification>>(emptyList())
-    
-    val allNotifications: StateFlow<List<NotificationItem>> = combine(
+    private val _isLoading = MutableStateFlow(true)
+    private val _actionMessage = MutableStateFlow<String?>(null)
+
+    // Tracks how many of the two streams have emitted at least once.
+    // Loading finishes only when both streams are ready.
+    private val _loadedStreams = MutableStateFlow(0)
+
+    val state: StateFlow<NotificationsState> = combine(
         _pendingRequests,
-        _generalNotifications
-    ) { requests, notifications ->
+        _generalNotifications,
+        _loadedStreams,
+        _actionMessage
+    ) { requests, notifications, loaded, message ->
         val items = mutableListOf<NotificationItem>()
         items.addAll(requests.map { NotificationItem.JoinRequestItem(it) })
         items.addAll(notifications.map { NotificationItem.GeneralNotificationItem(it) })
-        items.sortedByDescending { it.timestamp }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+        items.sortByDescending { it.timestamp }
 
-    val unreadCount: StateFlow<Int> = combine(
-        _pendingRequests,
-        _generalNotifications
-    ) { requests, notifications ->
-        requests.size + notifications.count { !it.isRead }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 0)
+        val count = requests.size + notifications.count { !it.isRead }
 
-    private val _isLoading = MutableStateFlow(true)
-    val isLoading: StateFlow<Boolean> = _isLoading.asStateFlow()
-
-    private val _actionMessage = MutableStateFlow<String?>(null)
-    val actionMessage: StateFlow<String?> = _actionMessage.asStateFlow()
+        NotificationsState(
+            allNotifications = items,
+            unreadCount = count,
+            isLoading = loaded < 2, // only false when both streams have emitted
+            actionMessage = message
+        )
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NotificationsState())
 
     init {
-        loadRequestsAndNotifications()
+        onEvent(NotificationsEvent.LoadNotifications)
+    }
+
+    fun onEvent(event: NotificationsEvent) {
+        when (event) {
+            is NotificationsEvent.LoadNotifications -> loadRequestsAndNotifications()
+            is NotificationsEvent.ApproveRequest -> approveRequest(event.request)
+            is NotificationsEvent.DenyRequest -> denyRequest(event.request)
+            is NotificationsEvent.MarkAsRead -> markAsRead(event.notificationId)
+            is NotificationsEvent.MarkAllAsRead -> markAllAsRead()
+            is NotificationsEvent.ClearActionMessage -> clearActionMessage()
+        }
     }
 
     private fun loadRequestsAndNotifications() {
-        val uid = auth.currentUser?.uid ?: return
+        val uid = authManager.currentUser?.uid
+        if (uid == null) {
+            _loadedStreams.value = 2 // mark as done so loading stops
+            _actionMessage.value = "User not logged in"
+            return
+        }
+
+        _loadedStreams.value = 0
+        _actionMessage.value = null
+
         viewModelScope.launch {
             launch {
-                joinRequestRepository.getRequestsForHost(uid).collect { requests ->
-                    _pendingRequests.value = requests
-                    updateLoadingState()
+                try {
+                    joinRequestRepository.getRequestsForHost(uid)
+                        .catch { e ->
+                            _actionMessage.value = e.localizedMessage ?: "Failed to load requests"
+                            markStreamLoaded()
+                        }
+                        .collect { requests ->
+                            _pendingRequests.value = requests
+                            markStreamLoaded()
+                        }
+                } catch (e: Exception) {
+                    _actionMessage.value = e.localizedMessage ?: "Failed to load requests"
+                    markStreamLoaded()
                 }
             }
             launch {
-                notificationRepository.getNotificationsForUser(uid).collect { notifications ->
-                    _generalNotifications.value = notifications
-                    updateLoadingState()
+                try {
+                    notificationRepository.getNotificationsForUser(uid)
+                        .catch { e ->
+                            _actionMessage.value =
+                                e.localizedMessage ?: "Failed to load notifications"
+                            markStreamLoaded()
+                        }
+                        .collect { notifications ->
+                            _generalNotifications.value = notifications
+                            markStreamLoaded()
+                        }
+                } catch (e: Exception) {
+                    _actionMessage.value = e.localizedMessage ?: "Failed to load notifications"
+                    markStreamLoaded()
                 }
             }
         }
     }
 
-    private fun updateLoadingState() {
-        if (_isLoading.value) {
-            _isLoading.value = false
+    private fun markStreamLoaded() {
+        if (_loadedStreams.value < 2) {
+            _loadedStreams.value += 1
         }
     }
 
-    fun approveRequest(request: JoinRequest) {
+    private fun approveRequest(request: JoinRequest) {
+        val currentUser = authManager.currentUser
+        if (currentUser == null) {
+            _actionMessage.value = "User not logged in"
+            return
+        }
+
         viewModelScope.launch {
-            joinRequestRepository.approveRequest(request.id, request.tripId, request.requesterId)
-                .onSuccess {
-                    // Also add to chatroom
-                    chatRepository.addMemberToChatroom(request.tripId, request.requesterId)
-                    
-                    // Create an approval notification for the requester
-                    val currentUser = auth.currentUser
-                    val notification = Notification(
-                        recipientId = request.requesterId,
-                        senderId = currentUser?.uid ?: "",
-                        senderName = currentUser?.displayName ?: "Host",
-                        senderImageUrl = currentUser?.photoUrl?.toString(),
-                        type = Notification.TYPE_REQUEST_APPROVED,
-                        tripId = request.tripId,
-                        tripTitle = request.tripTitle,
-                        chatroomId = request.tripId // chatroomId is the same as tripId
-                    )
-                    notificationRepository.createNotification(notification)
+            try {
+                joinRequestRepository.approveRequest(
+                    request.id,
+                    request.tripId,
+                    request.requesterId
+                )
+                    .onSuccess {
+                        // Also add to chatroom
+                        try {
+                            chatRepository.addMemberToChatroom(request.tripId, request.requesterId)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
 
-                    _actionMessage.value = "${request.requesterName} has been approved!"
-                }
-                .onFailure {
-                    _actionMessage.value = "Failed to approve request"
-                }
+                        // Create an approval notification for the requester
+                        try {
+                            val notification = Notification(
+                                recipientId = request.requesterId,
+                                senderId = currentUser.uid,
+                                senderName = currentUser.displayName ?: "Host",
+                                senderImageUrl = currentUser.photoUrl?.toString(),
+                                type = Notification.TYPE_REQUEST_APPROVED,
+                                tripId = request.tripId,
+                                tripTitle = request.tripTitle,
+                                chatroomId = request.tripId // chatroomId is the same as tripId
+                            )
+                            notificationRepository.createNotification(notification)
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
+
+                        _actionMessage.value = "${request.requesterName} has been approved!"
+                    }
+                    .onFailure { e ->
+                        _actionMessage.value = e.localizedMessage ?: "Failed to approve request"
+                    }
+            } catch (e: Exception) {
+                _actionMessage.value = e.localizedMessage ?: "Failed to approve request"
+            }
         }
     }
 
-    fun denyRequest(request: JoinRequest) {
+    private fun denyRequest(request: JoinRequest) {
+        if (authManager.currentUser == null) {
+            _actionMessage.value = "User not logged in"
+            return
+        }
+
         viewModelScope.launch {
-            joinRequestRepository.denyRequest(request.id)
-                .onSuccess {
-                    _actionMessage.value = "${request.requesterName}'s request denied"
-                }
-                .onFailure {
-                    _actionMessage.value = "Failed to deny request"
-                }
+            try {
+                joinRequestRepository.denyRequest(request.id)
+                    .onSuccess {
+                        _actionMessage.value = "${request.requesterName}'s request denied"
+                    }
+                    .onFailure { e ->
+                        _actionMessage.value = e.localizedMessage ?: "Failed to deny request"
+                    }
+            } catch (e: Exception) {
+                _actionMessage.value = e.localizedMessage ?: "Failed to deny request"
+            }
         }
     }
 
-    fun markAsRead(notificationId: String) {
+    private fun markAsRead(notificationId: String) {
         viewModelScope.launch {
-            notificationRepository.markAsRead(notificationId)
-        }
-    }
-    
-    fun markAllAsRead() {
-        val uid = auth.currentUser?.uid ?: return
-        viewModelScope.launch {
-            notificationRepository.markAllAsRead(uid)
+            try {
+                notificationRepository.markAsRead(notificationId)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 
-    fun clearActionMessage() {
+    private fun markAllAsRead() {
+        val uid = authManager.currentUser?.uid ?: return
+        viewModelScope.launch {
+            try {
+                notificationRepository.markAllAsRead(uid)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
+    }
+
+    private fun clearActionMessage() {
         _actionMessage.value = null
     }
 }
