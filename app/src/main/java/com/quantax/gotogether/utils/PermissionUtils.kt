@@ -11,6 +11,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.runtime.Composable
 import androidx.core.content.ContextCompat
 import com.google.android.gms.location.LocationServices
+import kotlinx.coroutines.launch
 import java.util.Locale
 
 object PermissionUtils {
@@ -77,26 +78,32 @@ object PermissionUtils {
         onLocationDetailsFetched: (String, String?) -> Unit,
         onError: (String) -> Unit
     ) {
-        try {
-            val geocoder = Geocoder(context, Locale.getDefault())
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                geocoder.getFromLocation(lat, lon, 1) { addresses ->
-                    val address = addresses.firstOrNull()
-                    onLocationDetailsFetched(
-                        formatAddress(address?.locality, address?.countryName),
-                        address?.locality
-                    )
+        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.IO).launch {
+            try {
+                val geocoder = Geocoder(context, Locale.getDefault())
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                    geocoder.getFromLocation(lat, lon, 1) { addresses ->
+                        val address = addresses.firstOrNull()
+                        val formatted = formatAddress(address?.locality, address?.countryName)
+                        val locality = address?.locality
+                        kotlinx.coroutines.CoroutineScope(kotlinx.coroutines.Dispatchers.Main).launch {
+                            onLocationDetailsFetched(formatted, locality)
+                        }
+                    }
+                } else {
+                    @Suppress("DEPRECATION")
+                    val address = geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()
+                    val formatted = formatAddress(address?.locality, address?.countryName)
+                    val locality = address?.locality
+                    kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                        onLocationDetailsFetched(formatted, locality)
+                    }
                 }
-            } else {
-                @Suppress("DEPRECATION")
-                val address = geocoder.getFromLocation(lat, lon, 1)?.firstOrNull()
-                onLocationDetailsFetched(
-                    formatAddress(address?.locality, address?.countryName),
-                    address?.locality
-                )
+            } catch (e: Exception) {
+                kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.Main) {
+                    onError("Geocoder error: ${e.message}")
+                }
             }
-        } catch (e: Exception) {
-            onError("Geocoder error: ${e.message}")
         }
     }
 

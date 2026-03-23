@@ -30,7 +30,6 @@ import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -61,7 +60,7 @@ fun HomeScreen(
     viewModel: HomeViewModel = hiltViewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    val searchFrom by viewModel.searchFrom.collectAsState()
+    val searchFrom by viewModel.searchFrom.collectAsStateWithLifecycle()
     val searchTo by viewModel.searchTo.collectAsStateWithLifecycle()
     val searchBudget by viewModel.searchBudget.collectAsStateWithLifecycle()
     val searchGroupSize by viewModel.searchGroupSize.collectAsStateWithLifecycle()

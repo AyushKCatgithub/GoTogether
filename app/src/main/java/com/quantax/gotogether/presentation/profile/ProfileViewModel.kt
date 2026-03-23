@@ -92,7 +92,7 @@ class ProfileViewModel @Inject constructor(
         }
 
         _state.update { it.copy(isLoading = true, error = null) }
-        
+
         viewModelScope.launch {
             repository.getProfile(user.uid).onSuccess { profile ->
                 val finalProfile = profile ?: UserProfile(uid = user.uid, email = user.email ?: "")
@@ -118,34 +118,34 @@ class ProfileViewModel @Inject constructor(
         _state.update { it.copy(isSaving = true, saveSuccess = false, error = null) }
 
         viewModelScope.launch {
-            var updatedProfile = profile.copy(uid = user.uid)
+            try {
+                var updatedProfile = profile.copy(uid = user.uid)
 
-            // If the profile image is a new local content URI, upload it to Storage first
-            if (storageService.isLocalUri(profile.profileImageUrl)) {
-                val uri = Uri.parse(profile.profileImageUrl)
-                val uploadResult = storageService.uploadImage(uri, "profile_images")
-
-                if (uploadResult.isSuccess) {
-                    val publicUrl = uploadResult.getOrNull()
-                    if (publicUrl != null) {
-                        updatedProfile = updatedProfile.copy(profileImageUrl = publicUrl)
+                // If the profile image is a new local content URI, upload it to Storage first
+                if (storageService.isLocalUri(profile.profileImageUrl)) {
+                    val uri = Uri.parse(profile.profileImageUrl)
+                    val uploadResult = storageService.uploadImage(uri, "profile_images")
+                    if (uploadResult.isSuccess) {
+                        val publicUrl = uploadResult.getOrNull()
+                        if (publicUrl != null) {
+                            updatedProfile = updatedProfile.copy(profileImageUrl = publicUrl)
+                        }
+                    } else {
+                        _state.update {
+                            it.copy(
+                                isSaving = false,
+                                error = uploadResult.exceptionOrNull()?.message ?: "Failed to upload profile photo"
+                            )
+                        }
+                        return@launch
                     }
-                } else {
-                    _state.update {
-                        it.copy(
-                            isSaving = false,
-                            error = uploadResult.exceptionOrNull()?.message ?: "Failed to upload profile photo"
-                        )
-                    }
-                    return@launch
                 }
-            }
 
                 // Upload any local verification/background photo URIs and collect public URLs
                 val verificationUrls = profile.verificationPhotoUrls.map { url ->
                     if (storageService.isLocalUri(url)) {
                         val uri = Uri.parse(url)
-                        storageService.uploadImage(uri, "verification_photos") ?: url
+                        storageService.uploadImage(uri, "verification_photos").getOrDefault(url)
                     } else {
                         url
                     }
@@ -156,35 +156,29 @@ class ProfileViewModel @Inject constructor(
                 val saveResult = repository.saveProfile(updatedProfile, oldUsername)
                 saveResult.fold(
                     onSuccess = {
-                        _state.value = _state.value.copy(
-                            isSaving = false,
-                            saveSuccess = true,
-                            profile = updatedProfile
-                        )
+                        _state.update {
+                            it.copy(
+                                isSaving = false,
+                                saveSuccess = true,
+                                profile = updatedProfile
+                            )
+                        }
                     },
                     onFailure = { e ->
-                        _state.value = _state.value.copy(
-                            isSaving = false,
-                            error = e.message ?: e.localizedMessage ?: "Failed to save profile"
-                        )
+                        _state.update {
+                            it.copy(
+                                isSaving = false,
+                                error = e.message ?: e.localizedMessage ?: "Failed to save profile"
+                            )
+                        }
                     }
                 )
             } catch (e: Exception) {
                 e.printStackTrace()
-                _state.value = _state.value.copy(isSaving = false, error = e.message ?: e.localizedMessage ?: "Failed to save profile")
-            repository.saveProfile(updatedProfile).onSuccess {
                 _state.update {
                     it.copy(
                         isSaving = false,
-                        saveSuccess = true,
-                        profile = updatedProfile
-                    )
-                }
-            }.onFailure { e ->
-                _state.update {
-                    it.copy(
-                        isSaving = false,
-                        error = e.localizedMessage ?: "Failed to save profile"
+                        error = e.message ?: e.localizedMessage ?: "Failed to save profile"
                     )
                 }
             }

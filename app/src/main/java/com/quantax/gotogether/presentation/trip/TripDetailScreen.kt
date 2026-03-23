@@ -71,6 +71,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.zIndex
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
@@ -421,7 +422,7 @@ fun TripDetailContent(
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
-                text = trip.description.ifBlank { "Bromo Tengger Semeru National Park, located in East Java, Indonesia, features active volcanoes, rugged landscapes, and the iconic Mount Bromo." },
+                text = trip.description.ifBlank { "No description provided." },
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
                 color = Color.Gray

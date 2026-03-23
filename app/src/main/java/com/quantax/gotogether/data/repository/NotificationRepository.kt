@@ -30,6 +30,7 @@ class NotificationRepository @Inject constructor(
     fun getNotificationsForUser(userId: String): Flow<List<Notification>> = callbackFlow {
         val listener = notificationsCollection
             .whereEqualTo("recipientId", userId)
+            .limit(50)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     trySend(emptyList())

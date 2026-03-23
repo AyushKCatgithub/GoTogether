@@ -32,12 +32,16 @@ class NotificationsViewModel @Inject constructor(
     private val _isLoading = MutableStateFlow(true)
     private val _actionMessage = MutableStateFlow<String?>(null)
 
+    // Tracks how many of the two streams have emitted at least once.
+    // Loading finishes only when both streams are ready.
+    private val _loadedStreams = MutableStateFlow(0)
+
     val state: StateFlow<NotificationsState> = combine(
         _pendingRequests,
         _generalNotifications,
-        _isLoading,
+        _loadedStreams,
         _actionMessage
-    ) { requests, notifications, loading, message ->
+    ) { requests, notifications, loaded, message ->
         val items = mutableListOf<NotificationItem>()
         items.addAll(requests.map { NotificationItem.JoinRequestItem(it) })
         items.addAll(notifications.map { NotificationItem.GeneralNotificationItem(it) })
@@ -48,7 +52,7 @@ class NotificationsViewModel @Inject constructor(
         NotificationsState(
             allNotifications = items,
             unreadCount = count,
-            isLoading = loading,
+            isLoading = loaded < 2, // only false when both streams have emitted
             actionMessage = message
         )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), NotificationsState())
@@ -71,12 +75,12 @@ class NotificationsViewModel @Inject constructor(
     private fun loadRequestsAndNotifications() {
         val uid = authManager.currentUser?.uid
         if (uid == null) {
-            _isLoading.value = false
+            _loadedStreams.value = 2 // mark as done so loading stops
             _actionMessage.value = "User not logged in"
             return
         }
 
-        _isLoading.value = true
+        _loadedStreams.value = 0
         _actionMessage.value = null
 
         viewModelScope.launch {
@@ -85,15 +89,15 @@ class NotificationsViewModel @Inject constructor(
                     joinRequestRepository.getRequestsForHost(uid)
                         .catch { e ->
                             _actionMessage.value = e.localizedMessage ?: "Failed to load requests"
-                            updateLoadingState()
+                            markStreamLoaded()
                         }
                         .collect { requests ->
                             _pendingRequests.value = requests
-                            updateLoadingState()
+                            markStreamLoaded()
                         }
                 } catch (e: Exception) {
                     _actionMessage.value = e.localizedMessage ?: "Failed to load requests"
-                    updateLoadingState()
+                    markStreamLoaded()
                 }
             }
             launch {
@@ -102,23 +106,23 @@ class NotificationsViewModel @Inject constructor(
                         .catch { e ->
                             _actionMessage.value =
                                 e.localizedMessage ?: "Failed to load notifications"
-                            updateLoadingState()
+                            markStreamLoaded()
                         }
                         .collect { notifications ->
                             _generalNotifications.value = notifications
-                            updateLoadingState()
+                            markStreamLoaded()
                         }
                 } catch (e: Exception) {
                     _actionMessage.value = e.localizedMessage ?: "Failed to load notifications"
-                    updateLoadingState()
+                    markStreamLoaded()
                 }
             }
         }
     }
 
-    private fun updateLoadingState() {
-        if (_isLoading.value) {
-            _isLoading.value = false
+    private fun markStreamLoaded() {
+        if (_loadedStreams.value < 2) {
+            _loadedStreams.value += 1
         }
     }
 

@@ -109,6 +109,7 @@ fun Modifier.bounceClick() = composed {
 @Composable
 fun HomeTopAppBar(
     locationText: String,
+    unreadMessageCount: Int = 0,
     onLogoClick: () -> Unit,
     onMessagesClick: () -> Unit
 ) {
@@ -181,14 +182,16 @@ fun HomeTopAppBar(
                     )
 
                 }
-                // Activity indicator dot
-                Box(
-                    modifier = Modifier
-                        .size(8.dp)
-                        .background(Color.Red, CircleShape)
-                        .align(Alignment.TopEnd)
-                        .padding(2.dp)
-                )
+                // Activity indicator dot — only visible when there are unread messages
+                if (unreadMessageCount > 0) {
+                    Box(
+                        modifier = Modifier
+                            .size(8.dp)
+                            .background(Color.Red, CircleShape)
+                            .align(Alignment.TopEnd)
+                            .padding(2.dp)
+                    )
+                }
             }
 
         },
@@ -873,202 +876,6 @@ fun FilterSection(
                 elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
             ) {
                 Text("See Results", fontWeight = FontWeight.Bold)
-            }
-        }
-    }
-}
-
-@Composable
-fun FeaturedTripCard(
-    trip: Trip,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Card(
-        modifier = modifier
-            .width(280.dp)
-            .height(400.dp)
-            .bounceClick()
-            .clickable { onClick() }
-            .shadow(
-                elevation = 20.dp,
-                shape = RoundedCornerShape(32.dp),
-                ambientColor = GoTogetherOrange.copy(alpha = 0.15f),
-                spotColor = GoTogetherOrange.copy(alpha = 0.25f)
-            ),
-        shape = RoundedCornerShape(32.dp),
-        colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card),
-        elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
-    ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            // Immersive Image
-            SubcomposeAsyncImage(
-                model = ImageRequest.Builder(LocalContext.current)
-                    .data(trip.imageUrl)
-                    .crossfade(true)
-                    .build(),
-                contentDescription = null,
-                contentScale = ContentScale.Crop,
-                modifier = Modifier.fillMaxSize(),
-                loading = {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(GoTogetherTheme.colors.surfaceVariant)
-                    )
-                }
-            )
-
-            // Dynamic Glass Overlay for top indicators
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            listOf(
-                                Color.Black.copy(alpha = 0.4f),
-                                Color.Transparent,
-                                Color.Transparent
-                            )
-                        )
-                    )
-            )
-
-            // Top Badges
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                HostBadge(
-                    name = trip.hostName,
-                    imageUrl = trip.hostImageUrl,
-                    isVerified = trip.hostVerified,
-                    onClick = {},
-                    modifier = Modifier.alpha(0.95f)
-                )
-
-                Surface(
-                    color = Color.Black.copy(alpha = 0.3f),
-                    shape = CircleShape,
-                    modifier = Modifier.size(36.dp),
-                    onClick = {}
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            Icons.Default.BookmarkBorder,
-                            null,
-                            tint = Color.White,
-                            modifier = Modifier.size(18.dp)
-                        )
-                    }
-                }
-            }
-
-            // Status Column (Center Left)
-            Column(
-                modifier = Modifier
-                    .padding(start = 16.dp, top = 64.dp)
-                    .align(Alignment.TopStart),
-                verticalArrangement = Arrangement.spacedBy(6.dp)
-            ) {
-                // Featured Tag
-                Surface(
-                    color = GoTogetherOrange,
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(
-                        Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Icon(
-                            Icons.Default.Star,
-                            null,
-                            tint = Color.White,
-                            modifier = Modifier.size(10.dp)
-                        )
-                        Spacer(Modifier.width(4.dp))
-                        Text(
-                            "FEATURED",
-                            color = Color.White,
-                            fontSize = 9.sp,
-                            fontWeight = FontWeight.Black
-                        )
-                    }
-                }
-            }
-
-            // Premium Glass Info Footer
-            Surface(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .padding(12.dp)
-                    .fillMaxWidth(),
-                color = Color.Black.copy(alpha = 0.5f),
-                shape = RoundedCornerShape(24.dp),
-                border = BorderStroke(1.dp, Color.White.copy(alpha = 0.15f))
-            ) {
-                Column(modifier = Modifier.padding(16.dp)) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
-                    ) {
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = trip.title,
-                                color = Color.White,
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.ExtraBold,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis
-                            )
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.padding(top = 2.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.LocationOn,
-                                    null,
-                                    tint = GoTogetherOrange,
-                                    modifier = Modifier.size(12.dp)
-                                )
-                                Spacer(Modifier.width(4.dp))
-                                Text(
-                                    trip.destination,
-                                    color = Color.White.copy(alpha = 0.8f),
-                                    fontSize = 12.sp,
-                                    fontWeight = FontWeight.Medium
-                                )
-                            }
-                        }
-                    }
-
-                    Spacer(Modifier.height(12.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                Icons.Default.DateRange,
-                                null,
-                                tint = Color.White.copy(alpha = 0.6f),
-                                modifier = Modifier.size(14.dp)
-                            )
-                            Spacer(Modifier.width(6.dp))
-                            Text(
-                                trip.startDate,
-                                color = Color.White.copy(alpha = 0.9f),
-                                fontSize = 12.sp
-                            )
-                        }
-                    }
-                }
             }
         }
     }

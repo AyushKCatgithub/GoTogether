@@ -83,51 +83,60 @@ class ChatRepository @Inject constructor(
             }
 
             override fun onCancelled(error: DatabaseError) {
-                Log.e("ChatRepository", "Listen failed for messages in $chatroomId", error.toException())
+                Log.e(
+                    "ChatRepository",
+                    "Listen failed for messages in $chatroomId",
+                    error.toException()
+                )
                 // Don't close the flow, just send empty list or handle error in UI
                 trySend(emptyList())
             }
         }
-        databaseRef.addValueEventListener(listener)
-        awaitClose { databaseRef.removeEventListener(listener) }
+        val query = databaseRef.limitToLast(100)
+        query.addValueEventListener(listener)
+        awaitClose { query.removeEventListener(listener) }
     }.flowOn(Dispatchers.IO)
 
-    suspend fun sendMessage(chatroomId: String, message: ChatMessage): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            val databaseRef = database.getReference("chatrooms").child(chatroomId).child("messages").push()
-            val messageId = databaseRef.key ?: return@withContext Result.failure(Exception("Could not generate message ID"))
-            
-            val newMessage = message.copy(id = messageId, chatroomId = chatroomId)
-            
-            // Upload message to Realtime Database
-            databaseRef.setValue(newMessage).await()
+    suspend fun sendMessage(chatroomId: String, message: ChatMessage): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                val databaseRef =
+                    database.getReference("chatrooms").child(chatroomId).child("messages").push()
+                val messageId = databaseRef.key
+                    ?: return@withContext Result.failure(Exception("Could not generate message ID"))
 
-            // Update chatroom summary in Firestore for the list view
-            val updates = mapOf(
-                "lastMessage" to message.text,
-                "lastMessageTimestamp" to message.timestamp,
-                "lastMessageSenderName" to message.senderName
-            )
-            
-            chatroomsCollection.document(chatroomId).set(updates, SetOptions.merge()).await()
+                val newMessage = message.copy(id = messageId, chatroomId = chatroomId)
 
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e("ChatRepository", "Error sending message to $chatroomId", e)
-            Result.failure(e)
+                // Upload message to Realtime Database
+                databaseRef.setValue(newMessage).await()
+
+                // Update chatroom summary in Firestore for the list view
+                val updates = mapOf(
+                    "lastMessage" to message.text,
+                    "lastMessageTimestamp" to message.timestamp,
+                    "lastMessageSenderName" to message.senderName
+                )
+
+                chatroomsCollection.document(chatroomId).set(updates, SetOptions.merge()).await()
+
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Log.e("ChatRepository", "Error sending message to $chatroomId", e)
+                Result.failure(e)
+            }
         }
-    }
 
-    suspend fun addMemberToChatroom(chatroomId: String, userId: String): Result<Unit> = withContext(Dispatchers.IO) {
-        try {
-            chatroomsCollection.document(chatroomId).update(
-                "memberIds",
-                com.google.firebase.firestore.FieldValue.arrayUnion(userId)
-            ).await()
-            Result.success(Unit)
-        } catch (e: Exception) {
-            Log.e("ChatRepository", "Error adding member $userId to $chatroomId", e)
-            Result.failure(e)
+    suspend fun addMemberToChatroom(chatroomId: String, userId: String): Result<Unit> =
+        withContext(Dispatchers.IO) {
+            try {
+                chatroomsCollection.document(chatroomId).update(
+                    "memberIds",
+                    com.google.firebase.firestore.FieldValue.arrayUnion(userId)
+                ).await()
+                Result.success(Unit)
+            } catch (e: Exception) {
+                Log.e("ChatRepository", "Error adding member $userId to $chatroomId", e)
+                Result.failure(e)
+            }
         }
-    }
 }

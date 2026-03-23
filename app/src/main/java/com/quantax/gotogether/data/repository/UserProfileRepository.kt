@@ -16,40 +16,27 @@ class UserProfileRepository @Inject constructor(
     private val firestore: FirebaseFirestore
 ) {
     private val usersCollection = firestore.collection("users")
+    private val usernamesCollection = firestore.collection("usernames")
 
     /** Normalize for uniqueness: lowercase, trim, letters/digits/underscore/dot only (Instagram-style). */
     private fun normalizeUsername(username: String): String =
         username.trim().lowercase().filter { it.isLetterOrDigit() || it == '_' || it == '.' }
 
     /**
-     * Returns true if the username is available for use (not taken by another user).
-     * Case-insensitive: "agentalpha" and "Agentalpha" are the same.
-     * Uses usernameLower (normalized) plus exact matches for input and normalized so we catch
-     * all case variations and old docs that only have username.
+     * Returns true if the username is available for use.
+     * Checks the dedicated `usernames` collection.
      */
-    suspend fun isUsernameAvailable(username: String, excludeUid: String): Result<Boolean> {
+    suspend fun isUsernameAvailable(username: String, excludeUid: String): Result<Boolean> = withContext(Dispatchers.IO) {
         val normalized = normalizeUsername(username)
-        if (normalized.isBlank()) return Result.success(true)
-        return try {
-            val byNormalized = usersCollection
-                .whereEqualTo("usernameLower", normalized)
-                .limit(1)
-                .get()
-                .await()
-            val byExactInput = usersCollection
-                .whereEqualTo("username", username)
-                .limit(1)
-                .get()
-                .await()
-            val byExactNormalized = usersCollection
-                .whereEqualTo("username", normalized)
-                .limit(1)
-                .get()
-                .await()
-            val takenByOther = byNormalized.documents.any { it.id != excludeUid } ||
-                byExactInput.documents.any { it.id != excludeUid } ||
-                byExactNormalized.documents.any { it.id != excludeUid }
-            Result.success(!takenByOther)
+        if (normalized.isBlank()) return@withContext Result.success(true)
+        try {
+            val doc = usernamesCollection.document(normalized).get().await()
+            if (!doc.exists()) {
+                Result.success(true)
+            } else {
+                val ownerUid = doc.getString("uid")
+                Result.success(ownerUid == excludeUid)
+            }
         } catch (e: Exception) {
             Result.failure(e)
         }
@@ -96,28 +83,56 @@ class UserProfileRepository @Inject constructor(
     }
 
     /**
-     * Saves the profile and enforces unique username (Instagram-style).
-     * Uniqueness is enforced by querying the users collection only (no separate usernames collection).
+     * Saves the profile and enforces unique username.
+     * Uses a Firestore batched write to update the user profile and the reserved username document atomically.
      */
     suspend fun saveProfile(profile: UserProfile, oldUsername: String? = null): Result<Unit> = withContext(Dispatchers.IO) {
         try {
             val newNormalized = normalizeUsername(profile.username)
-            if (newNormalized.isNotBlank()) {
-                val availabilityResult = isUsernameAvailable(profile.username, profile.uid)
-                if (availabilityResult.isFailure) {
-                    return Result.failure(availabilityResult.exceptionOrNull() ?: Exception("Could not check username"))
-                }
-                if (!availabilityResult.getOrNull()!!) {
-                    return Result.failure(Exception("This username is already taken."))
-                }
-            }
+            val oldNormalized = oldUsername?.let { normalizeUsername(it) } ?: ""
+
             val profileToSave = profile.copy(
                 usernameLower = if (profile.username.isNotBlank()) newNormalized else ""
             )
-            usersCollection.document(profileToSave.uid).set(profileToSave).await()
+
+            if (newNormalized.isBlank() || newNormalized == oldNormalized) {
+                // No username change or cleared username. Just save profile.
+                val batch = firestore.batch()
+                batch.set(usersCollection.document(profileToSave.uid), profileToSave)
+                if (oldNormalized.isNotBlank() && oldNormalized != newNormalized) {
+                    batch.delete(usernamesCollection.document(oldNormalized))
+                }
+                batch.commit().await()
+                return@withContext Result.success(Unit)
+            }
+
+            // Transactional update to safely claim the new username
+            firestore.runTransaction { transaction ->
+                val newUsernameRef = usernamesCollection.document(newNormalized)
+                val newUsernameDoc = transaction.get(newUsernameRef)
+
+                if (newUsernameDoc.exists()) {
+                    val ownerUid = newUsernameDoc.getString("uid")
+                    if (ownerUid != profile.uid) {
+                        throw Exception("This username is already taken.")
+                    }
+                }
+
+                // Claim the new username
+                transaction.set(newUsernameRef, mapOf("uid" to profile.uid, "username" to profile.username))
+                
+                // Release the old username if it changed
+                if (oldNormalized.isNotBlank() && oldNormalized != newNormalized) {
+                    transaction.delete(usernamesCollection.document(oldNormalized))
+                }
+
+                // Save profile
+                transaction.set(usersCollection.document(profileToSave.uid), profileToSave)
+            }.await()
+
             Result.success(Unit)
         } catch (e: Exception) {
-            android.util.Log.e("UserProfileRepository", "Error saving profile for ${profile.uid}", e)
+            android.util.Log.e("UserProfileRepository", "Error saving profile for \${profile.uid}", e)
             Result.failure(e)
         }
     }

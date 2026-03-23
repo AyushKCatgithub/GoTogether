@@ -108,12 +108,15 @@ class CreateTripViewModel @Inject constructor(
         viewModelScope.launch {
             _state.value = currentState.copy(isLoading = true, error = null)
             
-            // Fetch profile to determine verification status
             val profileResult = userProfileRepository.getProfile(currentUser.uid)
             val profile = profileResult.getOrNull()
+            // If profile fetch fails, fall back to FirebaseUser display name gracefully
             val isVerified = profile?.isVerified ?: false
-            val hostName = profile?.name?.ifBlank { null } ?: currentUser.displayName ?: "Traveler"
-            val hostImageUrl = profile?.profileImageUrl?.ifBlank { null } ?: currentUser.photoUrl?.toString()
+            val hostName = profile?.name?.takeIf { it.isNotBlank() }
+                ?: currentUser.displayName
+                ?: "Traveler"
+            val hostImageUrl = profile?.profileImageUrl?.takeIf { it.isNotBlank() }
+                ?: currentUser.photoUrl?.toString()
             
             // For MVP, we will use a dummy image if none provided
             val dummyImages = listOf(
@@ -146,7 +149,11 @@ class CreateTripViewModel @Inject constructor(
                 hostName = hostName,
                 hostImageUrl = hostImageUrl,
                 hostVerified = isVerified,
-                title = "${currentState.destination}: An Exciting Trip",
+                // Use destination as the base title; user can refine via description
+                title = if (currentState.description.isNotBlank())
+                    "${currentState.destination}: ${currentState.description.take(40)}"
+                else
+                    "${currentState.destination} Adventure",
                 startingLocation = currentState.startingLocation,
                 destination = currentState.destination,
                 startDate = currentState.startDate,
@@ -173,7 +180,11 @@ class CreateTripViewModel @Inject constructor(
                     lastMessageTimestamp = System.currentTimeMillis(),
                     lastMessageSenderName = "System"
                 )
-                chatRepository.createChatroom(chatroom)
+                val chatroomResult = chatRepository.createChatroom(chatroom)
+                if (chatroomResult.isFailure) {
+                    // Non-fatal: trip is created, but chatroom failed. Log and continue.
+                    chatroomResult.exceptionOrNull()?.printStackTrace()
+                }
                 
                 _state.value = currentState.copy(isLoading = false, isSuccess = true)
             } else {

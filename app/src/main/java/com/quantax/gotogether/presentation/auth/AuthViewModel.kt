@@ -57,10 +57,11 @@ class AuthViewModel @Inject constructor(
         onFailure: (String) -> Unit
     ) {
         _state.value = _state.value.copy(isLoading = true, error = null)
-        
+
         val callbacks = object : PhoneAuthProvider.OnVerificationStateChangedCallbacks() {
             override fun onVerificationCompleted(credential: com.google.firebase.auth.PhoneAuthCredential) {
-                // Auto-verification handled if desired, but usually we just wait for onCodeSent
+                // Auto-verification completed — OTP was filled automatically by the OS.
+                // We can attempt sign-in here, but for simplicity the user is still shown the OTP screen.
                 _state.value = _state.value.copy(isLoading = false)
             }
 
@@ -85,16 +86,21 @@ class AuthViewModel @Inject constructor(
         authManager.sendOtp(phoneNumber, activity, callbacks)
     }
 
+    /**
+     * Calls the now-suspending AuthManager.verifyOtp inside viewModelScope so that
+     * if the user navigates away, the coroutine is correctly cancelled.
+     */
     fun verifyOtp(verificationId: String, code: String) {
         _state.value = _state.value.copy(isLoading = true, error = null)
-        authManager.verifyOtp(verificationId, code) { result ->
+        viewModelScope.launch {
+            val result = authManager.verifyOtp(verificationId, code)
             _state.value = _state.value.copy(isLoading = false)
             result.fold(
                 onSuccess = {
                     _state.value = _state.value.copy(isAuthSuccess = true)
                 },
                 onFailure = {
-                    _state.value = _state.value.copy(error = it.message)
+                    _state.value = _state.value.copy(error = it.message ?: "OTP verification failed")
                 }
             )
         }

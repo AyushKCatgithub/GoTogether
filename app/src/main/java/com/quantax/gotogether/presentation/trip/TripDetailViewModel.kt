@@ -12,6 +12,11 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -42,44 +47,64 @@ class TripDetailViewModel @Inject constructor(
     val actionMessage: StateFlow<String?> = _actionMessage.asStateFlow()
 
     fun loadTrip(tripId: String) {
-        viewModelScope.launch {
-            _state.value = TripDetailState.Loading
-            tripRepository.getTripById(tripId).onSuccess { loadedTrip ->
-                if (loadedTrip != null) {
-                    val uid = authManager.currentUser?.uid ?: ""
-                    val isHost = loadedTrip.hostId == uid
-                    
-                    var requestStatus = "NONE"
-                    if (!isHost) {
-                        if (loadedTrip.members.contains(uid)) {
-                            requestStatus = JoinRequest.STATUS_APPROVED
-                        } else {
-                            val status = joinRequestRepository.getUserRequestStatus(tripId, uid)
-                            requestStatus = status ?: "NONE"
+        _state.value = TripDetailState.Loading
+        val uid = authManager.currentUser?.uid ?: ""
+        
+        val tripFlow = tripRepository.getTripByIdFlow(tripId).distinctUntilChanged()
+        val statusFlow = joinRequestRepository.getUserRequestStatusFlow(tripId, uid).distinctUntilChanged()
+
+        combine(tripFlow, statusFlow) { loadedTrip, status ->
+            if (loadedTrip != null) {
+                val isHost = loadedTrip.hostId == uid
+                val requestStatus = if (isHost) "NONE" 
+                                   else if (loadedTrip.members.contains(uid)) JoinRequest.STATUS_APPROVED 
+                                   else status ?: "NONE"
+                
+                // Fetch profiles asynchronously without blocking the flow
+                viewModelScope.launch {
+                    userProfileRepository.getProfiles(loadedTrip.members).onSuccess { profiles ->
+                        _state.update { currentState ->
+                            if (currentState is TripDetailState.Success && currentState.trip.id == tripId) {
+                                currentState.copy(
+                                    trip = loadedTrip,
+                                    isHost = isHost,
+                                    requestStatus = requestStatus,
+                                    membersList = profiles
+                                )
+                            } else {
+                                TripDetailState.Success(
+                                    trip = loadedTrip,
+                                    isHost = isHost,
+                                    requestStatus = requestStatus,
+                                    membersList = profiles
+                                )
+                            }
+                        }
+                    }.onFailure {
+                        _state.update { currentState ->
+                            if (currentState is TripDetailState.Success && currentState.trip.id == tripId) {
+                                currentState.copy(
+                                    trip = loadedTrip,
+                                    isHost = isHost,
+                                    requestStatus = requestStatus
+                                )
+                            } else {
+                                TripDetailState.Success(
+                                    trip = loadedTrip,
+                                    isHost = isHost,
+                                    requestStatus = requestStatus,
+                                    membersList = emptyList()
+                                )
+                            }
                         }
                     }
-
-                    // Fetch member profiles in batch
-                    var memberProfiles = emptyList<com.quantax.gotogether.domain.model.UserProfile>()
-                    if (loadedTrip.members.isNotEmpty()) {
-                        userProfileRepository.getProfiles(loadedTrip.members).onSuccess { profiles ->
-                            memberProfiles = profiles
-                        }
-                    }
-
-                    _state.value = TripDetailState.Success(
-                        trip = loadedTrip,
-                        isHost = isHost,
-                        requestStatus = requestStatus,
-                        membersList = memberProfiles
-                    )
-                } else {
-                    _state.value = TripDetailState.Error("Trip not found")
                 }
-            }.onFailure {
-                _state.value = TripDetailState.Error(it.localizedMessage ?: "Failed to load trip")
+            } else {
+                _state.value = TripDetailState.Error("Trip not found")
             }
-        }
+        }.catch { e ->
+            _state.value = TripDetailState.Error(e.localizedMessage ?: "Critical flow error")
+        }.launchIn(viewModelScope)
     }
 
     fun requestToJoin() {

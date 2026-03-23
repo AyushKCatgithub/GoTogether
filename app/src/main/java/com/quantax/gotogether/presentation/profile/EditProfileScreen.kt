@@ -60,10 +60,20 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import coil.compose.AsyncImage
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
+import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.quantax.gotogether.ui.theme.VerifiedCyan
+import com.quantax.gotogether.ui.theme.WarningYellow
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.border
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -172,7 +182,8 @@ fun EditProfileScreen(
                     modifier = Modifier
                         .size(120.dp)
                         .clickable {
-                            pickerForBackgroundSlot = nullphotoPickerLauncher.launch(
+                            pickerForBackgroundSlot = null
+                            photoPickerLauncher.launch(
                                 PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                             )
                         },
@@ -470,35 +481,16 @@ private fun GenZTextField(
                 .height(if (singleLine) 60.dp else 120.dp),
             placeholder = {
                 Text(
-                    "Enter $label",
+                    placeholder,
                     color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f)
                 )
             },
-
-            leadingIcon = {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .padding(start = 6.dp),
-                    contentAlignment = Alignment.Center
-
-                ) {
-                    Icon(
-                        icon,
-                        contentDescription = null,
-                        tint = if (value.isNotBlank()) GoTogetherOrange else GoTogetherTheme.colors.textSecondary
-                    )
-                }
-            },
-
-            modifier = Modifier.fillMaxWidth(),
-            placeholder = { Text(placeholder, color = Color.LightGray) },
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = GoTogetherOrange,
-                unfocusedBorderColor = Color.LightGray.copy(alpha = 0.3f),
+                unfocusedBorderColor = androidx.compose.ui.graphics.Color.LightGray.copy(alpha = 0.3f),
                 focusedContainerColor = GoTogetherTheme.colors.surface,
                 unfocusedContainerColor = GoTogetherTheme.colors.surface,
-                cursorColor = Color.Black
+                cursorColor = GoTogetherTheme.colors.textPrimary
             ),
             shape = RoundedCornerShape(16.dp),
             singleLine = singleLine,

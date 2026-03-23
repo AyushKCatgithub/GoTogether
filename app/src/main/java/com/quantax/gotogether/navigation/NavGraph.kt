@@ -8,6 +8,7 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
+import java.net.URLDecoder
 import com.quantax.gotogether.presentation.auth.AuthViewModel
 import com.quantax.gotogether.presentation.auth.OtpVerificationScreen
 import com.quantax.gotogether.presentation.auth.SignInScreen
@@ -58,12 +59,22 @@ fun GoTogetherNavGraph(
         composable(
             route = Routes.Otp.route,
             arguments = listOf(
-                navArgument("verificationId") { type = NavType.StringType },
-                navArgument("phoneNumber") { type = NavType.StringType }
+                navArgument("verificationId") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                },
+                navArgument("phoneNumber") {
+                    type = NavType.StringType
+                    nullable = true
+                    defaultValue = null
+                }
             )
         ) { backStackEntry ->
-            val vId = backStackEntry.arguments?.getString("verificationId") ?: ""
-            val phone = backStackEntry.arguments?.getString("phoneNumber") ?: ""
+            val vId = backStackEntry.arguments?.getString("verificationId")
+                ?.let { URLDecoder.decode(it, "UTF-8") } ?: ""
+            val phone = backStackEntry.arguments?.getString("phoneNumber")
+                ?.let { URLDecoder.decode(it, "UTF-8") } ?: ""
             OtpVerificationScreen(
                 verificationId = vId,
                 phoneNumber = phone,

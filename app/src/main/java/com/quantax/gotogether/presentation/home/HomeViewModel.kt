@@ -12,6 +12,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -52,9 +56,9 @@ class HomeViewModel @Inject constructor(
     val state: StateFlow<HomeState> = combine(
         _allTrips,
         _searchQuery.debounce(300L),
-        _searchFrom,
-        _searchTo,
-        _searchBudget,
+        _searchFrom.debounce(300L),
+        _searchTo.debounce(300L),
+        _searchBudget.debounce(300L),
         _searchGroupSize,
         _locationText,
         _currentCity,
@@ -86,8 +90,11 @@ class HomeViewModel @Inject constructor(
         // Sort trips by current location if no specific 'from' filter is applied
         val sortedTrips = if (from.isBlank() && _currentCity.value != null) {
             val current = _currentCity.value!!
-            trips.sortedWith(compareByDescending<Trip> { 
-                it.startingLocation.contains(current, ignoreCase = true) || current.contains(it.startingLocation, ignoreCase = true)
+            trips.sortedWith(compareByDescending<Trip> {
+                it.startingLocation.contains(
+                    current,
+                    ignoreCase = true
+                ) || current.contains(it.startingLocation, ignoreCase = true)
             }.thenByDescending { it.createdAt })
         } else {
             trips
@@ -95,11 +102,11 @@ class HomeViewModel @Inject constructor(
 
         val filtered = sortedTrips.filter { trip ->
             val matchesSearch = trip.matchesFilter(query, from, to, budget, size)
-            val matchesCategory = category == "All" || 
-                trip.title.contains(category, ignoreCase = true) || 
-                trip.description.contains(category, ignoreCase = true) ||
-                trip.interests.any { it.contains(category, ignoreCase = true) }
-            
+            val matchesCategory = category == "All" ||
+                    trip.title.contains(category, ignoreCase = true) ||
+                    trip.description.contains(category, ignoreCase = true) ||
+                    trip.interests.any { it.contains(category, ignoreCase = true) }
+
             matchesSearch && matchesCategory
         }
 
@@ -115,27 +122,43 @@ class HomeViewModel @Inject constructor(
     }
 
     fun loadTrips() {
-        viewModelScope.launch {
-            _error.value = null
-            _isRefreshing.value = true
-            repository.getTrips().fold(
-                onSuccess = { trips ->
-                    _allTrips.value = trips
-                },
-                onFailure = { error ->
-                    _error.value = error.localizedMessage ?: "Failed to load trips"
-                }
-            )
-            _isRefreshing.value = false
-        }
+        _error.value = null
+        _isRefreshing.value = true
+        repository.getTripsFlow()
+            .onEach { trips ->
+                _allTrips.value = trips
+                _isRefreshing.value = false
+            }
+            .catch { error ->
+                _error.value = error.localizedMessage ?: "Failed to load trips"
+                _isRefreshing.value = false
+            }
+            .launchIn(viewModelScope)
     }
 
-    fun onSearchQueryChange(query: String) { _searchQuery.value = query }
-    fun onSearchFromChange(query: String) { _searchFrom.value = query }
-    fun onSearchToChange(query: String) { _searchTo.value = query }
-    fun onSearchBudgetChange(query: String) { _searchBudget.value = query }
-    fun onSearchGroupSizeChange(size: Int) { if (size >= 0) _searchGroupSize.value = size }
-    fun onCategorySelected(category: String) { _selectedCategory.value = category }
+    fun onSearchQueryChange(query: String) {
+        _searchQuery.value = query
+    }
+
+    fun onSearchFromChange(query: String) {
+        _searchFrom.value = query
+    }
+
+    fun onSearchToChange(query: String) {
+        _searchTo.value = query
+    }
+
+    fun onSearchBudgetChange(query: String) {
+        _searchBudget.value = query
+    }
+
+    fun onSearchGroupSizeChange(size: Int) {
+        if (size >= 0) _searchGroupSize.value = size
+    }
+
+    fun onCategorySelected(category: String) {
+        _selectedCategory.value = category
+    }
 
     fun clearFilters() {
         _searchFrom.value = ""
@@ -153,18 +176,27 @@ class HomeViewModel @Inject constructor(
         cityOnly?.let { _currentCity.value = it }
     }
 
-    private fun Trip.matchesFilter(query: String, from: String, to: String, budget: String, size: Int): Boolean {
-        val matchesFrom = from.isEmpty() || 
-                startingLocation.contains(from.split(",")[0].trim(), ignoreCase = true) || 
+    private fun Trip.matchesFilter(
+        query: String,
+        from: String,
+        to: String,
+        budget: String,
+        size: Int
+    ): Boolean {
+        val matchesFrom = from.isBlank() ||
+                startingLocation.contains(
+                    from.split(",").getOrNull(0)?.trim() ?: from,
+                    ignoreCase = true
+                ) ||
                 from.contains(startingLocation, ignoreCase = true)
-        val matchesTo = to.isEmpty() || 
-                destination.contains(to.split(",")[0].trim(), ignoreCase = true) || 
+        val matchesTo = to.isBlank() ||
+                destination.contains(to.split(",").getOrNull(0)?.trim() ?: to, ignoreCase = true) ||
                 to.contains(destination, ignoreCase = true)
         val matchesSearch = query.isEmpty() || (
-            destination.contains(query, ignoreCase = true) ||
-            startingLocation.contains(query, ignoreCase = true) ||
-            title.contains(query, ignoreCase = true)
-        )
+                destination.contains(query, ignoreCase = true) ||
+                        startingLocation.contains(query, ignoreCase = true) ||
+                        title.contains(query, ignoreCase = true)
+                )
         val matchesBudget = budget.isEmpty() || matchesBudgetRange(budget)
         val matchesGroupSize = size == 0 || (groupSize <= size)
 
@@ -175,17 +207,17 @@ class HomeViewModel @Inject constructor(
 
     private fun Trip.matchesBudgetRange(maxBudgetStr: String): Boolean {
         val maxBudget = maxBudgetStr.toIntOrNull() ?: return true
-        
+
         // Performance: Reusing regex and avoiding expensive operations
         val tripMaxBudget = budgetRegex.findAll(budgetRange)
             .map { it.value.toIntOrNull() }
             .filterNotNull()
             .maxOrNull()
-        
+
         return tripMaxBudget?.let { it <= maxBudget } ?: (
-            budgetRange.isEmpty() || 
-            budgetRange.contains("flex", ignoreCase = true) || 
-            budgetRange.contains("free", ignoreCase = true)
-        )
+                budgetRange.isEmpty() ||
+                        budgetRange.contains("flex", ignoreCase = true) ||
+                        budgetRange.contains("free", ignoreCase = true)
+                )
     }
 }
