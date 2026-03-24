@@ -7,5 +7,7 @@ data class ChatMessage(
     val senderName: String = "",
     val senderImageUrl: String? = null,
     val text: String = "",
+    /** Optional image attachment (Firebase Storage URL). */
+    val imageUrl: String? = null,
     val timestamp: Long = System.currentTimeMillis()
 )

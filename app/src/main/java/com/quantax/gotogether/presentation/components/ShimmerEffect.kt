@@ -248,7 +248,7 @@ fun TripDetailShimmer() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(Color.White)
+            .background(GoTogetherTheme.colors.background)
             .padding(16.dp)
     ) {
         // Hero Image Card Shimmer

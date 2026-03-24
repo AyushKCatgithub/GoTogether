@@ -1,9 +1,11 @@
 package com.quantax.gotogether.presentation.chat
 
+import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.ChatRepository
+import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.ChatMessage
 import com.quantax.gotogether.domain.model.Chatroom
@@ -28,6 +30,7 @@ data class ChatUIState(
 class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val userProfileRepository: UserProfileRepository,
+    private val storageService: StorageService,
     private val authManager: AuthManager
 ) : ViewModel() {
 
@@ -78,7 +81,7 @@ class ChatViewModel @Inject constructor(
 
         viewModelScope.launch {
             _state.update { it.copy(isSending = true) }
-            
+
             val message = ChatMessage(
                 senderId = uid,
                 senderName = currentUserName,
@@ -86,13 +89,53 @@ class ChatViewModel @Inject constructor(
                 text = trimmedText,
                 timestamp = System.currentTimeMillis()
             )
-            
+
             val result = chatRepository.sendMessage(chatroomId, message)
-            
+
             _state.update { it.copy(isSending = false) }
-            
+
             if (result.isFailure) {
                 _state.update { it.copy(error = "Failed to send message: ${result.exceptionOrNull()?.message}") }
+            }
+        }
+    }
+
+    fun sendImageMessage(chatroomId: String, imageUri: Uri) {
+        val uid = authManager.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            _state.update { it.copy(isSending = true, error = null) }
+
+            val upload = storageService.uploadImage(imageUri, "chat_attachments")
+            if (upload.isFailure) {
+                _state.update {
+                    it.copy(
+                        isSending = false,
+                        error = upload.exceptionOrNull()?.message ?: "Failed to upload image"
+                    )
+                }
+                return@launch
+            }
+
+            val url = upload.getOrNull() ?: run {
+                _state.update { it.copy(isSending = false, error = "Upload failed") }
+                return@launch
+            }
+
+            val message = ChatMessage(
+                senderId = uid,
+                senderName = currentUserName,
+                senderImageUrl = currentUserImageUrl,
+                text = "",
+                imageUrl = url,
+                timestamp = System.currentTimeMillis()
+            )
+
+            val result = chatRepository.sendMessage(chatroomId, message)
+            _state.update { it.copy(isSending = false) }
+
+            if (result.isFailure) {
+                _state.update { it.copy(error = "Failed to send photo: ${result.exceptionOrNull()?.message}") }
             }
         }
     }

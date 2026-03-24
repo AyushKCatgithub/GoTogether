@@ -13,15 +13,19 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
+import androidx.compose.foundation.layout.only
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -69,6 +73,9 @@ fun MessagesScreen(
 
     Scaffold(
         containerColor = GoTogetherTheme.colors.background,
+        contentWindowInsets = WindowInsets.safeDrawing.only(
+            WindowInsetsSides.Horizontal + WindowInsetsSides.Top
+        ),
         topBar = {
             TopAppBar(
                 title = {
@@ -115,13 +122,14 @@ fun MessagesScreen(
 
                 else -> {
                     LazyColumn(
-                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                        verticalArrangement = Arrangement.spacedBy(0.dp)
                     ) {
                         items(chatrooms, key = { it.id }) { chatroom ->
                             ChatroomListItem(
                                 chatroom = chatroom,
-                                onClick = { onNavigateToChatroom(chatroom.id) }
+                                onClick = { onNavigateToChatroom(chatroom.id) },
+                                showDivider = chatroom.id != chatrooms.last().id
                             )
                         }
                     }
@@ -134,7 +142,8 @@ fun MessagesScreen(
 @Composable
 private fun ChatroomListItem(
     chatroom: Chatroom,
-    onClick: () -> Unit
+    onClick: () -> Unit,
+    showDivider: Boolean = true
 ) {
     val timestampText = remember(chatroom.lastMessageTimestamp) {
         if (chatroom.lastMessageTimestamp > 0) {
@@ -150,20 +159,14 @@ private fun ChatroomListItem(
         } else ""
     }
 
-    Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
-        shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = GoTogetherTheme.colors.card)
-    ) {
+    Column(modifier = Modifier.fillMaxWidth()) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(14.dp),
+                .clickable(onClick = onClick)
+                .padding(horizontal = 12.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Trip/Chatroom image
             SubcomposeAsyncImage(
                 model = ImageRequest.Builder(LocalContext.current)
                     .data(chatroom.tripImageUrl)
@@ -171,14 +174,14 @@ private fun ChatroomListItem(
                     .build(),
                 contentDescription = "Trip Image",
                 modifier = Modifier
-                    .size(52.dp)
-                    .clip(RoundedCornerShape(14.dp)),
+                    .size(56.dp)
+                    .clip(RoundedCornerShape(28.dp)),
                 contentScale = ContentScale.Crop,
                 loading = {
                     Box(
                         modifier = Modifier
                             .fillMaxSize()
-                            .background(GoTogetherTheme.colors.surface, RoundedCornerShape(14.dp))
+                            .background(GoTogetherTheme.colors.surface, RoundedCornerShape(28.dp))
                     )
                 },
                 error = {
@@ -192,7 +195,7 @@ private fun ChatroomListItem(
                                         GoTogetherOrangeDark
                                     )
                                 ),
-                                RoundedCornerShape(14.dp)
+                                RoundedCornerShape(28.dp)
                             ),
                         contentAlignment = Alignment.Center
                     ) {
@@ -200,55 +203,78 @@ private fun ChatroomListItem(
                             chatroom.tripTitle.take(1).uppercase(),
                             color = Color.White,
                             fontWeight = FontWeight.Bold,
-                            fontSize = 20.sp
+                            fontSize = 22.sp
                         )
                     }
                 }
             )
 
-            Spacer(modifier = Modifier.width(14.dp))
+            Spacer(modifier = Modifier.width(12.dp))
 
             Column(modifier = Modifier.weight(1f)) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                    verticalAlignment = Alignment.Top
                 ) {
                     Text(
                         text = chatroom.tripTitle,
                         color = GoTogetherTheme.colors.textPrimary,
                         fontWeight = FontWeight.SemiBold,
-                        fontSize = 15.sp,
+                        fontSize = 16.sp,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier
+                            .weight(1f)
+                            .padding(end = 8.dp)
                     )
                     if (timestampText.isNotEmpty()) {
                         Text(
                             text = timestampText,
                             color = GoTogetherTheme.colors.textSecondary,
-                            fontSize = 11.sp
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Normal
                         )
                     }
                 }
-                Spacer(modifier = Modifier.height(4.dp))
+                Spacer(modifier = Modifier.height(3.dp))
                 if (chatroom.lastMessage.isNotEmpty()) {
-                    Text(
-                        text = "${chatroom.lastMessageSenderName}: ${chatroom.lastMessage}",
-                        color = GoTogetherTheme.colors.textSecondary,
-                        fontSize = 13.sp,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
+                    Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = chatroom.lastMessageSenderName,
+                            color = GoTogetherTheme.colors.textSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.SemiBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.widthIn(max = 120.dp)
+                        )
+                        Text(
+                            text = ": ${chatroom.lastMessage}",
+                            color = GoTogetherTheme.colors.textSecondary,
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Normal,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f)
+                        )
+                    }
                 } else {
                     Text(
-                        text = "No messages yet",
-                        color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.6f),
-                        fontSize = 13.sp,
+                        text = "Tap to start chatting",
+                        color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.7f),
+                        fontSize = 14.sp,
                         fontStyle = androidx.compose.ui.text.font.FontStyle.Italic
                     )
                 }
             }
+        }
+        if (showDivider) {
+            HorizontalDivider(
+                modifier = Modifier.padding(start = 80.dp),
+                thickness = 0.5.dp,
+                color = GoTogetherTheme.colors.divider
+            )
         }
     }
 }
@@ -261,7 +287,9 @@ private fun EmptyMessages() {
     ) {
         Column(
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(12.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 32.dp)
         ) {
             Box(
                 modifier = Modifier
@@ -279,17 +307,22 @@ private fun EmptyMessages() {
                     modifier = Modifier.size(40.dp)
                 )
             }
+            Spacer(modifier = Modifier.height(16.dp))
             Text(
-                "No messages yet",
+                text = "No messages yet",
                 color = GoTogetherTheme.colors.textPrimary,
                 fontSize = 18.sp,
-                fontWeight = FontWeight.SemiBold
+                fontWeight = FontWeight.SemiBold,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
+            Spacer(modifier = Modifier.height(8.dp))
             Text(
-                "Join trips to start\nchatting with travelers",
+                text = "Join trips to start\nchatting with travelers",
                 color = GoTogetherTheme.colors.textSecondary,
                 fontSize = 14.sp,
-                textAlign = TextAlign.Center
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth()
             )
         }
     }

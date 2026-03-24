@@ -111,8 +111,13 @@ class ChatRepository @Inject constructor(
                 databaseRef.setValue(newMessage).await()
 
                 // Update chatroom summary in Firestore for the list view
+                val lastPreview = when {
+                    message.text.isNotBlank() -> message.text
+                    !message.imageUrl.isNullOrBlank() -> "📷 Photo"
+                    else -> ""
+                }
                 val updates = mapOf(
-                    "lastMessage" to message.text,
+                    "lastMessage" to lastPreview,
                     "lastMessageTimestamp" to message.timestamp,
                     "lastMessageSenderName" to message.senderName
                 )

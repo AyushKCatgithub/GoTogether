@@ -113,7 +113,7 @@ fun TripDetailScreen(
     }
 
     Scaffold(
-        containerColor = Color.White,
+        containerColor = GoTogetherTheme.colors.background,
         snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (state is TripDetailState.Success) {
@@ -181,7 +181,7 @@ fun TripDetailScreen(
                         FloatingHeader(
                             title = trip.title.ifBlank { trip.destination },
                             alpha = headerAlpha,
-                            backgroundColor = Color.White,
+                            backgroundColor = GoTogetherTheme.colors.background,
                             onBackClick = onNavigateBack,
                             onShareClick = shareTrip
                         )
@@ -208,7 +208,7 @@ fun TripDetailContent(
         modifier = Modifier
             .fillMaxSize()
             .verticalScroll(scrollState)
-            .background(Color.White)
+            .background(GoTogetherTheme.colors.background)
             .padding(bottom = paddingValues.calculateBottomPadding())
     ) {
         // Hero Image Card Section
@@ -275,7 +275,7 @@ fun TripDetailContent(
                     modifier = Modifier.weight(1f),
                     fontSize = 28.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.Black,
+                    color = GoTogetherTheme.colors.textPrimary,
                     letterSpacing = (-1).sp,
                     lineHeight = 32.sp
                 )
@@ -284,12 +284,12 @@ fun TripDetailContent(
                         text = trip.budgetRange,
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
-                        color = Color.Black
+                        color = GoTogetherTheme.colors.textPrimary
                     )
                     Text(
                         text = "/Trip",
                         fontSize = 12.sp,
-                        color = Color.Gray
+                        color = GoTogetherTheme.colors.textSecondary
                     )
                 }
             }
@@ -301,29 +301,29 @@ fun TripDetailContent(
                 Icon(
                     Icons.Default.LocationOn,
                     null,
-                    tint = Color.Gray,
+                    tint = GoTogetherTheme.colors.textSecondary,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = trip.destination,
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = GoTogetherTheme.colors.textSecondary
                 )
                 Spacer(modifier = Modifier.width(12.dp))
                 Box(
                     modifier = Modifier
                         .width(1.dp)
                         .height(12.dp)
-                        .background(Color.LightGray)
+                        .background(GoTogetherTheme.colors.divider)
                 )
                 Spacer(modifier = Modifier.width(12.dp))
-                Icon(Icons.Default.Route, null, tint = Color.Gray, modifier = Modifier.size(16.dp))
+                Icon(Icons.Default.Route, null, tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "14km",
                     fontSize = 14.sp,
-                    color = Color.Gray
+                    color = GoTogetherTheme.colors.textSecondary
                 )
             }
 
@@ -334,21 +334,22 @@ fun TripDetailContent(
                 Icon(
                     Icons.Default.StarBorder,
                     null,
-                    tint = Color.Gray,
+                    tint = GoTogetherTheme.colors.textSecondary,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "4.9/5",
                     fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = GoTogetherTheme.colors.textPrimary
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "137 Review",
                     fontSize = 14.sp,
                     fontWeight = FontWeight.Medium,
-                    color = Color.Black,
+                    color = GoTogetherTheme.colors.textPrimary,
                     style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
                 )
             }
@@ -359,8 +360,8 @@ fun TripDetailContent(
             Surface(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFF9F9F9),
-                border = BorderStroke(1.dp, Color(0xFFEEEEEE))
+                color = GoTogetherTheme.colors.surfaceVariant,
+                border = BorderStroke(1.dp, GoTogetherTheme.colors.border)
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
@@ -374,21 +375,22 @@ fun TripDetailContent(
                         Icon(
                             Icons.Default.Groups,
                             null,
-                            tint = Color.Gray,
+                            tint = GoTogetherTheme.colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Max ${trip.groupSize} Group Size",
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = GoTogetherTheme.colors.textPrimary
                         )
                     }
                     Box(
                         modifier = Modifier
                             .width(1.dp)
                             .height(24.dp)
-                            .background(Color.LightGray)
+                            .background(GoTogetherTheme.colors.divider)
                     )
                     Row(
                         modifier = Modifier.weight(1f),
@@ -398,14 +400,15 @@ fun TripDetailContent(
                         Icon(
                             Icons.Default.Schedule,
                             null,
-                            tint = Color.Gray,
+                            tint = GoTogetherTheme.colors.textSecondary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "4 Day Trip Duration",
                             fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium
+                            fontWeight = FontWeight.Medium,
+                            color = GoTogetherTheme.colors.textPrimary
                         )
                     }
                 }
@@ -418,14 +421,14 @@ fun TripDetailContent(
                 text = "Description",
                 fontSize = 18.sp,
                 fontWeight = FontWeight.Bold,
-                color = Color.Black
+                color = GoTogetherTheme.colors.textPrimary
             )
             Spacer(modifier = Modifier.height(8.dp))
             Text(
                 text = trip.description.ifBlank { "No description provided." },
                 fontSize = 14.sp,
                 lineHeight = 22.sp,
-                color = Color.Gray
+                color = GoTogetherTheme.colors.textSecondary
             )
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -440,7 +443,7 @@ fun TripDetailContent(
                     text = "Location",
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black
+                    color = GoTogetherTheme.colors.textPrimary
                 )
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
@@ -465,14 +468,14 @@ fun TripDetailContent(
                     .fillMaxWidth()
                     .height(180.dp),
                 shape = RoundedCornerShape(20.dp),
-                color = Color(0xFFF0F0F0)
+                color = GoTogetherTheme.colors.surfaceVariant
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(
                         Icons.Default.Map,
                         null,
                         modifier = Modifier.size(48.dp),
-                        tint = Color.Gray.copy(alpha = 0.3f)
+                        tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.35f)
                     )
                 }
             }
@@ -499,7 +502,7 @@ fun FloatingCircleButton(icon: ImageVector, onClick: () -> Unit) {
         onClick = onClick,
         modifier = Modifier.size(44.dp),
         shape = CircleShape,
-        color = Color.White.copy(alpha = 0.9f),
+        color = MaterialTheme.colorScheme.surface.copy(alpha = 0.92f),
         shadowElevation = 4.dp
     ) {
         Box(contentAlignment = Alignment.Center) {
@@ -507,7 +510,7 @@ fun FloatingCircleButton(icon: ImageVector, onClick: () -> Unit) {
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = Color.Black
+                tint = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -608,7 +611,7 @@ fun InfoItem(icon: ImageVector, value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, null, tint = GoTogetherOrange, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.height(4.dp))
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp)
+        Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = GoTogetherTheme.colors.textPrimary)
         Text(label, fontSize = 11.sp, color = GoTogetherTheme.colors.textSecondary)
     }
 }
@@ -669,7 +672,7 @@ fun HostSection(
                 Box(
                     modifier = Modifier
                         .size(3.dp)
-                        .background(Color.Gray.copy(alpha = 0.5f), CircleShape)
+                        .background(GoTogetherTheme.colors.divider, CircleShape)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
@@ -700,7 +703,8 @@ fun InterestsChips(interests: List<String>) {
                     tag,
                     modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
                     fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium
+                    fontWeight = FontWeight.Medium,
+                    color = GoTogetherTheme.colors.textPrimary
                 )
             }
         }
@@ -731,14 +735,14 @@ fun TravelersList(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(member.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
-                    Text("Ready for adventure", fontSize = 12.sp, color = Color.Gray)
+                    Text(member.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = GoTogetherTheme.colors.textPrimary)
+                    Text("Ready for adventure", fontSize = 12.sp, color = GoTogetherTheme.colors.textSecondary)
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
                     Icons.Default.ChevronRight,
                     null,
-                    tint = Color.LightGray,
+                    tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f),
                     modifier = Modifier.size(18.dp)
                 )
             }
@@ -754,9 +758,9 @@ fun EmptyTravelersPlaceholder() {
             .padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(48.dp), tint = Color.LightGray)
+        Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(48.dp), tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.4f))
         Spacer(modifier = Modifier.height(12.dp))
-        Text("No travelers yet. Be the first to join!", color = Color.Gray, fontSize = 14.sp)
+        Text("No travelers yet. Be the first to join!", color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
     }
 }
 
@@ -769,7 +773,7 @@ fun ActionBottomBar(
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        color = Color.White,
+        color = MaterialTheme.colorScheme.surface,
         shadowElevation = 0.dp // Reference image has it very flat or subtle
     ) {
         Box(
@@ -785,14 +789,16 @@ fun ActionBottomBar(
                         .fillMaxWidth()
                         .height(64.dp),
                     shape = RoundedCornerShape(20.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = MaterialTheme.colorScheme.primary,
+                        contentColor = MaterialTheme.colorScheme.onPrimary
+                    ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
                     Text(
                         "ENTER CHATROOM",
                         fontWeight = FontWeight.Black,
                         fontSize = 14.sp,
-                        color = Color.White,
                         letterSpacing = 1.sp
                     )
                 }
@@ -806,8 +812,14 @@ fun ActionBottomBar(
                         .height(64.dp),
                     shape = RoundedCornerShape(20.dp),
                     colors = ButtonDefaults.buttonColors(
-                        containerColor = if (isPending) Color.Black.copy(alpha = 0.5f) else Color.Black,
-                        disabledContainerColor = Color.Gray.copy(alpha = 0.3f)
+                        containerColor = if (isPending) {
+                            MaterialTheme.colorScheme.primary.copy(alpha = 0.45f)
+                        } else {
+                            MaterialTheme.colorScheme.primary
+                        },
+                        contentColor = MaterialTheme.colorScheme.onPrimary,
+                        disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+                        disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.38f)
                     ),
                     elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp)
                 ) {
@@ -815,7 +827,6 @@ fun ActionBottomBar(
                         if (isPending) "REQUEST PENDING" else "JOIN THE VIBE",
                         fontWeight = FontWeight.Black,
                         fontSize = 14.sp,
-                        color = Color.White,
                         letterSpacing = 1.sp
                     )
                 }

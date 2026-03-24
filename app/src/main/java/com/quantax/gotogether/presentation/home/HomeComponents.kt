@@ -46,6 +46,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -296,7 +297,7 @@ fun CategoryChips(
                 Text(
                     text = category,
                     modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                    color = if (isSelected) Color.White else GoTogetherTheme.colors.textSecondary,
+                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else GoTogetherTheme.colors.textSecondary,
                     fontSize = 14.sp,
                     fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
                 )
@@ -312,17 +313,17 @@ fun TripCard(
     onHostClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    Surface(
+        Surface(
         modifier = modifier
             .fillMaxWidth()
             .clickable { onClick() }
             .shadow(
                 elevation = 20.dp,
                 shape = RoundedCornerShape(32.dp),
-                spotColor = Color.Black.copy(alpha = 0.15f)
+                spotColor = GoTogetherTheme.colors.overlay.copy(alpha = 0.35f)
             ),
         shape = RoundedCornerShape(32.dp),
-        color = Color.White,
+        color = GoTogetherTheme.colors.card,
     ) {
         Column {
             TripCardHero(
@@ -503,7 +504,7 @@ private fun TripCardDetails(
                     text = trip.title.uppercase(),
                     fontSize = 20.sp,
                     fontWeight = FontWeight.Black,
-                    color = Color.Black,
+                    color = GoTogetherTheme.colors.textPrimary,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                     letterSpacing = (-0.5).sp
@@ -544,12 +545,12 @@ private fun TripCardDetails(
             // Price Tag - Sleek and modern
             if (trip.budgetRange.isNotBlank()) {
                 Surface(
-                    color = Color.Black, // High contrast
+                    color = MaterialTheme.colorScheme.inverseSurface,
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = trip.budgetRange,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.inverseOnSurface,
                         fontSize = 14.sp,
                         fontWeight = FontWeight.Black,
                         modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
@@ -644,7 +645,10 @@ private fun TripCardDetails(
 
             Button(
                 onClick = onActionClick,
-                colors = ButtonDefaults.buttonColors(containerColor = Color.Black),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
                 shape = RoundedCornerShape(16.dp),
                 contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
                 modifier = Modifier.bounceClick(),
@@ -730,7 +734,7 @@ fun ErrorHomeView(message: String, onRetry: () -> Unit) {
                     .fillMaxWidth(0.6f)
                     .height(54.dp)
             ) {
-                Text("Retry", fontWeight = FontWeight.Bold, color = Color.White)
+                Text("Retry", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
             }
         }
     }
