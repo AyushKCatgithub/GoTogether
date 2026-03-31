@@ -524,7 +524,10 @@ private fun TripCardDetails(
                         text = trip.destination,
                         fontSize = 13.sp,
                         fontWeight = FontWeight.SemiBold,
-                        color = GoTogetherTheme.colors.textSecondary
+                        color = GoTogetherTheme.colors.textSecondary,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                        modifier = Modifier.weight(1f, fill = false)
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
@@ -537,12 +540,13 @@ private fun TripCardDetails(
                         text = trip.startDate,
                         fontSize = 12.sp,
                         fontWeight = FontWeight.Medium,
-                        color = GoTogetherTheme.colors.textSecondary
+                        color = GoTogetherTheme.colors.textSecondary,
+                        maxLines = 1,
+                        softWrap = false
                     )
                 }
             }
 
-            // Price Tag - Sleek and modern
             if (trip.budgetRange.isNotBlank()) {
                 Surface(
                     color = MaterialTheme.colorScheme.inverseSurface,
