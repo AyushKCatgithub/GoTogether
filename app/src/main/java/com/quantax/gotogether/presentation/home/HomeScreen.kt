@@ -22,6 +22,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
@@ -37,7 +38,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -121,7 +121,7 @@ fun HomeScreen(
         FloatingActionButton(
             onClick = onNavigateToCreateTrip,
             containerColor = GoTogetherOrange,
-            contentColor = Color.White,
+            contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = RoundedCornerShape(18.dp),
             modifier = Modifier.shadow(
                 12.dp,
@@ -164,7 +164,7 @@ fun HomeScreen(
                             "NEXT VIBE",
                             fontSize = 42.sp,
                             fontWeight = FontWeight.Black,
-                            color = Color.Black,
+                            color = MaterialTheme.colorScheme.onBackground,
                             lineHeight = 46.sp,
                             letterSpacing = (-1).sp
                         )
