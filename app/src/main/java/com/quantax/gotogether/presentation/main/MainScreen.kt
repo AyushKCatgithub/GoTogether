@@ -172,7 +172,8 @@ fun MainScreen(
             }
             composable(Routes.MyTrips.route) {
                 MyTripsScreen(
-                    onNavigateToDetail = onNavigateToTripDetail
+                    onNavigateToDetail = onNavigateToTripDetail,
+                    onNavigateToPublicProfile = onNavigateToPublicProfile
                 )
             }
             composable(Routes.Profile.route) {

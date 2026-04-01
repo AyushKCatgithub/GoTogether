@@ -2,6 +2,8 @@ package com.quantax.gotogether.presentation.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
+import com.quantax.gotogether.data.repository.BookmarkRepository
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.domain.model.Trip
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -23,7 +25,9 @@ import javax.inject.Inject
 @OptIn(FlowPreview::class)
 @HiltViewModel
 class HomeViewModel @Inject constructor(
-    private val repository: TripRepository
+    private val repository: TripRepository,
+    private val bookmarkRepository: BookmarkRepository,
+    private val auth: FirebaseAuth
 ) : ViewModel() {
 
     private val _allTrips = MutableStateFlow<List<Trip>?>(null)
@@ -51,6 +55,31 @@ class HomeViewModel @Inject constructor(
     private val _locationText = MutableStateFlow("Detecting location...")
     private val _currentCity = MutableStateFlow<String?>(null)
     private val _error = MutableStateFlow<String?>(null)
+
+    // ─── Bookmarks ───
+    val bookmarkedIds: StateFlow<Set<String>> = run {
+        val userId = auth.currentUser?.uid
+        if (userId != null) {
+            bookmarkRepository.observeBookmarkedIds(userId)
+                .catch { emit(emptySet()) }
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
+        } else {
+            MutableStateFlow(emptySet())
+        }
+    }
+
+    fun toggleBookmark(trip: Trip) {
+        val userId = auth.currentUser?.uid ?: return
+        viewModelScope.launch {
+            bookmarkRepository.toggleBookmark(
+                userId = userId,
+                tripId = trip.id,
+                postTitle = trip.title,
+                authorId = trip.hostId,
+                thumbnailUrl = trip.imageUrl
+            )
+        }
+    }
 
     // Main state combining trips and filters
     val state: StateFlow<HomeState> = combine(

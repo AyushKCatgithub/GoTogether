@@ -67,6 +67,7 @@ fun HomeScreen(
     val searchQuery by viewModel.searchQuery.collectAsStateWithLifecycle()
     val isRefreshing by viewModel.isRefreshing.collectAsStateWithLifecycle()
     val selectedCategory by viewModel.selectedCategory.collectAsStateWithLifecycle()
+    val bookmarkedIds by viewModel.bookmarkedIds.collectAsStateWithLifecycle()
 
     var showFilterSheet by remember { mutableStateOf(false) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -226,7 +227,9 @@ fun HomeScreen(
                                     TripCard(
                                         trip = trip,
                                         onClick = { onNavigateToTripDetail(trip.id) },
-                                        onHostClick = { onNavigateToPublicProfile(trip.hostId) })
+                                        onHostClick = { onNavigateToPublicProfile(trip.hostId) },
+                                        isBookmarked = bookmarkedIds.contains(trip.id),
+                                        onBookmarkClick = { viewModel.toggleBookmark(trip) })
                                 }
                             }
                         }

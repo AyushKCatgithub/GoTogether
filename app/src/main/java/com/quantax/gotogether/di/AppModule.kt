@@ -5,6 +5,7 @@ import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.storage.FirebaseStorage
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.data.repository.BookmarkRepository
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.JoinRequestRepository
 import com.quantax.gotogether.data.repository.NotificationRepository
@@ -41,6 +42,12 @@ object AppModule {
     @Singleton
     fun provideTripRepository(firestore: FirebaseFirestore): TripRepository {
         return TripRepository(firestore)
+    }
+
+    @Provides
+    @Singleton
+    fun provideBookmarkRepository(firestore: FirebaseFirestore): BookmarkRepository {
+        return BookmarkRepository(firestore)
     }
 
     @Provides

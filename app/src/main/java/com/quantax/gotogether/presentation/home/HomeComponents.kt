@@ -1,6 +1,8 @@
 package com.quantax.gotogether.presentation.home
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -26,6 +28,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.DateRange
@@ -311,6 +314,8 @@ fun TripCard(
     trip: Trip,
     onClick: () -> Unit,
     onHostClick: () -> Unit = {},
+    isBookmarked: Boolean = false,
+    onBookmarkClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
         Surface(
@@ -328,7 +333,9 @@ fun TripCard(
         Column {
             TripCardHero(
                 trip = trip,
-                onHostClick = onHostClick
+                onHostClick = onHostClick,
+                isBookmarked = isBookmarked,
+                onBookmarkClick = onBookmarkClick
             )
             TripCardDetails(trip = trip, onActionClick = onClick)
         }
@@ -338,8 +345,20 @@ fun TripCard(
 @Composable
 private fun TripCardHero(
     trip: Trip,
-    onHostClick: () -> Unit
+    onHostClick: () -> Unit,
+    isBookmarked: Boolean = false,
+    onBookmarkClick: () -> Unit = {}
 ) {
+    // Bounce animation on bookmark toggle
+    val bookmarkScale by animateFloatAsState(
+        targetValue = if (isBookmarked) 1f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "bookmarkScale"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -410,25 +429,33 @@ private fun TripCardHero(
                 .align(Alignment.TopStart)
         )
 
-        // Bookmark 
+        // Bookmark
         Surface(
-            onClick = { },
+            onClick = onBookmarkClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(20.dp)
-                .size(38.dp),
-            color = Color.Black.copy(alpha = 0.3f),
+                .size(38.dp)
+                .graphicsLayer(
+                    scaleX = bookmarkScale,
+                    scaleY = bookmarkScale
+                ),
+            color = if (isBookmarked) GoTogetherOrange.copy(alpha = 0.85f)
+                    else Color.Black.copy(alpha = 0.3f),
             shape = CircleShape
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    Icons.Default.BookmarkBorder,
-                    contentDescription = "Save",
+                    imageVector = if (isBookmarked) Icons.Default.Bookmark
+                                  else Icons.Default.BookmarkBorder,
+                    contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark",
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
+
+
     }
 }
 
