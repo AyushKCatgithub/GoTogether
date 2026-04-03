@@ -6,20 +6,19 @@ import com.google.firebase.auth.FirebaseAuth
 import com.quantax.gotogether.data.repository.BookmarkRepository
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.domain.model.Trip
+import com.quantax.gotogether.utils.ConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
-import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
@@ -28,7 +27,15 @@ class HomeViewModel @Inject constructor(
     private val repository: TripRepository,
     private val bookmarkRepository: BookmarkRepository,
     private val auth: FirebaseAuth
+    private val connectivityObserver: ConnectivityObserver
 ) : ViewModel() {
+
+    val isConnected = connectivityObserver.observe()
+        .stateIn(
+            viewModelScope,
+            SharingStarted.WhileSubscribed(5000),
+            ConnectivityObserver.Status.Available
+        )
 
     private val _allTrips = MutableStateFlow<List<Trip>?>(null)
     private val _isRefreshing = MutableStateFlow(false)
@@ -55,6 +62,19 @@ class HomeViewModel @Inject constructor(
     private val _locationText = MutableStateFlow("Detecting location...")
     private val _currentCity = MutableStateFlow<String?>(null)
     private val _error = MutableStateFlow<String?>(null)
+
+    private data class HomeFilterParams(
+        val trips: List<Trip>?,
+        val query: String,
+        val from: String,
+        val to: String,
+        val budget: String,
+        val size: Int,
+        val locationText: String,
+        val currentCity: String?,
+        val category: String,
+        val errorMsg: String?
+    )
 
     // ─── Bookmarks ───
     val bookmarkedIds: StateFlow<Set<String>> = run {
@@ -100,41 +120,43 @@ class HomeViewModel @Inject constructor(
         val to = args[3] as String
         val budget = args[4] as String
         val size = args[5] as Int
-        val loc = args[6] as String
-        val currentCity = args[7] as String?
+        val locText = args[6] as String
+        val city = args[7] as String?
         val category = args[8] as String
         val errorMsg = args[9] as String?
 
-        if (errorMsg != null) return@combine HomeState.Error(errorMsg)
-        if (trips == null) return@combine HomeState.Loading
+        HomeFilterParams(trips, query, from, to, budget, size, locText, city, category, errorMsg)
+    }.combine(MutableStateFlow(Unit)) { params, _ ->
+        // Main business logic for filtering and sorting
+        if (params.errorMsg != null) return@combine HomeState.Error(params.errorMsg)
+        if (params.trips == null) return@combine HomeState.Loading
 
         val displayTitle = when {
-            from.isNotBlank() && to.isNotBlank() -> "$from → $to"
-            from.isNotBlank() -> "$from → Anywhere"
-            to.isNotBlank() -> "Anywhere → $to"
-            loc != "Detecting location..." && loc != "Location permission denied" -> loc
+            params.from.isNotBlank() && params.to.isNotBlank() -> "${params.from} → ${params.to}"
+            params.from.isNotBlank() -> "${params.from} → Anywhere"
+            params.to.isNotBlank() -> "Anywhere → ${params.to}"
+            params.locationText != "Detecting location..." && params.locationText != "Location permission denied" -> params.locationText
             else -> "Search journeys..."
         }
 
         // Sort trips by current location if no specific 'from' filter is applied
-        val sortedTrips = if (from.isBlank() && _currentCity.value != null) {
-            val current = _currentCity.value!!
-            trips.sortedWith(compareByDescending<Trip> {
-                it.startingLocation.contains(
-                    current,
-                    ignoreCase = true
-                ) || current.contains(it.startingLocation, ignoreCase = true)
+        val sortedTrips = if (params.from.isBlank() && params.currentCity != null) {
+            val current = params.currentCity
+            params.trips.sortedWith(compareByDescending<Trip> {
+                it.startingLocation.contains(current, ignoreCase = true) ||
+                        current.contains(it.startingLocation, ignoreCase = true)
             }.thenByDescending { it.createdAt })
         } else {
-            trips
+            params.trips
         }
 
         val filtered = sortedTrips.filter { trip ->
-            val matchesSearch = trip.matchesFilter(query, from, to, budget, size)
-            val matchesCategory = category == "All" ||
-                    trip.title.contains(category, ignoreCase = true) ||
-                    trip.description.contains(category, ignoreCase = true) ||
-                    trip.interests.any { it.contains(category, ignoreCase = true) }
+            val matchesSearch =
+                trip.matchesFilter(params.query, params.from, params.to, params.budget, params.size)
+            val matchesCategory = params.category == "All" ||
+                    trip.title.contains(params.category, ignoreCase = true) ||
+                    trip.description.contains(params.category, ignoreCase = true) ||
+                    trip.interests.any { it.contains(params.category, ignoreCase = true) }
 
             matchesSearch && matchesCategory
         }
@@ -145,6 +167,7 @@ class HomeViewModel @Inject constructor(
         started = SharingStarted.WhileSubscribed(5000),
         initialValue = HomeState.Loading
     )
+
 
     init {
         loadTrips()

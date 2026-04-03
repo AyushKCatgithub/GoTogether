@@ -12,9 +12,13 @@ import com.quantax.gotogether.data.repository.NotificationRepository
 import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
+import com.quantax.gotogether.utils.ConnectivityObserver
+import com.quantax.gotogether.utils.NetworkConnectivityObserver
+import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
+import dagger.hilt.android.qualifiers.ApplicationContext
 import dagger.hilt.components.SingletonComponent
 import javax.inject.Singleton
 
@@ -84,5 +88,11 @@ object AppModule {
     @Singleton
     fun provideAuthManager(auth: FirebaseAuth, profileRepo: UserProfileRepository): AuthManager {
         return AuthManager(auth, profileRepo)
+    }
+
+    @Provides
+    @Singleton
+    fun provideConnectivityObserver(@ApplicationContext context: Context): ConnectivityObserver {
+        return NetworkConnectivityObserver(context)
     }
 }

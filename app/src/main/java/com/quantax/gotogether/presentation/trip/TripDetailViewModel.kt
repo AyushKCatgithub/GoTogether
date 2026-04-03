@@ -16,7 +16,6 @@ import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -29,6 +28,7 @@ sealed class TripDetailState {
         val requestStatus: String,
         val membersList: List<com.quantax.gotogether.domain.model.UserProfile> = emptyList()
     ) : TripDetailState()
+
     data class Error(val message: String) : TripDetailState()
 }
 
@@ -46,57 +46,33 @@ class TripDetailViewModel @Inject constructor(
     private val _actionMessage = MutableStateFlow<String?>(null)
     val actionMessage: StateFlow<String?> = _actionMessage.asStateFlow()
 
+    private var currentProfilesJob: kotlinx.coroutines.Job? = null
+
     fun loadTrip(tripId: String) {
         _state.value = TripDetailState.Loading
         val uid = authManager.currentUser?.uid ?: ""
-        
+
         val tripFlow = tripRepository.getTripByIdFlow(tripId).distinctUntilChanged()
         val statusFlow = joinRequestRepository.getUserRequestStatusFlow(tripId, uid).distinctUntilChanged()
 
         combine(tripFlow, statusFlow) { loadedTrip, status ->
             if (loadedTrip != null) {
                 val isHost = loadedTrip.hostId == uid
-                val requestStatus = if (isHost) "NONE" 
-                                   else if (loadedTrip.members.contains(uid)) JoinRequest.STATUS_APPROVED 
-                                   else status ?: "NONE"
-                
-                // Fetch profiles asynchronously without blocking the flow
-                viewModelScope.launch {
-                    userProfileRepository.getProfiles(loadedTrip.members).onSuccess { profiles ->
-                        _state.update { currentState ->
-                            if (currentState is TripDetailState.Success && currentState.trip.id == tripId) {
-                                currentState.copy(
-                                    trip = loadedTrip,
-                                    isHost = isHost,
-                                    requestStatus = requestStatus,
-                                    membersList = profiles
-                                )
-                            } else {
-                                TripDetailState.Success(
-                                    trip = loadedTrip,
-                                    isHost = isHost,
-                                    requestStatus = requestStatus,
-                                    membersList = profiles
-                                )
-                            }
-                        }
-                    }.onFailure {
-                        _state.update { currentState ->
-                            if (currentState is TripDetailState.Success && currentState.trip.id == tripId) {
-                                currentState.copy(
-                                    trip = loadedTrip,
-                                    isHost = isHost,
-                                    requestStatus = requestStatus
-                                )
-                            } else {
-                                TripDetailState.Success(
-                                    trip = loadedTrip,
-                                    isHost = isHost,
-                                    requestStatus = requestStatus,
-                                    membersList = emptyList()
-                                )
-                            }
-                        }
+                val requestStatus = if (isHost) "NONE"
+                else if (loadedTrip.members.contains(uid)) JoinRequest.STATUS_APPROVED
+                else status ?: "NONE"
+
+                // Fetch profiles asynchronously while maintaining state
+                currentProfilesJob?.cancel()
+                currentProfilesJob = viewModelScope.launch {
+                    val profiles = userProfileRepository.getProfiles(loadedTrip.members).getOrDefault(emptyList())
+                    _state.update { 
+                        TripDetailState.Success(
+                            trip = loadedTrip,
+                            isHost = isHost,
+                            requestStatus = requestStatus,
+                            membersList = profiles
+                        )
                     }
                 }
             } else {
@@ -110,7 +86,7 @@ class TripDetailViewModel @Inject constructor(
     fun requestToJoin() {
         val currentState = _state.value
         if (currentState !is TripDetailState.Success) return
-        
+
         val currentTrip = currentState.trip
         val uid = authManager.currentUser?.uid ?: return
 
@@ -120,11 +96,12 @@ class TripDetailViewModel @Inject constructor(
                     tripId = currentTrip.id,
                     tripTitle = currentTrip.title,
                     requesterId = uid,
-                    requesterName = profile?.name ?: (authManager.currentUser?.displayName ?: "User"),
+                    requesterName = profile?.name ?: (authManager.currentUser?.displayName
+                        ?: "User"),
                     requesterImageUrl = profile?.profileImageUrl,
                     hostId = currentTrip.hostId
                 )
-                
+
                 joinRequestRepository.createRequest(request).onSuccess {
                     _actionMessage.value = "Join request sent to host!"
                     // Update state to pending

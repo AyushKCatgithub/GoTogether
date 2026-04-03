@@ -21,6 +21,9 @@ class TripRepository @Inject constructor(
     private val tripsCollection = firestore.collection("trips")
     private val usersCollection = firestore.collection("users")
 
+    // Thread-safe in-memory cache for profiles to reduce redundant fetches
+    private val profileCache = java.util.concurrent.ConcurrentHashMap<String, UserProfile>()
+
     fun getTripsFlow(): Flow<List<Trip>> = callbackFlow {
         val listener = tripsCollection
             .orderBy("createdAt", Query.Direction.DESCENDING)
@@ -37,42 +40,37 @@ class TripRepository @Inject constructor(
                     return@addSnapshotListener
                 }
 
-                // Batch fetch host profiles for enrichment
-                val hostIds = trips.map { it.hostId }.distinct().filter { it.isNotBlank() }
+                // Optimization: Enforce structured concurrency within the callbackFlow
+                launch(Dispatchers.IO) {
+                    val hostIds = trips.map { it.hostId }
+                        .distinct()
+                        .filter { it.isNotBlank() && !profileCache.containsKey(it) }
 
-                // We use a coroutine to fetch profiles and then send the enriched list
-                val scope = kotlinx.coroutines.CoroutineScope(Dispatchers.IO)
-                scope.launch {
-                    val hostProfiles = mutableMapOf<String, UserProfile>()
                     if (hostIds.isNotEmpty()) {
                         hostIds.chunked(30).forEach { chunk ->
                             try {
                                 val usersSnapshot = usersCollection
-                                    .whereIn(
-                                        com.google.firebase.firestore.FieldPath.documentId(),
-                                        chunk
-                                    )
+                                    .whereIn(com.google.firebase.firestore.FieldPath.documentId(), chunk)
                                     .get()
                                     .await()
-                                usersSnapshot.toObjects(UserProfile::class.java)
-                                    .forEach { profile ->
-                                        hostProfiles[profile.uid] = profile
-                                    }
+                                usersSnapshot.toObjects(UserProfile::class.java).forEach { profile ->
+                                    profileCache[profile.uid] = profile
+                                }
                             } catch (e: Exception) {
+                                // Silent fail - enrichment is secondary to trip data
                             }
                         }
                     }
 
-                    val updatedTrips = trips.map { trip ->
-                        val profile = hostProfiles[trip.hostId]
+                    val enrichedTrips = trips.map { trip ->
+                        val cachedProfile = profileCache[trip.hostId]
                         trip.copy(
-                            hostName = profile?.name ?: trip.hostName,
-                            hostImageUrl = profile?.profileImageUrl?.takeIf { it.isNotBlank() }
-                                ?: trip.hostImageUrl,
-                            hostVerified = profile?.isVerified ?: trip.hostVerified
+                            hostName = cachedProfile?.name ?: trip.hostName,
+                            hostImageUrl = cachedProfile?.profileImageUrl?.takeIf { it.isNotBlank() } ?: trip.hostImageUrl,
+                            hostVerified = cachedProfile?.isVerified ?: trip.hostVerified
                         )
                     }
-                    trySend(updatedTrips)
+                    trySend(enrichedTrips)
                 }
             }
         awaitClose { listener.remove() }
