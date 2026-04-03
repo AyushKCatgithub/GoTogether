@@ -1,7 +1,12 @@
 package com.quantax.gotogether.presentation.main
 
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
 import androidx.compose.material.icons.filled.Home
@@ -12,7 +17,9 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -21,6 +28,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -87,8 +95,34 @@ fun MainScreen(
     val notificationsState by notificationsViewModel.state.collectAsStateWithLifecycle()
     val unreadCount = notificationsState.unreadCount
 
+    val isHomeTab =
+        currentDestination?.hierarchy?.any { it.route == Routes.Home.route } == true
+
     Scaffold(
         containerColor = GoTogetherTheme.colors.background,
+        floatingActionButton = {
+            if (isHomeTab) {
+                ExtendedFloatingActionButton(
+                    onClick = onNavigateToCreateTrip,
+                    containerColor = GoTogetherOrange,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                    shape = RoundedCornerShape(18.dp),
+                    modifier = Modifier.shadow(
+                        12.dp,
+                        RoundedCornerShape(18.dp),
+                        ambientColor = GoTogetherOrange.copy(alpha = 0.5f),
+                        spotColor = GoTogetherOrange.copy(alpha = 0.8f)
+                    )
+                ) {
+                    Icon(Icons.Filled.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Create Trip",
+                        fontWeight = FontWeight.ExtraBold
+                    )
+                }
+            }
+        },
         bottomBar = {
             NavigationBar(
                 containerColor = GoTogetherTheme.colors.surfaceVariant,
@@ -155,10 +189,10 @@ fun MainScreen(
             startDestination = Routes.Home.route,
             modifier = Modifier
                 .fillMaxSize()
+                .padding(innerPadding)
         ) {
             composable(Routes.Home.route) {
                 HomeScreen(
-                    onNavigateToCreateTrip = onNavigateToCreateTrip,
                     onNavigateToTripDetail = onNavigateToTripDetail,
                     onNavigateToMessages = onNavigateToMessages,
                     onNavigateToPublicProfile = onNavigateToPublicProfile

@@ -14,13 +14,10 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -37,7 +34,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -53,7 +49,6 @@ import com.quantax.gotogether.utils.PermissionUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    onNavigateToCreateTrip: () -> Unit,
     onNavigateToTripDetail: (String) -> Unit = {},
     onNavigateToMessages: () -> Unit,
     onNavigateToPublicProfile: (String) -> Unit = {},
@@ -118,28 +113,6 @@ fun HomeScreen(
             onLogoClick = { viewModel.loadTrips() },
             onMessagesClick = onNavigateToMessages
         )
-    }, floatingActionButton = {
-        FloatingActionButton(
-            onClick = onNavigateToCreateTrip,
-            containerColor = GoTogetherOrange,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shape = RoundedCornerShape(18.dp),
-            modifier = Modifier.shadow(
-                12.dp,
-                RoundedCornerShape(18.dp),
-                ambientColor = GoTogetherOrange.copy(alpha = 0.5f),
-                spotColor = GoTogetherOrange.copy(alpha = 0.8f)
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Create Trip", fontWeight = FontWeight.ExtraBold)
-            }
-        }
     }) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,

@@ -69,7 +69,14 @@ class ChatViewModel @Inject constructor(
                     _state.update { it.copy(isLoading = false, error = e.message) }
                 }
                 .collect { messageList ->
-                    _state.update { it.copy(messages = messageList, isLoading = false) }
+                    // Filter out messages soft-deleted for the current user
+                    val uid = authManager.currentUser?.uid
+                    val filtered = if (uid != null) {
+                        messageList.filter { !it.deletedFor.contains(uid) }
+                    } else {
+                        messageList
+                    }
+                    _state.update { it.copy(messages = filtered, isLoading = false) }
                 }
         }
     }
@@ -145,6 +152,23 @@ class ChatViewModel @Inject constructor(
     }
 
     fun getCurrentUserId(): String = authManager.currentUser?.uid ?: ""
+
+    fun deleteMessageForMe(chatroomId: String, messageId: String) {
+        val uid = authManager.currentUser?.uid ?: return
+        viewModelScope.launch {
+            chatRepository.deleteMessageForMe(chatroomId, messageId, uid).onFailure { e ->
+                _state.update { it.copy(error = "Failed to delete: ${e.message}") }
+            }
+        }
+    }
+
+    fun deleteMessageForAll(chatroomId: String, messageId: String) {
+        viewModelScope.launch {
+            chatRepository.deleteMessageForAll(chatroomId, messageId).onFailure { e ->
+                _state.update { it.copy(error = "Failed to delete: ${e.message}") }
+            }
+        }
+    }
 
     override fun onCleared() {
         super.onCleared()

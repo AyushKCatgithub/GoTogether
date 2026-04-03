@@ -133,13 +133,13 @@ private fun TabSelector(
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         TabButton(
-            label = "My Posts",
+            label = "My Trips",
             isSelected = selectedTab == MyTripsTab.MY_POSTS,
             onClick = { onTabSelected(MyTripsTab.MY_POSTS) },
             modifier = Modifier.weight(1f)
         )
         TabButton(
-            label = "Saved Posts",
+            label = "Saved Trips",
             isSelected = selectedTab == MyTripsTab.SAVED_POSTS,
             onClick = { onTabSelected(MyTripsTab.SAVED_POSTS) },
             modifier = Modifier.weight(1f)
