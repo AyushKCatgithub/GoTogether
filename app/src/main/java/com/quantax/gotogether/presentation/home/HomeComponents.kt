@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -71,6 +72,7 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -122,13 +124,13 @@ fun HomeTopAppBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clickable { onLogoClick() }
+
             ) {
                 Icon(
                     Icons.Default.LocationOn,
                     contentDescription = "Location",
                     tint = GoTogetherOrange,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp).clickable { onLogoClick() }
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
@@ -199,6 +201,7 @@ fun HomeTopAppBar(
             }
 
         },
+        windowInsets = WindowInsets(0, 0, 0, 0),
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
     )
 }
@@ -920,7 +923,7 @@ fun FilterSection(
 private fun FilterItem(
     value: String,
     placeholder: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
     Box(
