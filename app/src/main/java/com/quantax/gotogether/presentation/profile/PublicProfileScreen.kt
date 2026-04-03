@@ -16,7 +16,6 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
@@ -87,7 +86,9 @@ fun PublicProfileScreen(
         viewModel.loadProfile(userId)
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.background)) {
+    Box(modifier = Modifier
+        .fillMaxSize()
+        .background(GoTogetherTheme.colors.background)) {
         when {
             state.isLoading -> {
                 Box(
@@ -103,7 +104,10 @@ fun PublicProfileScreen(
                     modifier = Modifier.fillMaxSize(),
                     contentAlignment = Alignment.Center
                 ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.padding(32.dp)) {
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.padding(32.dp)
+                    ) {
                         Text(
                             state.error!!,
                             color = GoTogetherTheme.colors.textSecondary,
@@ -127,7 +131,8 @@ fun PublicProfileScreen(
 
             else -> {
                 val profile = state.profile
-                val backgroundPhotos = profile?.backgroundPhotoUrls?.filter { it.isNotBlank() }.orEmpty()
+                val backgroundPhotos =
+                    profile?.backgroundPhotoUrls?.filter { it.isNotBlank() }.orEmpty()
                 val hasSlidingPhotos = backgroundPhotos.isNotEmpty()
                 val pagerCount = (backgroundPhotos.size).coerceAtLeast(1)
 
@@ -167,7 +172,11 @@ fun PublicProfileScreen(
                                                 ),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                                            CircularProgressIndicator(
+                                                color = GoTogetherOrange,
+                                                strokeWidth = 2.dp,
+                                                modifier = Modifier.size(24.dp)
+                                            )
                                         }
                                     },
                                     error = {
@@ -175,10 +184,16 @@ fun PublicProfileScreen(
                                             modifier = Modifier
                                                 .fillMaxSize()
                                                 .background(
-                                                    GoTogetherTheme.colors.surface),
+                                                    GoTogetherTheme.colors.surface
+                                                ),
                                             contentAlignment = Alignment.Center
                                         ) {
-                                            Icon(Icons.Default.Person, contentDescription = null, tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(48.dp))
+                                            Icon(
+                                                Icons.Default.Person,
+                                                contentDescription = null,
+                                                tint = GoTogetherTheme.colors.textSecondary,
+                                                modifier = Modifier.size(48.dp)
+                                            )
                                         }
                                     }
                                 )
@@ -272,7 +287,11 @@ fun PublicProfileScreen(
                         color = GoTogetherTheme.colors.textPrimary
                     )
                     if (profile?.username?.isNotBlank() == true) {
-                        Text(text = "@${profile.username}", fontSize = 15.sp, color = GoTogetherTheme.colors.textSecondary)
+                        Text(
+                            text = "@${profile.username}",
+                            fontSize = 15.sp,
+                            color = GoTogetherTheme.colors.textSecondary
+                        )
                     }
                     if (profile?.bio?.isNotBlank() == true) {
                         Spacer(modifier = Modifier.height(8.dp))
@@ -291,8 +310,8 @@ fun PublicProfileScreen(
                             modifier = Modifier
                                 .background(
                                     if (profile.isVerified) VerifiedCyan.copy(alpha = 0.12f) else WarningYellow.copy(
-                                            alpha = 0.12f
-                                        ),
+                                        alpha = 0.12f
+                                    ),
                                     RoundedCornerShape(50)
                                 )
                                 .padding(horizontal = 16.dp, vertical = 6.dp),
@@ -315,10 +334,16 @@ fun PublicProfileScreen(
                     }
                     Spacer(modifier = Modifier.height(28.dp))
                     Column(
-                        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp),
                         verticalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
-                        PublicProfileInfoCard(icon = Icons.Default.LocationOn, label = "Address", value = profile?.address ?: "")
+                        PublicProfileInfoCard(
+                            icon = Icons.Default.LocationOn,
+                            label = "Address",
+                            value = profile?.address ?: ""
+                        )
                     }
                     Spacer(modifier = Modifier.height(24.dp))
                 }
@@ -346,18 +371,32 @@ fun PublicProfileScreen(
                             contentScale = ContentScale.Crop,
                             loading = {
                                 Box(
-                                    modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.surface, CircleShape),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(GoTogetherTheme.colors.surface, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 2.dp, modifier = Modifier.size(24.dp))
+                                    CircularProgressIndicator(
+                                        color = GoTogetherOrange,
+                                        strokeWidth = 2.dp,
+                                        modifier = Modifier.size(24.dp)
+                                    )
                                 }
                             },
                             error = {
                                 Box(
-                                    modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.surface, CircleShape).border(4.dp, GoTogetherOrange, CircleShape),
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(GoTogetherTheme.colors.surface, CircleShape)
+                                        .border(4.dp, GoTogetherOrange, CircleShape),
                                     contentAlignment = Alignment.Center
                                 ) {
-                                    Icon(Icons.Default.Person, contentDescription = "No Photo", tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(48.dp))
+                                    Icon(
+                                        Icons.Default.Person,
+                                        contentDescription = "No Photo",
+                                        tint = GoTogetherTheme.colors.textSecondary,
+                                        modifier = Modifier.size(48.dp)
+                                    )
                                 }
                             }
                         )
@@ -371,7 +410,12 @@ fun PublicProfileScreen(
                                 .border(4.dp, GoTogetherOrange, CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Person, contentDescription = "No Photo", tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(48.dp))
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = "No Photo",
+                                tint = GoTogetherTheme.colors.textSecondary,
+                                modifier = Modifier.size(48.dp)
+                            )
                         }
                     }
                 }
@@ -379,11 +423,19 @@ fun PublicProfileScreen(
                 // 4. TopAppBar (transparent, back only — like ProfileScreen but with back instead of edit)
                 TopAppBar(
                     title = {
-                        Text("Profile", fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textPrimary)
+                        Text(
+                            "Profile",
+                            fontWeight = FontWeight.Bold,
+                            color = GoTogetherTheme.colors.textPrimary
+                        )
                     },
                     navigationIcon = {
                         IconButton(onClick = onNavigateBack) {
-                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back", tint = GoTogetherTheme.colors.textPrimary)
+                            Icon(
+                                Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = GoTogetherTheme.colors.textPrimary
+                            )
                         }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -442,12 +494,21 @@ private fun FullScreenImageViewer(
                     contentScale = ContentScale.Fit,
                     loading = {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 2.dp, modifier = Modifier.size(32.dp))
+                            CircularProgressIndicator(
+                                color = GoTogetherOrange,
+                                strokeWidth = 2.dp,
+                                modifier = Modifier.size(32.dp)
+                            )
                         }
                     },
                     error = {
                         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Person, contentDescription = null, tint = Color.White, modifier = Modifier.size(64.dp))
+                            Icon(
+                                Icons.Default.Person,
+                                contentDescription = null,
+                                tint = Color.White,
+                                modifier = Modifier.size(64.dp)
+                            )
                         }
                     }
                 )

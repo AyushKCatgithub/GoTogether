@@ -1,5 +1,6 @@
 package com.quantax.gotogether.presentation.home
 
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -12,8 +13,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -38,6 +38,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -107,16 +108,41 @@ fun HomeScreen(
         }
     }
 
+    val connectivityStatus by viewModel.isConnected.collectAsStateWithLifecycle()
+
     Scaffold(containerColor = GoTogetherTheme.colors.background, topBar = {
         val locationText = when (val s = state) {
             is HomeState.Success -> s.locationText
             else -> "Loading location..."
         }
-        HomeTopAppBar(
-            locationText = locationText,
-            onLogoClick = { viewModel.loadTrips() },
-            onMessagesClick = onNavigateToMessages
-        )
+        Column {
+            HomeTopAppBar(
+                locationText = locationText,
+                onLogoClick = { viewModel.loadTrips() },
+                onMessagesClick = onNavigateToMessages
+            )
+            // Premium "No Connection" bar
+            androidx.compose.animation.AnimatedVisibility(
+                visible = connectivityStatus != com.quantax.gotogether.utils.ConnectivityObserver.Status.Available,
+                enter = androidx.compose.animation.expandVertically(),
+                exit = androidx.compose.animation.shrinkVertically()
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .background(com.quantax.gotogether.ui.theme.WarningYellow)
+                        .padding(horizontal = 16.dp, vertical = 6.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(
+                        "No Internet Connection — Showing Cached Data",
+                        color = Color.Black,
+                        fontSize = 12.sp,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+            }
+        }
     }, floatingActionButton = {
         FloatingActionButton(
             onClick = onNavigateToCreateTrip,
@@ -124,19 +150,19 @@ fun HomeScreen(
             contentColor = MaterialTheme.colorScheme.onPrimary,
             shape = RoundedCornerShape(18.dp),
             modifier = Modifier.shadow(
-                12.dp,
+                16.dp,
                 RoundedCornerShape(18.dp),
                 ambientColor = GoTogetherOrange.copy(alpha = 0.5f),
                 spotColor = GoTogetherOrange.copy(alpha = 0.8f)
             )
         ) {
             Row(
-                modifier = Modifier.padding(horizontal = 16.dp),
+                modifier = Modifier.padding(horizontal = 20.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
                 Spacer(modifier = Modifier.width(8.dp))
-                Text("Create Trip", fontWeight = FontWeight.ExtraBold)
+                Text("Host a Journey", fontWeight = FontWeight.Black, fontSize = 14.sp)
             }
         }
     }) { paddingValues ->
@@ -215,18 +241,38 @@ fun HomeScreen(
                         if (currentState.trips.isEmpty()) {
                             item { EmptyTripsView() }
                         } else {
-                            items(
-                                currentState.trips, key = { it.id }, contentType = { "TripCard" }
-                            ) { trip ->
-                                Box(
-                                    modifier = Modifier.padding(
-                                        horizontal = 16.dp, vertical = 12.dp
+                            itemsIndexed(
+                                currentState.trips, key = { _, trip -> trip.id }
+                            ) { index, trip ->
+                                // Premium staggered animation effect
+                                val animatedVisibility = remember { mutableStateOf(false) }
+                                LaunchedEffect(Unit) { animatedVisibility.value = true }
+
+                                androidx.compose.animation.AnimatedVisibility(
+                                    visible = animatedVisibility.value,
+                                    enter = androidx.compose.animation.fadeIn(
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            500,
+                                            delayMillis = index * 80
+                                        )
+                                    ) + androidx.compose.animation.scaleIn(
+                                        initialScale = 0.9f,
+                                        animationSpec = androidx.compose.animation.core.tween(
+                                            500,
+                                            delayMillis = index * 80
+                                        )
                                     )
                                 ) {
-                                    TripCard(
-                                        trip = trip,
-                                        onClick = { onNavigateToTripDetail(trip.id) },
-                                        onHostClick = { onNavigateToPublicProfile(trip.hostId) })
+                                    Box(
+                                        modifier = Modifier.padding(
+                                            horizontal = 16.dp, vertical = 12.dp
+                                        )
+                                    ) {
+                                        TripCard(
+                                            trip = trip,
+                                            onClick = { onNavigateToTripDetail(trip.id) },
+                                            onHostClick = { onNavigateToPublicProfile(trip.hostId) })
+                                    }
                                 }
                             }
                         }

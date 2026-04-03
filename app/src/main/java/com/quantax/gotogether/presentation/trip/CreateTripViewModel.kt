@@ -99,6 +99,11 @@ class CreateTripViewModel @Inject constructor(
             return
         }
 
+        if (currentState.startDate.isBlank() || currentState.endDate.isBlank()) {
+            _state.value = currentState.copy(error = "Please select both start and end dates")
+            return
+        }
+
         val currentUser = authManager.currentUser
         if (currentUser == null) {
             _state.value = currentState.copy(error = "You must be signed in to create a trip")

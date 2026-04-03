@@ -13,9 +13,9 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.test.resetMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -80,20 +80,21 @@ class ProfileViewModelTest {
     }
 
     @Test
-    fun `init when flow emits null uses empty profile with uid and email`() = runTest(testDispatcher) {
-        val firebaseUser = mockk<FirebaseUser>()
-        every { firebaseUser.uid } returns "uid1"
-        every { firebaseUser.email } returns "user@test.com"
-        every { authManager.currentUser } returns firebaseUser
-        every { repository.getProfileFlow("uid1") } returns flowOf(null)
+    fun `init when flow emits null uses empty profile with uid and email`() =
+        runTest(testDispatcher) {
+            val firebaseUser = mockk<FirebaseUser>()
+            every { firebaseUser.uid } returns "uid1"
+            every { firebaseUser.email } returns "user@test.com"
+            every { authManager.currentUser } returns firebaseUser
+            every { repository.getProfileFlow("uid1") } returns flowOf(null)
 
-        val viewModel = ProfileViewModel(repository, storageService, authManager)
+            val viewModel = ProfileViewModel(repository, storageService, authManager)
 
-        val state = viewModel.state.value
-        assertFalse(state.isLoading)
-        assertEquals("uid1", state.profile?.uid)
-        assertEquals("user@test.com", state.profile?.email)
-    }
+            val state = viewModel.state.value
+            assertFalse(state.isLoading)
+            assertEquals("uid1", state.profile?.uid)
+            assertEquals("user@test.com", state.profile?.email)
+        }
 
     @Test
     fun `LoadProfile when user is null sets error`() = runTest(testDispatcher) {
@@ -211,7 +212,12 @@ class ProfileViewModelTest {
             UserProfile(uid = "uid1", email = "e@e.com")
         )
         every { storageService.isLocalUri(any()) } returns false
-        coEvery { repository.saveProfile(any(), any()) } returns Result.failure(RuntimeException("Save failed"))
+        coEvery {
+            repository.saveProfile(
+                any(),
+                any()
+            )
+        } returns Result.failure(RuntimeException("Save failed"))
 
         val viewModel = ProfileViewModel(repository, storageService, authManager)
         viewModel.onEvent(ProfileEvent.SaveProfile(UserProfile(uid = "uid1", email = "e@e.com")))

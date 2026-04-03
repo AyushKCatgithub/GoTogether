@@ -11,10 +11,10 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -134,7 +134,8 @@ class ProfileViewModel @Inject constructor(
                         _state.update {
                             it.copy(
                                 isSaving = false,
-                                error = uploadResult.exceptionOrNull()?.message ?: "Failed to upload profile photo"
+                                error = uploadResult.exceptionOrNull()?.message
+                                    ?: "Failed to upload profile photo"
                             )
                         }
                         return@launch

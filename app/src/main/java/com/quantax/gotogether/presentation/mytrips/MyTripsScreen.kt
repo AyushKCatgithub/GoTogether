@@ -44,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.SubcomposeAsyncImage
 import com.quantax.gotogether.domain.model.Trip
 import com.quantax.gotogether.presentation.components.TripCardShimmer
 import com.quantax.gotogether.presentation.home.ErrorHomeView

@@ -7,9 +7,9 @@ import io.mockk.mockk
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
+import kotlinx.coroutines.test.resetMain
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.test.setMain
-import kotlinx.coroutines.test.resetMain
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -79,18 +79,19 @@ class PublicProfileViewModelTest {
     }
 
     @Test
-    fun `loadProfile when PERMISSION_DENIED sets private profile error`() = runTest(testDispatcher) {
-        coEvery { repository.getProfile("uid1") } returns Result.failure(
-            RuntimeException("PERMISSION_DENIED: Missing or insufficient permissions.")
-        )
+    fun `loadProfile when PERMISSION_DENIED sets private profile error`() =
+        runTest(testDispatcher) {
+            coEvery { repository.getProfile("uid1") } returns Result.failure(
+                RuntimeException("PERMISSION_DENIED: Missing or insufficient permissions.")
+            )
 
-        val viewModel = PublicProfileViewModel(repository)
-        viewModel.loadProfile("uid1")
+            val viewModel = PublicProfileViewModel(repository)
+            viewModel.loadProfile("uid1")
 
-        val state = viewModel.state.value
-        assertFalse(state.isLoading)
-        assertEquals("This user's profile is private", state.error)
-    }
+            val state = viewModel.state.value
+            assertFalse(state.isLoading)
+            assertEquals("This user's profile is private", state.error)
+        }
 
     @Test
     fun `loadProfile when other failure sets generic error`() = runTest(testDispatcher) {

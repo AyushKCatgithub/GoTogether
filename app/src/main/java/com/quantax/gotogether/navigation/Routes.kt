@@ -1,6 +1,5 @@
 package com.quantax.gotogether.navigation
 
-import java.net.URLDecoder
 import java.net.URLEncoder
 
 sealed class Routes(val route: String) {
@@ -30,9 +29,11 @@ sealed class Routes(val route: String) {
     data object TripDetail : Routes("trip_detail/{tripId}") {
         fun createRoute(tripId: String) = "trip_detail/$tripId"
     }
+
     data object Chatroom : Routes("chatroom/{chatroomId}") {
         fun createRoute(chatroomId: String) = "chatroom/$chatroomId"
     }
+
     data object PublicProfile : Routes("public_profile/{userId}") {
         fun createRoute(userId: String) = "public_profile/$userId"
     }
