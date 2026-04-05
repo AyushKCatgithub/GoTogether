@@ -1,5 +1,6 @@
 package com.quantax.gotogether.di
 
+import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
@@ -14,7 +15,6 @@ import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.utils.ConnectivityObserver
 import com.quantax.gotogether.utils.NetworkConnectivityObserver
-import android.content.Context
 import dagger.Module
 import dagger.Provides
 import dagger.hilt.InstallIn
@@ -56,7 +56,10 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideChatRepository(firestore: FirebaseFirestore, database: FirebaseDatabase): ChatRepository {
+    fun provideChatRepository(
+        firestore: FirebaseFirestore,
+        database: FirebaseDatabase
+    ): ChatRepository {
         return ChatRepository(firestore, database)
     }
 

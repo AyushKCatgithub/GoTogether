@@ -18,7 +18,6 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.List
@@ -109,6 +108,7 @@ fun MyTripsScreen(
                         onDeleteClick = { viewModel.deleteTrip(it) },
                         onRetry = { viewModel.loadMyTrips() }
                     )
+
                     MyTripsTab.SAVED_POSTS -> SavedPostsContent(
                         state = state,
                         onTripClick = onNavigateToDetail,

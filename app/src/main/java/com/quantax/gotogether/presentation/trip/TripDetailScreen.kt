@@ -34,11 +34,9 @@ import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.IosShare
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Map
-import androidx.compose.material.icons.filled.Route
 import androidx.compose.material.icons.filled.Schedule
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Shield
-import androidx.compose.material.icons.filled.StarBorder
 import androidx.compose.material.icons.filled.Verified
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -346,7 +344,7 @@ fun TripDetailContent(
             )
 
             Spacer(modifier = Modifier.height(24.dp))
-            
+
             if (trip.interests.isNotEmpty()) {
                 SectionHeader(title = "Trip Vibe")
                 Spacer(modifier = Modifier.height(16.dp))
@@ -554,7 +552,12 @@ fun InfoItem(icon: ImageVector, value: String, label: String) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Icon(icon, null, tint = GoTogetherOrange, modifier = Modifier.size(22.dp))
         Spacer(modifier = Modifier.height(4.dp))
-        Text(value, fontWeight = FontWeight.Bold, fontSize = 15.sp, color = GoTogetherTheme.colors.textPrimary)
+        Text(
+            value,
+            fontWeight = FontWeight.Bold,
+            fontSize = 15.sp,
+            color = GoTogetherTheme.colors.textPrimary
+        )
         Text(label, fontSize = 11.sp, color = GoTogetherTheme.colors.textSecondary)
     }
 }
@@ -678,8 +681,17 @@ fun TravelersList(
                 )
                 Spacer(modifier = Modifier.width(16.dp))
                 Column {
-                    Text(member.name, fontWeight = FontWeight.SemiBold, fontSize = 15.sp, color = GoTogetherTheme.colors.textPrimary)
-                    Text("Ready for adventure", fontSize = 12.sp, color = GoTogetherTheme.colors.textSecondary)
+                    Text(
+                        member.name,
+                        fontWeight = FontWeight.SemiBold,
+                        fontSize = 15.sp,
+                        color = GoTogetherTheme.colors.textPrimary
+                    )
+                    Text(
+                        "Ready for adventure",
+                        fontSize = 12.sp,
+                        color = GoTogetherTheme.colors.textSecondary
+                    )
                 }
                 Spacer(modifier = Modifier.weight(1f))
                 Icon(
@@ -701,9 +713,18 @@ fun EmptyTravelersPlaceholder() {
             .padding(vertical = 20.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        Icon(Icons.Default.GroupAdd, null, modifier = Modifier.size(48.dp), tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.4f))
+        Icon(
+            Icons.Default.GroupAdd,
+            null,
+            modifier = Modifier.size(48.dp),
+            tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.4f)
+        )
         Spacer(modifier = Modifier.height(12.dp))
-        Text("No travelers yet. Be the first to join!", color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
+        Text(
+            "No travelers yet. Be the first to join!",
+            color = GoTogetherTheme.colors.textSecondary,
+            fontSize = 14.sp
+        )
     }
 }
 
