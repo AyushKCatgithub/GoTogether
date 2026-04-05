@@ -1,6 +1,5 @@
 package com.quantax.gotogether.navigation
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -23,7 +22,6 @@ import java.net.URLDecoder
 @Composable
 fun GoTogetherNavGraph(
     navController: NavHostController,
-    context: Context
 ) {
     NavHost(
         navController = navController,

@@ -27,6 +27,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Bookmark
+import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.GroupAdd
@@ -165,10 +167,12 @@ fun TripDetailScreen(
                         trip = trip,
                         isHost = currentState.isHost,
                         requestStatus = currentState.requestStatus,
+                        isBookmarked = currentState.isBookmarked,
                         members = currentState.membersList,
                         scrollState = scrollState,
                         onBackClick = onNavigateBack,
                         onShareClick = shareTrip,
+                        onBookmarkClick = { viewModel.toggleBookmark() },
                         onProfileClick = { onNavigateToPublicProfile(it) },
                         paddingValues = paddingValues
                     )
@@ -180,8 +184,10 @@ fun TripDetailScreen(
                             title = trip.title.ifBlank { trip.destination },
                             alpha = headerAlpha,
                             backgroundColor = GoTogetherTheme.colors.background,
+                            isBookmarked = currentState.isBookmarked,
                             onBackClick = onNavigateBack,
-                            onShareClick = shareTrip
+                            onShareClick = shareTrip,
+                            onBookmarkClick = { viewModel.toggleBookmark() }
                         )
                     }
                 }
@@ -195,10 +201,12 @@ fun TripDetailContent(
     trip: com.quantax.gotogether.domain.model.Trip,
     isHost: Boolean,
     requestStatus: String,
+    isBookmarked: Boolean,
     members: List<com.quantax.gotogether.domain.model.UserProfile>,
     scrollState: androidx.compose.foundation.ScrollState,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
+    onBookmarkClick: () -> Unit,
     onProfileClick: (String) -> Unit,
     paddingValues: PaddingValues
 ) {
@@ -250,10 +258,19 @@ fun TripDetailContent(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 FloatingCircleButton(Icons.AutoMirrored.Filled.ArrowBack, onClick = onBackClick)
-                FloatingCircleButton(Icons.Filled.IosShare, onClick = onShareClick)
+                
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    FloatingCircleButton(
+                        icon = if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        tint = if (isBookmarked) GoTogetherOrange else null,
+                        onClick = onBookmarkClick
+                    )
+                    FloatingCircleButton(Icons.Filled.IosShare, onClick = onShareClick)
+                }
             }
 
 
@@ -438,7 +455,11 @@ fun TripDetailContent(
 }
 
 @Composable
-fun FloatingCircleButton(icon: ImageVector, onClick: () -> Unit) {
+fun FloatingCircleButton(
+    icon: ImageVector,
+    tint: Color? = null,
+    onClick: () -> Unit
+) {
     Surface(
         onClick = onClick,
         modifier = Modifier.size(44.dp),
@@ -451,7 +472,7 @@ fun FloatingCircleButton(icon: ImageVector, onClick: () -> Unit) {
                 imageVector = icon,
                 contentDescription = null,
                 modifier = Modifier.size(20.dp),
-                tint = MaterialTheme.colorScheme.onSurface
+                tint = tint ?: MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -462,8 +483,10 @@ fun FloatingHeader(
     title: String,
     alpha: Float,
     backgroundColor: Color,
+    isBookmarked: Boolean,
     onBackClick: () -> Unit,
-    onShareClick: () -> Unit
+    onShareClick: () -> Unit,
+    onBookmarkClick: () -> Unit
 ) {
     Surface(
         color = backgroundColor.copy(alpha = alpha.coerceIn(0f, 0.95f)),
@@ -505,18 +528,36 @@ fun FloatingHeader(
                 )
             }
 
-            IconButton(
-                onClick = onShareClick,
-                modifier = Modifier.background(
-                    if (alpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent,
-                    CircleShape
-                )
-            ) {
-                Icon(
-                    Icons.Default.Share,
-                    contentDescription = null,
-                    tint = if (alpha < 0.5f) Color.White else GoTogetherTheme.colors.textPrimary
-                )
+            Row(horizontalArrangement = Arrangement.spacedBy(4.dp), verticalAlignment = Alignment.CenterVertically) {
+                IconButton(
+                    onClick = onBookmarkClick,
+                    modifier = Modifier.background(
+                        if (alpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent,
+                        CircleShape
+                    )
+                ) {
+                    Icon(
+                        if (isBookmarked) Icons.Default.Bookmark else Icons.Default.BookmarkBorder,
+                        contentDescription = null,
+                        tint = if (alpha < 0.5f) Color.White 
+                               else if (isBookmarked) GoTogetherOrange 
+                               else GoTogetherTheme.colors.textPrimary
+                    )
+                }
+
+                IconButton(
+                    onClick = onShareClick,
+                    modifier = Modifier.background(
+                        if (alpha < 0.5f) Color.Black.copy(alpha = 0.3f) else Color.Transparent,
+                        CircleShape
+                    )
+                ) {
+                    Icon(
+                        Icons.Default.Share,
+                        contentDescription = null,
+                        tint = if (alpha < 0.5f) Color.White else GoTogetherTheme.colors.textPrimary
+                    )
+                }
             }
         }
     }

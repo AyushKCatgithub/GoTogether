@@ -6,6 +6,7 @@ import com.quantax.gotogether.auth.AuthManager
 import com.quantax.gotogether.data.repository.JoinRequestRepository
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
+import com.quantax.gotogether.data.repository.BookmarkRepository
 import com.quantax.gotogether.domain.model.JoinRequest
 import com.quantax.gotogether.domain.model.Trip
 import dagger.hilt.android.lifecycle.HiltViewModel
@@ -26,6 +27,7 @@ sealed class TripDetailState {
         val trip: Trip,
         val isHost: Boolean,
         val requestStatus: String,
+        val isBookmarked: Boolean = false,
         val membersList: List<com.quantax.gotogether.domain.model.UserProfile> = emptyList()
     ) : TripDetailState()
 
@@ -37,6 +39,7 @@ class TripDetailViewModel @Inject constructor(
     private val tripRepository: TripRepository,
     private val joinRequestRepository: JoinRequestRepository,
     private val userProfileRepository: UserProfileRepository,
+    private val bookmarkRepository: BookmarkRepository,
     private val authManager: AuthManager
 ) : ViewModel() {
 
@@ -54,13 +57,16 @@ class TripDetailViewModel @Inject constructor(
 
         val tripFlow = tripRepository.getTripByIdFlow(tripId).distinctUntilChanged()
         val statusFlow = joinRequestRepository.getUserRequestStatusFlow(tripId, uid).distinctUntilChanged()
+        val bookmarkFlow = bookmarkRepository.observeBookmarkedIds(uid).distinctUntilChanged()
 
-        combine(tripFlow, statusFlow) { loadedTrip, status ->
+        combine(tripFlow, statusFlow, bookmarkFlow) { loadedTrip, status, bookmarks ->
             if (loadedTrip != null) {
                 val isHost = loadedTrip.hostId == uid
                 val requestStatus = if (isHost) "NONE"
                 else if (loadedTrip.members.contains(uid)) JoinRequest.STATUS_APPROVED
                 else status ?: "NONE"
+                
+                val isBookmarked = bookmarks.contains(loadedTrip.id)
 
                 // Fetch profiles asynchronously while maintaining state
                 currentProfilesJob?.cancel()
@@ -71,6 +77,7 @@ class TripDetailViewModel @Inject constructor(
                             trip = loadedTrip,
                             isHost = isHost,
                             requestStatus = requestStatus,
+                            isBookmarked = isBookmarked,
                             membersList = profiles
                         )
                     }
@@ -110,6 +117,23 @@ class TripDetailViewModel @Inject constructor(
                     _actionMessage.value = "Failed to send join request."
                 }
             }
+        }
+    }
+
+    fun toggleBookmark() {
+        val currentState = _state.value
+        if (currentState !is TripDetailState.Success) return
+        val trip = currentState.trip
+        val uid = authManager.currentUser?.uid ?: return
+
+        viewModelScope.launch {
+            bookmarkRepository.toggleBookmark(
+                userId = uid,
+                tripId = trip.id,
+                postTitle = trip.title,
+                authorId = trip.hostId,
+                thumbnailUrl = trip.imageUrl
+            )
         }
     }
 

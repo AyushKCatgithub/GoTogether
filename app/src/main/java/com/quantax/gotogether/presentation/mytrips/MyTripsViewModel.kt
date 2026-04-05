@@ -108,14 +108,17 @@ class MyTripsViewModel @Inject constructor(
     fun removeBookmark(tripId: String) {
         val user = authManager.currentUser ?: return
         viewModelScope.launch {
+            // Find the trip BEFORE updating the UI state
+            val trip = _state.value.savedTrips.find { it.id == tripId }
+            
             // Optimistically remove from UI
             _state.update { currentState ->
                 currentState.copy(
                     savedTrips = currentState.savedTrips.filter { it.id != tripId }
                 )
             }
+            
             // Remove from Firestore
-            val trip = _state.value.savedTrips.find { it.id == tripId }
             bookmarkRepository.toggleBookmark(
                 userId = user.uid,
                 tripId = tripId,

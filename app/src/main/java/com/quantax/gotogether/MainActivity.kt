@@ -19,8 +19,7 @@ class MainActivity : ComponentActivity() {
             GoTogetherTheme {
                 val navController = rememberNavController()
                 GoTogetherNavGraph(
-                    navController = navController,
-                    context = this@MainActivity
+                    navController = navController
                 )
             }
         }

@@ -9,13 +9,17 @@ import com.quantax.gotogether.domain.model.Trip
 import com.quantax.gotogether.utils.ConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.debounce
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
@@ -78,16 +82,19 @@ class HomeViewModel @Inject constructor(
     )
 
     // ─── Bookmarks ───
-    val bookmarkedIds: StateFlow<Set<String>> = run {
-        val userId = auth.currentUser?.uid
+    @OptIn(kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+    val bookmarkedIds: StateFlow<Set<String>> = callbackFlow {
+        val listener = FirebaseAuth.AuthStateListener { trySend(it.currentUser?.uid) }
+        auth.addAuthStateListener(listener)
+        awaitClose { auth.removeAuthStateListener(listener) }
+    }.flatMapLatest { userId ->
         if (userId != null) {
             bookmarkRepository.observeBookmarkedIds(userId)
                 .catch { emit(emptySet()) }
-                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
         } else {
-            MutableStateFlow(emptySet())
+            flowOf(emptySet())
         }
-    }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptySet())
 
     fun toggleBookmark(trip: Trip) {
         val userId = auth.currentUser?.uid ?: return

@@ -356,7 +356,7 @@ private fun TripCardHero(
 ) {
     // Bounce animation on bookmark toggle
     val bookmarkScale by animateFloatAsState(
-        targetValue = if (isBookmarked) 1f else 1f,
+        targetValue = if (isBookmarked) 1.15f else 1f,
         animationSpec = spring(
             dampingRatio = Spring.DampingRatioMediumBouncy,
             stiffness = Spring.StiffnessLow

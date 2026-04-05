@@ -1,6 +1,7 @@
 package com.quantax.gotogether.presentation.main
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.navigationBarsPadding
@@ -18,6 +19,7 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -97,101 +99,108 @@ fun MainScreen(
     val unreadCount = notificationsState.unreadCount
 
     Scaffold(
-        containerColor = GoTogetherTheme.colors.background,
-        bottomBar = {
-            Box(
+        containerColor = GoTogetherTheme.colors.background, bottomBar = {
+            Surface(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .navigationBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 20.dp)
+                    .navigationBarsPadding(),
+                color = GoTogetherTheme.colors.background.copy(alpha = 0.98f),
             ) {
-                NavigationBar(
-                    containerColor = Color.Transparent,
-                    contentColor = GoTogetherTheme.colors.textPrimary,
-                    tonalElevation = 0.dp,
-                    windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
-                ) {
-                    bottomNavItems.forEach { item ->
-                        val isSelected =
-                            currentDestination?.hierarchy?.any { it.route == item.route } == true
+                Column {
+                    HorizontalDivider(
+                        thickness = 0.5.dp,
+                        color = GoTogetherTheme.colors.divider.copy(alpha = 0.2f)
+                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 12.dp, vertical = 2.dp)
+                    ) {
+                        NavigationBar(
+                            containerColor = Color.Transparent,
+                            contentColor = GoTogetherTheme.colors.textPrimary,
+                        ) {
+                            bottomNavItems.forEach { item ->
+                                val isSelected =
+                                    currentDestination?.hierarchy?.any { it.route == item.route } == true
 
-                        NavigationBarItem(
-                            selected = isSelected,
-                            onClick = {
-                                if (item.isAction) {
-                                    onNavigateToCreateTrip()
-                                } else {
-                                    if (!isSelected) {
-                                        navController.navigate(item.route) {
-                                            popUpTo(navController.graph.findStartDestination().id) {
-                                                saveState = true
+                                NavigationBarItem(
+                                    selected = isSelected,
+                                    onClick = {
+                                        if (item.isAction) {
+                                            onNavigateToCreateTrip()
+                                        } else {
+                                            if (!isSelected) {
+                                                navController.navigate(item.route) {
+                                                    popUpTo(navController.graph.findStartDestination().id) {
+                                                        saveState = true
+                                                    }
+                                                    launchSingleTop = true
+                                                    restoreState = true
+                                                }
                                             }
-                                            launchSingleTop = true
-                                            restoreState = true
                                         }
-                                    }
-                                }
-                            },
-                            icon = {
-                                val icon =
-                                    if (isSelected) item.selectedIcon else item.unselectedIcon
-                                if (item.isAction) {
-                                    Surface(
-                                        modifier = Modifier.size(52.dp),
-                                        shape = androidx.compose.foundation.shape.CircleShape,
-                                        color = GoTogetherOrange,
-                                        shadowElevation = 8.dp
-                                    ) {
-                                        Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
-                                            Icon(
-                                                item.selectedIcon,
-                                                contentDescription = item.label,
-                                                tint = Color.White,
-                                                modifier = Modifier.size(28.dp)
+                                    },
+                                    icon = {
+                                        val icon =
+                                            if (isSelected) item.selectedIcon else item.unselectedIcon
+                                        if (item.isAction) {
+                                            Surface(
+                                                modifier = Modifier.size(52.dp),
+                                                shape = androidx.compose.foundation.shape.CircleShape,
+                                                color = GoTogetherOrange,
+                                                shadowElevation = 8.dp
+                                            ) {
+                                                Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                                    Icon(
+                                                        item.selectedIcon,
+                                                        contentDescription = item.label,
+                                                        tint = Color.White,
+                                                        modifier = Modifier.size(28.dp)
+                                                    )
+                                                }
+                                            }
+                                        } else if (item.route == Routes.Notifications.route && unreadCount > 0) {
+                                            BadgedBox(
+                                                badge = {
+                                                    Badge(containerColor = GoTogetherOrange) {
+                                                        Text(
+                                                            unreadCount.toString(),
+                                                            color = Color.White,
+                                                            fontSize = 10.sp
+                                                        )
+                                                    }
+                                                }
+                                            ) {
+                                                Icon(icon, contentDescription = item.label)
+                                            }
+                                        } else {
+                                            Icon(icon, contentDescription = item.label)
+                                        }
+                                    },
+                                    label = {
+                                        if (!item.isAction) {
+                                            Text(
+                                                text = item.label,
+                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                                fontSize = 11.sp
                                             )
                                         }
-                                    }
-                                } else if (item.route == Routes.Notifications.route && unreadCount > 0) {
-                                    BadgedBox(
-                                        badge = {
-                                            Badge(containerColor = GoTogetherOrange) {
-                                                Text(
-                                                    unreadCount.toString(),
-                                                    color = Color.White,
-                                                    fontSize = 10.sp
-                                                )
-                                            }
-                                        }
-                                    ) {
-                                        Icon(icon, contentDescription = item.label)
-                                    }
-                                } else {
-                                    Icon(icon, contentDescription = item.label)
-                                }
-                            },
-                            label = {
-                                if (!item.isAction) {
-                                    Text(
-                                        text = item.label,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                        fontSize = 11.sp
+                                    },
+                                    colors = NavigationBarItemDefaults.colors(
+                                        selectedIconColor = GoTogetherOrange,
+                                        selectedTextColor = GoTogetherOrange,
+                                        unselectedIconColor = GoTogetherTheme.colors.textSecondary,
+                                        unselectedTextColor = GoTogetherTheme.colors.textSecondary,
+                                        indicatorColor = Color.Transparent
                                     )
-                                }
-                            },
-                            colors = NavigationBarItemDefaults.colors(
-                                selectedIconColor = GoTogetherOrange,
-                                selectedTextColor = GoTogetherOrange,
-                                unselectedIconColor = GoTogetherTheme.colors.textSecondary,
-                                unselectedTextColor = GoTogetherTheme.colors.textSecondary,
-                                indicatorColor = Color.Transparent
-                            )
-                        )
+                                )
+                            }
+                        }
                     }
                 }
-
             }
-        }
-    ) { innerPadding ->
+        }) { innerPadding ->
         NavHost(
             navController = navController,
             startDestination = Routes.Home.route,
@@ -209,8 +218,7 @@ fun MainScreen(
             }
             composable(Routes.Notifications.route) {
                 NotificationsScreen(
-                    viewModel = notificationsViewModel,
-                    onNavigateToChatroom = onNavigateToChatroom
+                    viewModel = notificationsViewModel, onNavigateToChatroom = onNavigateToChatroom
                 )
             }
             composable(Routes.MyTrips.route) {
@@ -221,8 +229,7 @@ fun MainScreen(
             }
             composable(Routes.Profile.route) {
                 ProfileScreen(
-                    onNavigateToEditProfile = onNavigateToEditProfile,
-                    onSignOut = onSignOut
+                    onNavigateToEditProfile = onNavigateToEditProfile, onSignOut = onSignOut
                 )
             }
         }
