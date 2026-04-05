@@ -73,12 +73,13 @@ class AuthManager @Inject constructor(
                 uid = user.uid,
                 email = user.email ?: "",
                 phone = user.phoneNumber ?: "",
-                name = user.displayName ?: ""
+                name = user.displayName ?: "",
+                profileImageUrl = user.photoUrl?.toString() ?: ""
             )
-            val result = profileRepo.saveProfile(newProfile)
-            if (result.isFailure) {
-                throw Exception("Failed to save user profile: ${result.exceptionOrNull()?.message}")
-            }
+            profileRepo.saveProfile(newProfile)
+        } else if (existingProfile.profileImageUrl.isBlank() && user.photoUrl != null) {
+            // Update existing profile with photo if it's currently missing
+            profileRepo.saveProfile(existingProfile.copy(profileImageUrl = user.photoUrl.toString()))
         }
     }
 
