@@ -1,14 +1,17 @@
 package com.quantax.gotogether.presentation.main
 
-import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Person
@@ -17,18 +20,16 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
@@ -56,7 +57,8 @@ data class BottomNavItem(
     val label: String,
     val route: String,
     val selectedIcon: ImageVector,
-    val unselectedIcon: ImageVector
+    val unselectedIcon: ImageVector,
+    val isAction: Boolean = false
 )
 
 private val bottomNavItems = listOf(
@@ -67,6 +69,7 @@ private val bottomNavItems = listOf(
         Icons.Filled.Notifications,
         Icons.Outlined.Notifications
     ),
+    BottomNavItem("Create", "action_create", Icons.Filled.Add, Icons.Filled.Add, isAction = true),
     BottomNavItem(
         "My Trips",
         Routes.MyTrips.route,
@@ -95,92 +98,99 @@ fun MainScreen(
     val notificationsState by notificationsViewModel.state.collectAsStateWithLifecycle()
     val unreadCount = notificationsState.unreadCount
 
-    val isHomeTab =
-        currentDestination?.hierarchy?.any { it.route == Routes.Home.route } == true
-
     Scaffold(
         containerColor = GoTogetherTheme.colors.background,
-        floatingActionButton = {
-            if (isHomeTab) {
-                ExtendedFloatingActionButton(
-                    onClick = onNavigateToCreateTrip,
-                    containerColor = GoTogetherOrange,
-                    contentColor = MaterialTheme.colorScheme.onPrimary,
-                    shape = RoundedCornerShape(18.dp),
-                    modifier = Modifier.shadow(
-                        12.dp,
-                        RoundedCornerShape(18.dp),
-                        ambientColor = GoTogetherOrange.copy(alpha = 0.5f),
-                        spotColor = GoTogetherOrange.copy(alpha = 0.8f)
-                    )
-                ) {
-                    Icon(Icons.Filled.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        "Create Trip",
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                }
-            }
-        },
         bottomBar = {
-            NavigationBar(
-                containerColor = GoTogetherTheme.colors.surfaceVariant,
-                contentColor = GoTogetherTheme.colors.textPrimary,
-                tonalElevation = 8.dp
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .navigationBarsPadding()
+                    .padding(horizontal = 24.dp, vertical = 20.dp)
             ) {
-                bottomNavItems.forEach { item ->
-                    val isSelected =
-                        currentDestination?.hierarchy?.any { it.route == item.route } == true
+                NavigationBar(
+                    containerColor = Color.Transparent,
+                    contentColor = GoTogetherTheme.colors.textPrimary,
+                    tonalElevation = 0.dp,
+                    windowInsets = androidx.compose.foundation.layout.WindowInsets(0, 0, 0, 0)
+                ) {
+                    bottomNavItems.forEach { item ->
+                        val isSelected =
+                            currentDestination?.hierarchy?.any { it.route == item.route } == true
 
-                    NavigationBarItem(
-                        selected = isSelected,
-                        onClick = {
-                            if (!isSelected) {
-                                navController.navigate(item.route) {
-                                    popUpTo(navController.graph.findStartDestination().id) {
-                                        saveState = true
+                        NavigationBarItem(
+                            selected = isSelected,
+                            onClick = {
+                                if (item.isAction) {
+                                    onNavigateToCreateTrip()
+                                } else {
+                                    if (!isSelected) {
+                                        navController.navigate(item.route) {
+                                            popUpTo(navController.graph.findStartDestination().id) {
+                                                saveState = true
+                                            }
+                                            launchSingleTop = true
+                                            restoreState = true
+                                        }
                                     }
-                                    launchSingleTop = true
-                                    restoreState = true
                                 }
-                            }
-                        },
-                        icon = {
-                            val icon = if (isSelected) item.selectedIcon else item.unselectedIcon
-                            if (item.route == Routes.Notifications.route && unreadCount > 0) {
-                                BadgedBox(
-                                    badge = {
-                                        Badge(containerColor = GoTogetherOrange) {
-                                            Text(
-                                                unreadCount.toString(),
-                                                color = Color.White,
-                                                fontSize = 10.sp
+                            },
+                            icon = {
+                                val icon =
+                                    if (isSelected) item.selectedIcon else item.unselectedIcon
+                                if (item.isAction) {
+                                    Surface(
+                                        modifier = Modifier.size(52.dp),
+                                        shape = androidx.compose.foundation.shape.CircleShape,
+                                        color = GoTogetherOrange,
+                                        shadowElevation = 8.dp
+                                    ) {
+                                        Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                            Icon(
+                                                item.selectedIcon,
+                                                contentDescription = item.label,
+                                                tint = Color.White,
+                                                modifier = Modifier.size(28.dp)
                                             )
                                         }
                                     }
-                                ) {
+                                } else if (item.route == Routes.Notifications.route && unreadCount > 0) {
+                                    BadgedBox(
+                                        badge = {
+                                            Badge(containerColor = GoTogetherOrange) {
+                                                Text(
+                                                    unreadCount.toString(),
+                                                    color = Color.White,
+                                                    fontSize = 10.sp
+                                                )
+                                            }
+                                        }
+                                    ) {
+                                        Icon(icon, contentDescription = item.label)
+                                    }
+                                } else {
                                     Icon(icon, contentDescription = item.label)
                                 }
-                            } else {
-                                Icon(icon, contentDescription = item.label)
-                            }
-                        },
-                        label = {
-                            Text(
-                                text = item.label,
-                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                            },
+                            label = {
+                                if (!item.isAction) {
+                                    Text(
+                                        text = item.label,
+                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
+                                        fontSize = 11.sp
+                                    )
+                                }
+                            },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = GoTogetherOrange,
+                                selectedTextColor = GoTogetherOrange,
+                                unselectedIconColor = GoTogetherTheme.colors.textSecondary,
+                                unselectedTextColor = GoTogetherTheme.colors.textSecondary,
+                                indicatorColor = Color.Transparent
                             )
-                        },
-                        colors = NavigationBarItemDefaults.colors(
-                            selectedIconColor = GoTogetherOrange,
-                            selectedTextColor = GoTogetherOrange,
-                            unselectedIconColor = GoTogetherTheme.colors.textSecondary,
-                            unselectedTextColor = GoTogetherTheme.colors.textSecondary,
-                            indicatorColor = GoTogetherOrange.copy(alpha = 0.1f)
                         )
-                    )
+                    }
                 }
+
             }
         }
     ) { innerPadding ->
@@ -193,6 +203,7 @@ fun MainScreen(
         ) {
             composable(Routes.Home.route) {
                 HomeScreen(
+                    onNavigateToCreateTrip = onNavigateToCreateTrip,
                     onNavigateToTripDetail = onNavigateToTripDetail,
                     onNavigateToMessages = onNavigateToMessages,
                     onNavigateToPublicProfile = onNavigateToPublicProfile

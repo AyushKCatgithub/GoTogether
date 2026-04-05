@@ -3,6 +3,10 @@ package com.quantax.gotogether.presentation.auth
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -74,13 +78,16 @@ fun SignInScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     var phoneNumber by remember { mutableStateOf("") }
-    val countryCodes = listOf(
-        "+91" to "India",
-        "+1" to "USA",
-        "+44" to "UK",
-        "+61" to "Australia",
-        "+81" to "Japan"
-    )
+    var phoneError by remember { mutableStateOf<String?>(null) }
+    val countryCodes = remember {
+        listOf(
+            "+91" to "India",
+            "+1" to "USA",
+            "+44" to "UK",
+            "+61" to "Australia",
+            "+81" to "Japan"
+        )
+    }
     var selectedCountryCode by remember { mutableStateOf(countryCodes[0].first) }
 
     LaunchedEffect(state.isAuthSuccess) {
@@ -116,15 +123,20 @@ fun SignInScreen(
     ) {
         GlowingBackgroundOrb()
 
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 24.dp)
-                .padding(top = 80.dp, bottom = 32.dp)
-                .imePadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = fadeIn(tween(800)) + slideInVertically(tween(800), initialOffsetY = { 40 }),
+            modifier = Modifier.fillMaxSize()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 80.dp, bottom = 32.dp)
+                    .imePadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             HeaderSection()
 
             Spacer(modifier = Modifier.height(40.dp))
@@ -147,12 +159,15 @@ fun SignInScreen(
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     PhoneSignInSection(
                         phoneNumber = phoneNumber,
+                        phoneError = phoneError,
                         selectedCountryCode = selectedCountryCode,
                         countryCodes = countryCodes,
                         isLoading = state.isLoading,
                         onPhoneNumberChange = {
-                            if (it.length <= 10) {
-                                phoneNumber = it
+                            val digits = it.filter { char -> char.isDigit() }
+                            if (digits.length <= 10) {
+                                phoneNumber = digits
+                                if (phoneError != null) phoneError = null
                             }
                         },
                         onCountryCodeChange = {
@@ -160,8 +175,9 @@ fun SignInScreen(
                         },
                         onSendOtp = {
                             if (phoneNumber.length < 10) {
-                                // Handle validation
+                                phoneError = "Please enter a valid 10-digit number"
                             } else {
+                                phoneError = null
                                 val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
                                 viewModel.sendOtp(
                                     phoneNumber = fullPhoneNumber,
@@ -205,6 +221,7 @@ fun SignInScreen(
                         strokeWidth = 3.dp
                     )
                 }
+            }
             }
         }
     }
@@ -267,6 +284,7 @@ fun HeaderSection() {
 @Composable
 fun PhoneSignInSection(
     phoneNumber: String,
+    phoneError: String?,
     selectedCountryCode: String,
     countryCodes: List<Pair<String, String>>,
     isLoading: Boolean,
@@ -284,6 +302,8 @@ fun PhoneSignInSection(
             placeholder = { Text("Enter number") },
             singleLine = true,
             enabled = !isLoading,
+            isError = phoneError != null,
+            supportingText = phoneError?.let { { Text(it, color = Color(0xFFFF5252)) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),

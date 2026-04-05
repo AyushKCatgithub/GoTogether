@@ -363,7 +363,7 @@ fun EditProfileScreen(
                 )
                 GenZTextField(
                     value = phone,
-                    onValueChange = { phone = it },
+                    onValueChange = { phone = it.filter { char -> char.isDigit() || char == '+' } },
                     label = "PHONE",
                     placeholder = "+1 234 ..."
                 )

@@ -88,8 +88,12 @@ class CreateTripViewModel @Inject constructor(
         _state.value = _state.value.copy(selectedImageUri = uri)
     }
     
-    fun setError(message: String) {
+    fun setError(message: String?) {
         _state.value = _state.value.copy(error = message)
+    }
+    
+    fun clearError() {
+        _state.value = _state.value.copy(error = null)
     }
 
     fun publishTrip() {

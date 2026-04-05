@@ -149,7 +149,8 @@ fun OtpVerificationScreen(
                     otpText = otpCode,
                     otpCount = 6,
                     onOtpTextChange = {
-                        if (it.length <= 6) otpCode = it
+                        val digits = it.filter { char -> char.isDigit() }
+                        if (digits.length <= 6) otpCode = digits
                     }
                 )
 

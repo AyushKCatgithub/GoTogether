@@ -14,14 +14,14 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
@@ -55,6 +55,7 @@ import com.quantax.gotogether.utils.PermissionUtils
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
+    onNavigateToCreateTrip: () -> Unit,
     onNavigateToTripDetail: (String) -> Unit = {},
     onNavigateToMessages: () -> Unit,
     onNavigateToPublicProfile: (String) -> Unit = {},
@@ -115,61 +116,39 @@ fun HomeScreen(
         containerColor = GoTogetherTheme.colors.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
-        val locationText = when (val s = state) {
-            is HomeState.Success -> s.locationText
-            else -> "Loading location..."
-        }
-        Column {
-            HomeTopAppBar(
-                locationText = locationText,
-                onLogoClick = { viewModel.loadTrips() },
-                onMessagesClick = onNavigateToMessages
-            )
-            // Premium "No Connection" bar
-            androidx.compose.animation.AnimatedVisibility(
-                visible = connectivityStatus != com.quantax.gotogether.utils.ConnectivityObserver.Status.Available,
-                enter = androidx.compose.animation.expandVertically(),
-                exit = androidx.compose.animation.shrinkVertically()
-            ) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .background(com.quantax.gotogether.ui.theme.WarningYellow)
-                        .padding(horizontal = 16.dp, vertical = 6.dp),
-                    contentAlignment = Alignment.Center
+            val locationText = when (val s = state) {
+                is HomeState.Success -> s.locationText
+                else -> "Loading location..."
+            }
+            Column {
+                HomeTopAppBar(
+                    locationText = locationText,
+                    onLogoClick = { viewModel.loadTrips() },
+                    onMessagesClick = onNavigateToMessages
+                )
+                // Premium "No Connection" bar
+                androidx.compose.animation.AnimatedVisibility(
+                    visible = connectivityStatus != com.quantax.gotogether.utils.ConnectivityObserver.Status.Available,
+                    enter = androidx.compose.animation.expandVertically(),
+                    exit = androidx.compose.animation.shrinkVertically()
                 ) {
-                    Text(
-                        "No Internet Connection — Showing Cached Data",
-                        color = Color.Black,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Bold
-                    )
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .background(com.quantax.gotogether.ui.theme.WarningYellow)
+                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            "No Internet Connection — Showing Cached Data",
+                            color = Color.Black,
+                            fontSize = 12.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
                 }
             }
-        }
-    }, floatingActionButton = {
-        FloatingActionButton(
-            onClick = onNavigateToCreateTrip,
-            containerColor = GoTogetherOrange,
-            contentColor = MaterialTheme.colorScheme.onPrimary,
-            shape = RoundedCornerShape(18.dp),
-            modifier = Modifier.shadow(
-                16.dp,
-                RoundedCornerShape(18.dp),
-                ambientColor = GoTogetherOrange.copy(alpha = 0.5f),
-                spotColor = GoTogetherOrange.copy(alpha = 0.8f)
-            )
-        ) {
-            Row(
-                modifier = Modifier.padding(horizontal = 20.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(Icons.Default.Add, contentDescription = null)
-                Spacer(modifier = Modifier.width(8.dp))
-                Text("Host a Journey", fontWeight = FontWeight.Black, fontSize = 14.sp)
-            }
-        }
-    }) { paddingValues ->
+        }) { paddingValues ->
         PullToRefreshBox(
             isRefreshing = isRefreshing,
             onRefresh = { viewModel.loadTrips() },
@@ -276,8 +255,8 @@ fun HomeScreen(
                                             trip = trip,
                                             onClick = { onNavigateToTripDetail(trip.id) },
                                             onHostClick = { onNavigateToPublicProfile(trip.hostId) },
-                                        isBookmarked = bookmarkedIds.contains(trip.id),
-                                        onBookmarkClick = { viewModel.toggleBookmark(trip) })
+                                            isBookmarked = bookmarkedIds.contains(trip.id),
+                                            onBookmarkClick = { viewModel.toggleBookmark(trip) })
                                     }
                                 }
                             }

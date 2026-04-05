@@ -90,6 +90,7 @@ fun CreateTripScreen(
     LaunchedEffect(state.error) {
         state.error?.let {
             snackbarHostState.showSnackbar(it)
+            viewModel.clearError()
         }
     }
 

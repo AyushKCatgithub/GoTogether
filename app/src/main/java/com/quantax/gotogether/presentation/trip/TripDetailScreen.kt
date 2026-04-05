@@ -296,7 +296,7 @@ fun TripDetailContent(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Location and Rating Info
+            // Location and Date Info
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Icon(
                     Icons.Default.LocationOn,
@@ -310,109 +310,52 @@ fun TripDetailContent(
                     fontSize = 14.sp,
                     color = GoTogetherTheme.colors.textSecondary
                 )
-                Spacer(modifier = Modifier.width(12.dp))
-                Box(
-                    modifier = Modifier
-                        .width(1.dp)
-                        .height(12.dp)
-                        .background(GoTogetherTheme.colors.divider)
-                )
-                Spacer(modifier = Modifier.width(12.dp))
-                Icon(Icons.Default.Route, null, tint = GoTogetherTheme.colors.textSecondary, modifier = Modifier.size(16.dp))
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "14km",
-                    fontSize = 14.sp,
-                    color = GoTogetherTheme.colors.textSecondary
-                )
-            }
-
-            Row(
-                modifier = Modifier.padding(top = 8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Icon(
-                    Icons.Default.StarBorder,
-                    null,
-                    tint = GoTogetherTheme.colors.textSecondary,
-                    modifier = Modifier.size(16.dp)
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "4.9/5",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = GoTogetherTheme.colors.textPrimary
-                )
-                Spacer(modifier = Modifier.width(4.dp))
-                Text(
-                    text = "137 Review",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = GoTogetherTheme.colors.textPrimary,
-                    style = androidx.compose.ui.text.TextStyle(textDecoration = androidx.compose.ui.text.style.TextDecoration.Underline)
-                )
+                if (trip.startDate.isNotBlank() && trip.endDate.isNotBlank()) {
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Box(
+                        modifier = Modifier
+                            .width(1.dp)
+                            .height(12.dp)
+                            .background(GoTogetherTheme.colors.divider)
+                    )
+                    Spacer(modifier = Modifier.width(12.dp))
+                    Icon(
+                        Icons.Default.Schedule,
+                        null,
+                        tint = GoTogetherTheme.colors.textSecondary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = "${trip.startDate} - ${trip.endDate}",
+                        fontSize = 14.sp,
+                        color = GoTogetherTheme.colors.textSecondary
+                    )
+                }
             }
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Central Status Card
-            Surface(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(20.dp),
-                color = GoTogetherTheme.colors.surfaceVariant,
-                border = BorderStroke(1.dp, GoTogetherTheme.colors.border)
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Groups,
-                            null,
-                            tint = GoTogetherTheme.colors.textSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "Max ${trip.groupSize} Group Size",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = GoTogetherTheme.colors.textPrimary
-                        )
-                    }
-                    Box(
-                        modifier = Modifier
-                            .width(1.dp)
-                            .height(24.dp)
-                            .background(GoTogetherTheme.colors.divider)
-                    )
-                    Row(
-                        modifier = Modifier.weight(1f),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Icon(
-                            Icons.Default.Schedule,
-                            null,
-                            tint = GoTogetherTheme.colors.textSecondary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text(
-                            text = "4 Day Trip Duration",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = GoTogetherTheme.colors.textPrimary
-                        )
-                    }
-                }
+            // Host Profile Highlight
+            HostSection(
+                name = trip.hostName,
+                imageUrl = trip.hostImageUrl,
+                isVerified = trip.hostVerified,
+                isYou = isHost,
+                onProfileClick = { onProfileClick(trip.hostId) }
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+            
+            if (trip.interests.isNotEmpty()) {
+                SectionHeader(title = "Trip Vibe")
+                Spacer(modifier = Modifier.height(16.dp))
+                InterestsChips(interests = trip.interests)
+                Spacer(modifier = Modifier.height(24.dp))
             }
+
+            // Central Status Card (Trip Info Hub)
+            TripInfoHub(trip)
 
             Spacer(modifier = Modifier.height(24.dp))
 

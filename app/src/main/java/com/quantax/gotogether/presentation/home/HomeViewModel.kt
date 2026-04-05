@@ -19,6 +19,7 @@ import kotlinx.coroutines.flow.debounce
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 @OptIn(FlowPreview::class)
@@ -26,7 +27,7 @@ import javax.inject.Inject
 class HomeViewModel @Inject constructor(
     private val repository: TripRepository,
     private val bookmarkRepository: BookmarkRepository,
-    private val auth: FirebaseAuth
+    private val auth: FirebaseAuth,
     private val connectivityObserver: ConnectivityObserver
 ) : ViewModel() {
 
