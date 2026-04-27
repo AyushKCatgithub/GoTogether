@@ -117,7 +117,15 @@ fun CreateTripScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("PLAN A TRIP", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, letterSpacing = 1.sp) },
+                title = {
+                    Text(
+                        "PLAN A TRIP",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        color = GoTogetherTheme.colors.textPrimary,
+                        letterSpacing = 2.sp
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Surface(shape = CircleShape, color = GoTogetherTheme.colors.surface, modifier = Modifier.size(36.dp)) {
@@ -200,7 +208,9 @@ fun CreateTripScreen(
             Box(modifier = Modifier.padding(horizontal = 20.dp, vertical = 16.dp)) {
                 Button(
                     onClick = { viewModel.publishTrip() },
-                    modifier = Modifier.fillMaxWidth().height(64.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(64.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
                     shape = RoundedCornerShape(20.dp),
                     enabled = !state.isLoading,
@@ -255,7 +265,9 @@ fun CreateTripScreen(
 
 @Composable
 private fun TripSection(title: String, content: @Composable () -> Unit) {
-    Column(modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 8.dp)) {
+    Column(modifier = Modifier
+        .fillMaxWidth()
+        .padding(horizontal = 20.dp, vertical = 8.dp)) {
         Text(text = title, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold, color = GoTogetherTheme.colors.textSecondary, letterSpacing = 1.sp, modifier = Modifier.padding(start = 4.dp, bottom = 12.dp))
         Column(verticalArrangement = Arrangement.spacedBy(12.dp)) { content() }
     }
@@ -363,7 +375,12 @@ private fun GroupSizeSection(groupSize: Int, onValueChange: (Int) -> Unit) {
         Row(modifier = Modifier.padding(12.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
             IconButton(
                 onClick = { if (groupSize > 0) onValueChange(groupSize - 1) },
-                modifier = Modifier.size(44.dp).background(if (groupSize > 0) GoTogetherOrange.copy(alpha = 0.1f) else GoTogetherTheme.colors.background, RoundedCornerShape(12.dp))
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(
+                        if (groupSize > 0) GoTogetherOrange.copy(alpha = 0.1f) else GoTogetherTheme.colors.background,
+                        RoundedCornerShape(12.dp)
+                    )
             ) {
                 Icon(Icons.Default.Remove, "Decrease", tint = if (groupSize > 0) GoTogetherOrange else GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f))
             }
@@ -375,7 +392,9 @@ private fun GroupSizeSection(groupSize: Int, onValueChange: (Int) -> Unit) {
 
             IconButton(
                 onClick = { onValueChange(groupSize + 1) },
-                modifier = Modifier.size(44.dp).background(GoTogetherOrange.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
+                modifier = Modifier
+                    .size(44.dp)
+                    .background(GoTogetherOrange.copy(alpha = 0.1f), RoundedCornerShape(12.dp))
             ) {
                 Icon(Icons.Default.Add, "Increase", tint = GoTogetherOrange)
             }
@@ -388,7 +407,9 @@ private fun GroupSizeSection(groupSize: Int, onValueChange: (Int) -> Unit) {
 private fun InterestsSection(interests: List<String>, onAdd: (String) -> Unit, onRemove: (String) -> Unit) {
     Column {
         if (interests.isNotEmpty()) {
-            FlowRow(modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            FlowRow(modifier = Modifier
+                .fillMaxWidth()
+                .padding(bottom = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 interests.forEach { interest ->
                     Surface(
                         onClick = { onRemove(interest) },
@@ -417,7 +438,9 @@ private fun InterestsSection(interests: List<String>, onAdd: (String) -> Unit, o
                 BasicTextField(
                     value = newInterest,
                     onValueChange = { newInterest = it },
-                    modifier = Modifier.weight(1f).padding(horizontal = 12.dp),
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(horizontal = 12.dp),
                     textStyle = MaterialTheme.typography.bodyLarge.copy(color = GoTogetherTheme.colors.textPrimary, fontWeight = FontWeight.Bold),
                     cursorBrush = SolidColor(GoTogetherOrange),
                     singleLine = true,
@@ -430,7 +453,12 @@ private fun InterestsSection(interests: List<String>, onAdd: (String) -> Unit, o
                 )
                 IconButton(
                     onClick = { if (newInterest.isNotBlank()) { onAdd(newInterest.trim()); newInterest = "" } },
-                    modifier = Modifier.size(40.dp).background(if (newInterest.isNotBlank()) GoTogetherOrange else GoTogetherTheme.colors.background, RoundedCornerShape(12.dp))
+                    modifier = Modifier
+                        .size(40.dp)
+                        .background(
+                            if (newInterest.isNotBlank()) GoTogetherOrange else GoTogetherTheme.colors.background,
+                            RoundedCornerShape(12.dp)
+                        )
                 ) {
                     Icon(Icons.Default.Add, null, tint = if (newInterest.isNotBlank()) Color.White else GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f))
                 }
@@ -443,7 +471,9 @@ private fun InterestsSection(interests: List<String>, onAdd: (String) -> Unit, o
 private fun PhotoSection(uri: android.net.Uri?, onPickerLaunch: () -> Unit, onRemove: () -> Unit) {
     Surface(
         onClick = onPickerLaunch,
-        modifier = Modifier.fillMaxWidth().height(200.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .height(200.dp),
         shape = RoundedCornerShape(24.dp),
         color = GoTogetherTheme.colors.surface,
         border = androidx.compose.foundation.BorderStroke(2.dp, GoTogetherTheme.colors.textSecondary.copy(alpha = 0.05f))
@@ -453,7 +483,10 @@ private fun PhotoSection(uri: android.net.Uri?, onPickerLaunch: () -> Unit, onRe
                 AsyncImage(model = uri, contentDescription = null, modifier = Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
                 Surface(
                     onClick = onRemove,
-                    modifier = Modifier.align(Alignment.TopEnd).padding(12.dp).size(32.dp),
+                    modifier = Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(12.dp)
+                        .size(32.dp),
                     shape = CircleShape,
                     color = Color.Black.copy(alpha = 0.5f)
                 ) {

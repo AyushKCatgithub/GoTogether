@@ -4,6 +4,9 @@ import android.content.Intent
 import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -13,12 +16,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
+import androidx.compose.foundation.rememberPlatformOverscrollFactory
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -41,6 +46,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -61,7 +67,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.hilt.navigation.compose.hiltViewModel
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
@@ -80,6 +86,7 @@ fun ProfileScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     var showFullScreenViewer by remember { mutableStateOf(false) }
+    var showProfilePhotoPreview by remember { mutableStateOf(false) }
     var fullScreenInitialIndex by remember { mutableStateOf(0) }
 
     LaunchedEffect(Unit) {
@@ -87,8 +94,11 @@ fun ProfileScreen(
     }
 
     val scrollState = rememberScrollState()
-    val bannerHeight = 320.dp
-    val photoSize = 110.dp
+    val bannerHeight = 240.dp
+    val photoSize = 88.dp
+    val overscrollFactory = rememberPlatformOverscrollFactory(
+        glowColor = GoTogetherOrange.copy(alpha = 0.22f)
+    )
 
     // Derived state to prevent whole-screen recomposition on scroll
     val headerAlpha by remember {
@@ -121,117 +131,46 @@ fun ProfileScreen(
                 }
                 val pagerCount = backgroundPhotos.size.coerceAtLeast(1)
 
-                // ─── Scrollable Layer with embedded pager ──────────────────
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(scrollState)
-                        .navigationBarsPadding()
-                ) {
-                    // ─── Header Pager (replaces old Spacer + background layer) ──
-                    Box(
+                CompositionLocalProvider(LocalOverscrollFactory provides overscrollFactory) {
+                    Column(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .height(bannerHeight)
-                            .graphicsLayer {
-                                // Parallax: counteract half the scroll to create sticky effect
-                                translationY = scrollState.value.toFloat() * 0.5f
-                                alpha =
-                                    (1f - (scrollState.value.toFloat() / (bannerHeight.toPx() * 0.8f))).coerceIn(
-                                        0f,
-                                        1f
-                                    )
-                            }
+                            .fillMaxSize()
+                            .verticalScroll(scrollState)
+                            .navigationBarsPadding()
                     ) {
-                        val pagerState = rememberPagerState(pageCount = { pagerCount })
-                        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                            if (backgroundPhotos.isNotEmpty()) {
-                                SubcomposeAsyncImage(
-                                    model = backgroundPhotos[page],
-                                    contentDescription = null,
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .clickable {
-                                            fullScreenInitialIndex = page
-                                            showFullScreenViewer = true
-                                        },
-                                    contentScale = ContentScale.Crop
-                                )
-                            } else {
-                                Box(
-                                    modifier = Modifier
-                                        .fillMaxSize()
-                                        .background(
-                                            Brush.verticalGradient(
-                                                listOf(
-                                                    GoTogetherOrange.copy(alpha = 0.2f),
-                                                    GoTogetherTheme.colors.background
-                                                )
-                                            )
-                                        )
-                                )
-                            }
-                        }
-                        // Gradient scrim (non-interactive, passes touches through)
-                        Box(
+                        ProfileCover(
                             modifier = Modifier
-                                .fillMaxSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            Color.Transparent,
-                                            Color.Black.copy(alpha = 0.4f)
+                                .fillMaxWidth()
+                                .height(bannerHeight)
+                                .graphicsLayer {
+                                    translationY = scrollState.value.toFloat() * 0.25f
+                                    alpha =
+                                        (1f - (scrollState.value.toFloat() / (bannerHeight.toPx() * 0.9f))).coerceIn(
+                                            0f,
+                                            1f
                                         )
-                                    )
-                                )
+                                },
+                            photos = backgroundPhotos,
+                            pagerCount = pagerCount,
+                            onPhotoClick = { page ->
+                                fullScreenInitialIndex = page
+                                showFullScreenViewer = true
+                            }
                         )
 
-                        // Dot indicator
-                        if (backgroundPhotos.size > 1) {
-                            Row(
-                                modifier = Modifier
-                                    .align(Alignment.TopCenter)
-                                    //.statusBarsPadding()
-                                    .padding(top = 8.dp),
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                repeat(backgroundPhotos.size) { index ->
-                                    val isSelected = pagerState.currentPage == index
-                                    Box(
-                                        modifier = Modifier
-                                            .size(if (isSelected) 8.dp else 6.dp)
-                                            .clip(CircleShape)
-                                            .background(
-                                                if (isSelected) Color.White
-                                                else Color.White.copy(alpha = 0.4f)
-                                            )
-                                    )
-                                }
-                            }
-                        }
-
-                    }
-
-                    // Content Container (White background or theme background)
-                    Surface(
-                        modifier = Modifier.fillMaxWidth(),
-                        color = GoTogetherTheme.colors.background,
-                        shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp),
-                        shadowElevation = 0.dp // Elevation comes from avatar and top bar logic
-                    ) {
                         Column(
-                            modifier = Modifier.padding(horizontal = 24.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp)
+                                .padding(top = 20.dp),
+                            verticalArrangement = Arrangement.spacedBy(18.dp)
                         ) {
-                            // Avatar Overlap Adjustment
-                            Spacer(modifier = Modifier.height(photoSize / 2 + 16.dp))
+                            ProfileSummaryCard(
+                                profile = profile,
+                                photoSize = photoSize,
+                                onPhotoLongPress = { showProfilePhotoPreview = true }
+                            )
 
-                            // Name & Bio Section
-                            ProfileHeadline(profile)
-
-                            Spacer(modifier = Modifier.height(28.dp))
-
-                            // Action Buttons & Info
                             ProfileContent(
                                 profile = profile,
                                 onEdit = onNavigateToEditProfile,
@@ -241,43 +180,11 @@ fun ProfileScreen(
                                 }
                             )
 
-                            Spacer(modifier = Modifier.height(100.dp))
+                            Spacer(modifier = Modifier.height(8.dp))
                         }
                     }
                 }
 
-                // ─── 3. Floating Avatar Layer ────────────────────────────────
-                // Drawn over the content but responds to scroll
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.TopCenter)
-                        .padding(top = bannerHeight - photoSize / 2)
-                        .graphicsLayer {
-                            val scrollValue = scrollState.value.toFloat()
-                            val progress = (scrollValue / bannerHeight.toPx()).coerceIn(0f, 1f)
-                            val scale = (1f - (progress * 0.4f)).coerceIn(0.6f, 1f)
-                            scaleX = scale
-                            scaleY = scale
-                            translationY =
-                                (-scrollValue * 0.4f).coerceIn(-(bannerHeight.toPx() / 4), 0f)
-                        }
-                ) {
-                    Surface(
-                        modifier = Modifier.size(photoSize),
-                        shape = CircleShape,
-                        color = GoTogetherTheme.colors.background,
-                        shadowElevation = 8.dp,
-                        border = androidx.compose.foundation.BorderStroke(
-                            4.dp,
-                            GoTogetherTheme.colors.background
-                        )
-                    ) {
-                        ProfileImage(profile?.profileImageUrl)
-                    }
-                }
-
-                // ─── 4. Top Bar Layer ────────────────────────────────────────
-                // Fixed top bar that fades in on scroll
                 ProfileTopBar(
                     headerAlpha = headerAlpha,
                     profileImage = profile?.profileImageUrl,
@@ -298,42 +205,172 @@ fun ProfileScreen(
                     onDismiss = { showFullScreenViewer = false })
             }
         }
+
+        if (showProfilePhotoPreview) {
+            ProfilePhotoPreviewDialog(
+                photoUrl = state.profile?.profileImageUrl,
+                onDismiss = { showProfilePhotoPreview = false }
+            )
+        }
     }
 }
 
 @Composable
-private fun ProfileHeadline(profile: com.quantax.gotogether.domain.model.UserProfile?) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                text = profile?.name ?: "Traveller",
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = GoTogetherTheme.colors.textPrimary
-            )
-            if (profile?.isVerified == true) {
-                Spacer(modifier = Modifier.width(6.dp))
-                Icon(
-                    Icons.Default.CheckCircle,
-                    null,
-                    tint = VerifiedCyan,
-                    modifier = Modifier.size(20.dp)
+private fun ProfileCover(
+    modifier: Modifier = Modifier,
+    photos: List<String>,
+    pagerCount: Int,
+    onPhotoClick: (Int) -> Unit
+) {
+    Box(modifier = modifier) {
+        val pagerState = rememberPagerState(pageCount = { pagerCount })
+        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+            if (photos.isNotEmpty()) {
+                SubcomposeAsyncImage(
+                    model = photos[page],
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .clickable { onPhotoClick(page) },
+                    contentScale = ContentScale.Crop
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    GoTogetherOrange.copy(alpha = 0.16f),
+                                    GoTogetherTheme.colors.surface,
+                                    GoTogetherTheme.colors.background
+                                )
+                            )
+                        )
                 )
             }
         }
-        Text(
-            text = if (profile?.username != null) "@${profile.username}" else "Welcome to GoTogether",
-            style = MaterialTheme.typography.bodyMedium,
-            color = GoTogetherTheme.colors.textSecondary
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.Black.copy(alpha = 0.08f),
+                            Color.Black.copy(alpha = 0.34f)
+                        )
+                    )
+                )
         )
-        if (profile?.bio?.isNotBlank() == true) {
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = profile.bio,
-                style = MaterialTheme.typography.bodyLarge,
-                color = GoTogetherTheme.colors.textPrimary.copy(alpha = 0.8f),
-                textAlign = TextAlign.Center
-            )
+
+        if (photos.size > 1) {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .padding(bottom = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                repeat(photos.size) { index ->
+                    val isSelected = pagerState.currentPage == index
+                    Box(
+                        modifier = Modifier
+                            .size(if (isSelected) 8.dp else 6.dp)
+                            .clip(CircleShape)
+                            .background(
+                                if (isSelected) Color.White
+                                else Color.White.copy(alpha = 0.48f)
+                            )
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileSummaryCard(
+    profile: com.quantax.gotogether.domain.model.UserProfile?,
+    photoSize: androidx.compose.ui.unit.Dp,
+    onPhotoLongPress: () -> Unit
+) {
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(8.dp),
+        color = GoTogetherTheme.colors.surface,
+        shadowElevation = 1.dp,
+        border = androidx.compose.foundation.BorderStroke(
+            1.dp,
+            GoTogetherTheme.colors.textSecondary.copy(alpha = 0.08f)
+        )
+    ) {
+        Column(
+            modifier = Modifier.padding(20.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp)
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Surface(
+                    modifier = Modifier
+                        .size(photoSize)
+                        .combinedClickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null,
+                            onClick = {},
+                            onLongClick = onPhotoLongPress
+                        ),
+                    shape = CircleShape,
+                    color = GoTogetherTheme.colors.background,
+                    border = androidx.compose.foundation.BorderStroke(
+                        3.dp,
+                        GoTogetherTheme.colors.background
+                    ),
+                    shadowElevation = 3.dp
+                ) {
+                    ProfileImage(
+                        url = profile?.profileImageUrl,
+                        contentScale = ContentScale.Crop
+                    )
+                }
+
+                Spacer(modifier = Modifier.width(16.dp))
+
+                Column(modifier = Modifier.weight(1f)) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(
+                            text = profile?.name ?: "Traveller",
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = GoTogetherTheme.colors.textPrimary
+                        )
+                        if (profile?.isVerified == true) {
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Icon(
+                                Icons.Default.CheckCircle,
+                                null,
+                                tint = VerifiedCyan,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                    Text(
+                        text = if (profile?.username != null) "@${profile.username}" else "GoTogether profile",
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = GoTogetherTheme.colors.textSecondary
+                    )
+                }
+            }
+
+            if (profile?.bio?.isNotBlank() == true) {
+                Text(
+                    text = profile.bio,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GoTogetherTheme.colors.textPrimary.copy(alpha = 0.78f),
+                    lineHeight = 20.sp
+                )
+            }
         }
     }
 }
@@ -348,7 +385,7 @@ private fun ProfileContent(
         // Info Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(8.dp),
             color = GoTogetherTheme.colors.surface,
             border = androidx.compose.foundation.BorderStroke(
                 1.dp,
@@ -383,10 +420,10 @@ private fun ProfileContent(
                 onClick = onEdit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(60.dp),
+                    .height(56.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                shape = RoundedCornerShape(20.dp),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                shape = RoundedCornerShape(8.dp),
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
             ) {
                 Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(10.dp))
@@ -486,7 +523,12 @@ private fun ProfileTopBar(
                     )
                 }
             }
-            IconButton(onClick = onEdit, modifier = Modifier.align(Alignment.CenterEnd)) {
+            IconButton(
+                onClick = onEdit,
+                modifier = Modifier
+                    .align(Alignment.CenterEnd)
+                    .offset(y = (-16).dp)
+            ) {
                 Icon(Icons.Default.Edit, null, tint = GoTogetherOrange)
             }
         }
@@ -494,7 +536,10 @@ private fun ProfileTopBar(
 }
 
 @Composable
-private fun ProfileImage(url: String?) {
+private fun ProfileImage(
+    url: String?,
+    contentScale: ContentScale = ContentScale.Crop
+) {
     if (url?.isNotBlank() == true) {
         AsyncImage(
             model = url,
@@ -502,7 +547,7 @@ private fun ProfileImage(url: String?) {
             modifier = Modifier
                 .fillMaxSize()
                 .clip(CircleShape),
-            contentScale = ContentScale.Crop
+            contentScale = contentScale
         )
     } else {
         Box(contentAlignment = Alignment.Center) {
@@ -525,7 +570,7 @@ private fun ProfileInfoItem(
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Surface(
             modifier = Modifier.size(36.dp),
-            shape = RoundedCornerShape(10.dp),
+            shape = RoundedCornerShape(8.dp),
             color = GoTogetherTheme.colors.background
         ) {
             Box(contentAlignment = Alignment.Center) {
@@ -564,8 +609,8 @@ private fun SecondaryActionButton(
 ) {
     Surface(
         onClick = onClick,
-        modifier = modifier.height(54.dp),
-        shape = RoundedCornerShape(16.dp),
+        modifier = modifier.height(52.dp),
+        shape = RoundedCornerShape(8.dp),
         color = GoTogetherTheme.colors.surface,
         border = androidx.compose.foundation.BorderStroke(
             1.dp,
@@ -674,6 +719,41 @@ private fun FullScreenImageViewer(
                     .padding(16.dp)
             ) {
                 Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(28.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfilePhotoPreviewDialog(
+    photoUrl: String?,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.68f))
+                .clickable(onClick = onDismiss),
+            contentAlignment = Alignment.Center
+        ) {
+            Surface(
+                modifier = Modifier.size(230.dp),
+                shape = CircleShape,
+                color = GoTogetherTheme.colors.surface,
+                shadowElevation = 12.dp,
+                border = androidx.compose.foundation.BorderStroke(
+                    4.dp,
+                    GoTogetherTheme.colors.surface
+                )
+            ) {
+                ProfileImage(
+                    url = photoUrl,
+                    contentScale = ContentScale.Crop
+                )
             }
         }
     }

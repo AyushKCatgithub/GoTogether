@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
@@ -67,6 +66,7 @@ fun OtpVerificationScreen(
 ) {
     var otpCode by remember { mutableStateOf("") }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val displayPhoneNumber = remember(phoneNumber) { phoneNumber.toLocalIndianPhoneNumber() }
 
     LaunchedEffect(state.isAuthSuccess) {
         if (state.isAuthSuccess) {
@@ -135,7 +135,7 @@ fun OtpVerificationScreen(
                 )
 
                 Text(
-                    text = phoneNumber,
+                    text = displayPhoneNumber,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = GoTogetherOrange,
@@ -256,15 +256,16 @@ fun OtpInputField(
         onValueChange = onOtpTextChange,
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
         decorationBox = {
-            Row(horizontalArrangement = Arrangement.Center) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
                 repeat(otpCount) { index ->
                     CharView(
                         index = index,
-                        text = otpText
+                        text = otpText,
+                        modifier = Modifier.weight(1f)
                     )
-                    if (index < otpCount - 1) {
-                        Spacer(modifier = Modifier.width(8.dp))
-                    }
                 }
             }
         }
@@ -274,7 +275,8 @@ fun OtpInputField(
 @Composable
 private fun CharView(
     index: Int,
-    text: String
+    text: String,
+    modifier: Modifier = Modifier
 ) {
     val isFocused = text.length == index
     val char = when {
@@ -286,9 +288,8 @@ private fun CharView(
     val bgColor = if (isFocused) GoTogetherOrange.copy(alpha = 0.05f) else Color.Transparent
 
     Box(
-        modifier = Modifier
-            .width(52.dp)
-            .height(64.dp)
+        modifier = modifier
+            .height(62.dp)
             .background(bgColor, RoundedCornerShape(16.dp))
             .border(2.dp, borderColor, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
@@ -300,5 +301,14 @@ private fun CharView(
             color = GoTogetherTheme.colors.textPrimary,
             textAlign = TextAlign.Center
         )
+    }
+}
+
+private fun String.toLocalIndianPhoneNumber(): String {
+    val digits = filter { it.isDigit() }
+    return when {
+        digits.length == 12 && digits.startsWith("91") -> digits.drop(2)
+        digits.length > 10 && digits.takeLast(10).firstOrNull() in '6'..'9' -> digits.takeLast(10)
+        else -> this
     }
 }
