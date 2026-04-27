@@ -105,10 +105,12 @@ fun ProfileScreen(
         .background(GoTogetherTheme.colors.background)) {
         when {
             state.isLoading -> LoadingState()
-            state.error != null -> ErrorState(error = state.error!!) {
-                viewModel.onEvent(
-                    ProfileEvent.LoadProfile
-                )
+            state.error != null -> state.error?.let { error ->
+                ErrorState(error = error) {
+                    viewModel.onEvent(
+                        ProfileEvent.LoadProfile
+                    )
+                }
             }
 
             else -> {
@@ -119,92 +121,96 @@ fun ProfileScreen(
                 }
                 val pagerCount = backgroundPhotos.size.coerceAtLeast(1)
 
-                // ─── 1. Background Layer (Parallax Header) ──────────────────
-                // Moved to bottom of Box for correct touch propagation (behind content)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(bannerHeight)
-                        .graphicsLayer {
-                            translationY = -scrollState.value.toFloat() * 0.5f // Simple parallax
-                            alpha =
-                                (1f - (scrollState.value.toFloat() / (bannerHeight.toPx() * 0.8f))).coerceIn(
-                                    0f,
-                                    1f
-                                )
-                        }
-                ) {
-                    val pagerState = rememberPagerState(pageCount = { pagerCount })
-                    HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                        if (backgroundPhotos.isNotEmpty()) {
-                            SubcomposeAsyncImage(
-                                model = backgroundPhotos[page],
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize(),
-                                contentScale = ContentScale.Crop
-                            )
-                        } else {
-                            Box(
-                                modifier = Modifier
-                                    .fillMaxSize()
-                                    .background(
-                                        Brush.verticalGradient(
-                                            listOf(
-                                                GoTogetherOrange.copy(alpha = 0.2f),
-                                                GoTogetherTheme.colors.background
-                                            )
-                                        )
-                                    )
-                            )
-                        }
-                    }
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        Color.Transparent,
-                                        Color.Black.copy(alpha = 0.4f)
-                                    )
-                                )
-                            )
-                    )
-
-                    // Story-style Pager Indicator
-                    if (backgroundPhotos.size > 1) {
-                        Row(
-                            modifier = Modifier
-                                .align(Alignment.BottomCenter)
-                                .padding(bottom = 16.dp),
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
-                            repeat(backgroundPhotos.size) { index ->
-                                val isSelected = pagerState.currentPage == index
-                                Box(
-                                    modifier = Modifier
-                                        .size(if (isSelected) 16.dp else 6.dp, 6.dp)
-                                        .clip(CircleShape)
-                                        .background(
-                                            if (isSelected) Color.White else Color.White.copy(
-                                                alpha = 0.5f
-                                            )
-                                        )
-                                )
-                            }
-                        }
-                    }
-                }
-
-                // ─── 2. Scrollable Layer ─────────────────────────────────────
+                // ─── Scrollable Layer with embedded pager ──────────────────
                 Column(
                     modifier = Modifier
                         .fillMaxSize()
                         .verticalScroll(scrollState)
                         .navigationBarsPadding()
                 ) {
-                    // Spacer for Header
-                    Spacer(modifier = Modifier.height(bannerHeight))
+                    // ─── Header Pager (replaces old Spacer + background layer) ──
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(bannerHeight)
+                            .graphicsLayer {
+                                // Parallax: counteract half the scroll to create sticky effect
+                                translationY = scrollState.value.toFloat() * 0.5f
+                                alpha =
+                                    (1f - (scrollState.value.toFloat() / (bannerHeight.toPx() * 0.8f))).coerceIn(
+                                        0f,
+                                        1f
+                                    )
+                            }
+                    ) {
+                        val pagerState = rememberPagerState(pageCount = { pagerCount })
+                        HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
+                            if (backgroundPhotos.isNotEmpty()) {
+                                SubcomposeAsyncImage(
+                                    model = backgroundPhotos[page],
+                                    contentDescription = null,
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .clickable {
+                                            fullScreenInitialIndex = page
+                                            showFullScreenViewer = true
+                                        },
+                                    contentScale = ContentScale.Crop
+                                )
+                            } else {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxSize()
+                                        .background(
+                                            Brush.verticalGradient(
+                                                listOf(
+                                                    GoTogetherOrange.copy(alpha = 0.2f),
+                                                    GoTogetherTheme.colors.background
+                                                )
+                                            )
+                                        )
+                                )
+                            }
+                        }
+                        // Gradient scrim (non-interactive, passes touches through)
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            Color.Transparent,
+                                            Color.Black.copy(alpha = 0.4f)
+                                        )
+                                    )
+                                )
+                        )
+
+                        // Dot indicator
+                        if (backgroundPhotos.size > 1) {
+                            Row(
+                                modifier = Modifier
+                                    .align(Alignment.TopCenter)
+                                    //.statusBarsPadding()
+                                    .padding(top = 8.dp),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                repeat(backgroundPhotos.size) { index ->
+                                    val isSelected = pagerState.currentPage == index
+                                    Box(
+                                        modifier = Modifier
+                                            .size(if (isSelected) 8.dp else 6.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isSelected) Color.White
+                                                else Color.White.copy(alpha = 0.4f)
+                                            )
+                                    )
+                                }
+                            }
+                        }
+
+                    }
 
                     // Content Container (White background or theme background)
                     Surface(
@@ -637,6 +643,29 @@ private fun FullScreenImageViewer(
                         }
                     }
                 )
+            }
+            // Dot indicator
+            if (photoUrls.size > 1) {
+                Row(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .statusBarsPadding()
+                        .padding(top = 8.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp)
+                ) {
+                    repeat(photoUrls.size) { index ->
+                        val isSelected = pagerState.currentPage == index
+                        Box(
+                            modifier = Modifier
+                                .size(if (isSelected) 8.dp else 6.dp)
+                                .clip(CircleShape)
+                                .background(
+                                    if (isSelected) Color.White
+                                    else Color.White.copy(alpha = 0.4f)
+                                )
+                        )
+                    }
+                }
             }
             IconButton(
                 onClick = onDismiss,

@@ -203,7 +203,7 @@ private fun MyPostsContent(
         }
 
         state.error != null -> {
-            ErrorHomeView(message = state.error!!, onRetry = onRetry)
+            ErrorHomeView(message = state.error, onRetry = onRetry)
         }
 
         state.trips.isEmpty() -> {
@@ -265,7 +265,7 @@ private fun SavedPostsContent(
         }
 
         state.error != null -> {
-            ErrorHomeView(message = state.error!!, onRetry = onRetry)
+            ErrorHomeView(message = state.error, onRetry = onRetry)
         }
 
         state.savedTrips.isEmpty() -> {

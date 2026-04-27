@@ -9,6 +9,7 @@ import com.quantax.gotogether.domain.model.Trip
 import com.quantax.gotogether.utils.ConnectivityObserver
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -67,6 +68,7 @@ class HomeViewModel @Inject constructor(
     private val _locationText = MutableStateFlow("Detecting location...")
     private val _currentCity = MutableStateFlow<String?>(null)
     private val _error = MutableStateFlow<String?>(null)
+    private var tripsJob: Job? = null
 
     private data class HomeFilterParams(
         val trips: List<Trip>?,
@@ -182,9 +184,10 @@ class HomeViewModel @Inject constructor(
     }
 
     fun loadTrips() {
+        tripsJob?.cancel()
         _error.value = null
         _isRefreshing.value = true
-        repository.getTripsFlow()
+        tripsJob = repository.getTripsFlow()
             .onEach { trips ->
                 _allTrips.value = trips
                 _isRefreshing.value = false

@@ -99,7 +99,9 @@ fun PublicProfileScreen(
     Box(modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.background)) {
         when {
             state.isLoading -> LoadingState()
-            state.error != null -> ErrorState(error = state.error!!) { viewModel.loadProfile(userId) }
+            state.error != null -> state.error?.let { error ->
+                ErrorState(error = error) { viewModel.loadProfile(userId) }
+            }
             else -> {
                 val profile = state.profile
                 val backgroundPhotos = remember(profile?.backgroundPhotoUrls) {

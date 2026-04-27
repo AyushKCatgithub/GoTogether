@@ -269,24 +269,24 @@ fun ChatroomScreen(
         }
 
         // ─── Full-Screen Image Viewer ───
-        if (fullScreenImageUrl != null) {
+        fullScreenImageUrl?.let { imageUrl ->
             FullScreenImageViewer(
-                imageUrl = fullScreenImageUrl!!,
+                imageUrl = imageUrl,
                 onDismiss = { fullScreenImageUrl = null }
             )
         }
 
         // ─── Delete Confirmation Dialog ───
-        if (messageToDelete != null) {
+        messageToDelete?.let { message ->
             DeleteMessageDialog(
-                message = messageToDelete!!,
-                isOwnMessage = messageToDelete!!.senderId == currentUserId,
+                message = message,
+                isOwnMessage = message.senderId == currentUserId,
                 onDeleteForMe = {
-                    viewModel.deleteMessageForMe(chatroomId, messageToDelete!!.id)
+                    viewModel.deleteMessageForMe(chatroomId, message.id)
                     messageToDelete = null
                 },
                 onDeleteForAll = {
-                    viewModel.deleteMessageForAll(chatroomId, messageToDelete!!.id)
+                    viewModel.deleteMessageForAll(chatroomId, message.id)
                     messageToDelete = null
                 },
                 onDismiss = { messageToDelete = null }
@@ -697,15 +697,15 @@ private fun MessageBubble(
             }
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                if (!message.imageUrl.isNullOrBlank()) {
+                message.imageUrl?.takeIf { it.isNotBlank() }?.let { imageUrl ->
                     AsyncImage(
-                        model = message.imageUrl,
+                        model = imageUrl,
                         contentDescription = "Attached image",
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 240.dp)
                             .clip(RoundedCornerShape(8.dp))
-                            .clickable { onImageClick(message.imageUrl!!) },
+                            .clickable { onImageClick(imageUrl) },
                         contentScale = ContentScale.Crop
                     )
                     if (message.text.isNotBlank()) {

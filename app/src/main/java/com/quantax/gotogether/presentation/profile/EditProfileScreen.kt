@@ -266,8 +266,8 @@ fun EditProfileScreen(
                 VerificationStatusCard(isVerified, 3 - backgroundCount)
             }
 
-            if (state.error != null) {
-                Text(state.error!!, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(16.dp))
+            state.error?.let { error ->
+                Text(error, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(16.dp))
             }
 
             if (state.isSaving) {

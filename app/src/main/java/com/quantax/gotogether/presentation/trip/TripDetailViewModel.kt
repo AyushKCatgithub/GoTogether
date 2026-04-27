@@ -3,19 +3,21 @@ package com.quantax.gotogether.presentation.trip
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.data.repository.BookmarkRepository
 import com.quantax.gotogether.data.repository.JoinRequestRepository
 import com.quantax.gotogether.data.repository.TripRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
-import com.quantax.gotogether.data.repository.BookmarkRepository
 import com.quantax.gotogether.domain.model.JoinRequest
 import com.quantax.gotogether.domain.model.Trip
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -49,17 +51,24 @@ class TripDetailViewModel @Inject constructor(
     private val _actionMessage = MutableStateFlow<String?>(null)
     val actionMessage: StateFlow<String?> = _actionMessage.asStateFlow()
 
+    private var tripLoadJob: Job? = null
     private var currentProfilesJob: kotlinx.coroutines.Job? = null
 
     fun loadTrip(tripId: String) {
+        tripLoadJob?.cancel()
+        currentProfilesJob?.cancel()
         _state.value = TripDetailState.Loading
         val uid = authManager.currentUser?.uid ?: ""
 
         val tripFlow = tripRepository.getTripByIdFlow(tripId).distinctUntilChanged()
         val statusFlow = joinRequestRepository.getUserRequestStatusFlow(tripId, uid).distinctUntilChanged()
-        val bookmarkFlow = bookmarkRepository.observeBookmarkedIds(uid).distinctUntilChanged()
+        val bookmarkFlow = if (uid.isNotBlank()) {
+            bookmarkRepository.observeBookmarkedIds(uid)
+        } else {
+            flowOf(emptySet())
+        }.distinctUntilChanged()
 
-        combine(tripFlow, statusFlow, bookmarkFlow) { loadedTrip, status, bookmarks ->
+        tripLoadJob = combine(tripFlow, statusFlow, bookmarkFlow) { loadedTrip, status, bookmarks ->
             if (loadedTrip != null) {
                 val isHost = loadedTrip.hostId == uid
                 val requestStatus = if (isHost) "NONE"

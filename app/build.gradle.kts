@@ -10,6 +10,11 @@ android {
     namespace = "com.quantax.gotogether"
     compileSdk = 36
 
+    val debugKeystoreFile = file("debug_keystore.jks")
+    val debugStorePassword = providers.gradleProperty("GOTOGETHER_DEBUG_STORE_PASSWORD").orNull
+    val debugKeyPassword = providers.gradleProperty("GOTOGETHER_DEBUG_KEY_PASSWORD").orNull
+    val debugKeyAlias = providers.gradleProperty("GOTOGETHER_DEBUG_KEY_ALIAS").orNull
+
     defaultConfig {
         applicationId = "com.quantax.gotogether"
         minSdk = 29
@@ -20,11 +25,18 @@ android {
     }
 
     signingConfigs {
-        getByName("debug") {
-            storeFile = file("debug_keystore.jks")
-            storePassword = "12345678"
-            keyPassword = "12345678"
-            keyAlias = "debug_key"
+        if (
+            debugKeystoreFile.exists() &&
+            !debugStorePassword.isNullOrBlank() &&
+            !debugKeyPassword.isNullOrBlank() &&
+            !debugKeyAlias.isNullOrBlank()
+        ) {
+            getByName("debug") {
+                storeFile = debugKeystoreFile
+                storePassword = debugStorePassword
+                keyPassword = debugKeyPassword
+                keyAlias = debugKeyAlias
+            }
         }
     }
 
