@@ -107,7 +107,7 @@ class AuthViewModel @Inject constructor(
     }
 
     fun signOut() {
-        authManager.signOut()
+        viewModelScope.launch { authManager.signOut() }
     }
 
     fun isLoggedIn(): Boolean = authManager.isLoggedIn()

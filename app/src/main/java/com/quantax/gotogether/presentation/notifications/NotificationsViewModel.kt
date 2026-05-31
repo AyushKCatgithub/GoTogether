@@ -3,6 +3,7 @@ package com.quantax.gotogether.presentation.notifications
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.data.fcm.NotificationChannels
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.JoinRequestRepository
 import com.quantax.gotogether.data.repository.NotificationRepository
@@ -155,7 +156,7 @@ class NotificationsViewModel @Inject constructor(
                                 senderId = currentUser.uid,
                                 senderName = currentUser.displayName ?: "Host",
                                 senderImageUrl = currentUser.photoUrl?.toString(),
-                                type = Notification.TYPE_REQUEST_APPROVED,
+                                type = NotificationChannels.TYPE_REQUEST_APPROVED,
                                 tripId = request.tripId,
                                 tripTitle = request.tripTitle,
                                 chatroomId = request.tripId // chatroomId is the same as tripId

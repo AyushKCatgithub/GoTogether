@@ -55,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.JoinRequest
+import com.quantax.gotogether.data.fcm.NotificationChannels
 import com.quantax.gotogether.domain.model.Notification
 import com.quantax.gotogether.presentation.components.NotificationShimmerItem
 import com.quantax.gotogether.ui.theme.AccentGreen
@@ -402,7 +403,7 @@ private fun GeneralNotificationCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             // Action button
-            if (notification.type == Notification.TYPE_REQUEST_APPROVED) {
+            if (notification.type == NotificationChannels.TYPE_REQUEST_APPROVED) {
                 IconButton(
                     onClick = onNavigateToChatroom,
                     modifier = Modifier

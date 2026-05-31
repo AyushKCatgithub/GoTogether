@@ -6,6 +6,7 @@ import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.UserProfile
 import io.mockk.coEvery
+import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk
 import io.mockk.verify
@@ -161,11 +162,12 @@ class ProfileViewModelTest {
     @Test
     fun `SignOut calls authManager signOut`() = runTest(testDispatcher) {
         every { authManager.currentUser } returns null
+        coEvery { authManager.signOut() } returns Unit
         val viewModel = ProfileViewModel(repository, storageService, authManager)
 
         viewModel.onEvent(ProfileEvent.SignOut)
 
-        verify(exactly = 1) { authManager.signOut() }
+        coVerify(exactly = 1) { authManager.signOut() }
     }
 
     @Test

@@ -4,8 +4,10 @@ import android.content.Context
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.database.FirebaseDatabase
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.storage.FirebaseStorage
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.data.fcm.FcmTokenRepository
 import com.quantax.gotogether.data.repository.BookmarkRepository
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.JoinRequestRepository
@@ -41,6 +43,17 @@ object AppModule {
     @Provides
     @Singleton
     fun provideFirebaseStorage(): FirebaseStorage = FirebaseStorage.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFirebaseMessaging(): FirebaseMessaging = FirebaseMessaging.getInstance()
+
+    @Provides
+    @Singleton
+    fun provideFcmTokenRepository(
+        firestore: FirebaseFirestore,
+        messaging: FirebaseMessaging
+    ): FcmTokenRepository = FcmTokenRepository(firestore, messaging)
 
     @Provides
     @Singleton
@@ -89,8 +102,12 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideAuthManager(auth: FirebaseAuth, profileRepo: UserProfileRepository): AuthManager {
-        return AuthManager(auth, profileRepo)
+    fun provideAuthManager(
+        auth: FirebaseAuth,
+        profileRepo: UserProfileRepository,
+        fcmTokenRepository: FcmTokenRepository
+    ): AuthManager {
+        return AuthManager(auth, profileRepo, fcmTokenRepository)
     }
 
     @Provides

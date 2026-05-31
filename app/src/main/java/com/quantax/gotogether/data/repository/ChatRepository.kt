@@ -119,7 +119,8 @@ class ChatRepository @Inject constructor(
                 val updates = mapOf(
                     "lastMessage" to lastPreview,
                     "lastMessageTimestamp" to message.timestamp,
-                    "lastMessageSenderName" to message.senderName
+                    "lastMessageSenderName" to message.senderName,
+                    "lastMessageSenderId" to message.senderId
                 )
 
                 chatroomsCollection.document(chatroomId).set(updates, SetOptions.merge()).await()
@@ -208,14 +209,16 @@ class ChatRepository @Inject constructor(
                 mapOf(
                     "lastMessage" to preview,
                     "lastMessageTimestamp" to (latestMsg?.timestamp ?: 0L),
-                    "lastMessageSenderName" to (latestMsg?.senderName ?: "")
+                    "lastMessageSenderName" to (latestMsg?.senderName ?: ""),
+                    "lastMessageSenderId" to (latestMsg?.senderId ?: "")
                 )
             } else {
                 // No messages left in the chatroom
                 mapOf(
                     "lastMessage" to "",
                     "lastMessageTimestamp" to 0L,
-                    "lastMessageSenderName" to ""
+                    "lastMessageSenderName" to "",
+                    "lastMessageSenderId" to ""
                 )
             }
 
