@@ -8,5 +8,6 @@ data class Chatroom(
     val memberIds: List<String> = emptyList(),
     val lastMessage: String = "",
     val lastMessageTimestamp: Long = 0L,
-    val lastMessageSenderName: String = ""
+    val lastMessageSenderName: String = "",
+    val lastMessageSenderId: String = ""
 )

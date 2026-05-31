@@ -119,7 +119,8 @@ class ChatRepository @Inject constructor(
                 val updates = mapOf(
                     "lastMessage" to lastPreview,
                     "lastMessageTimestamp" to message.timestamp,
-                    "lastMessageSenderName" to message.senderName
+                    "lastMessageSenderName" to message.senderName,
+                    "lastMessageSenderId" to message.senderId
                 )
 
                 chatroomsCollection.document(chatroomId).set(updates, SetOptions.merge()).await()
@@ -144,4 +145,90 @@ class ChatRepository @Inject constructor(
                 Result.failure(e)
             }
         }
+
+    /**
+     * Soft-delete a message for a specific user by adding their userId
+     * to the message's `deletedFor` list in Realtime Database.
+     */
+    suspend fun deleteMessageForMe(
+        chatroomId: String,
+        messageId: String,
+        userId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val messageRef = database.getReference("chatrooms")
+                .child(chatroomId).child("messages").child(messageId)
+            // Read the current deletedFor list and append
+            val snapshot = messageRef.child("deletedFor").get().await()
+            val currentList = mutableListOf<String>()
+            snapshot.children.forEach { child ->
+                child.getValue(String::class.java)?.let { currentList.add(it) }
+            }
+            if (!currentList.contains(userId)) {
+                currentList.add(userId)
+            }
+            messageRef.child("deletedFor").setValue(currentList).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ChatRepository", "Error deleting message for user $userId", e)
+            Result.failure(e)
+        }
+    }
+
+    /**
+     * Permanently delete a message for all users by removing the
+     * message node from Realtime Database, then update the chatroom's
+     * lastMessage summary in Firestore to reflect the new latest message.
+     */
+    suspend fun deleteMessageForAll(
+        chatroomId: String,
+        messageId: String
+    ): Result<Unit> = withContext(Dispatchers.IO) {
+        try {
+            val messagesRef = database.getReference("chatrooms")
+                .child(chatroomId).child("messages")
+
+            // Remove the message
+            messagesRef.child(messageId).removeValue().await()
+
+            // Fetch the latest remaining message to update Firestore chatroom summary
+            // Push keys are chronologically sorted, so limitToLast(1) gives the newest
+            val latestSnapshot = messagesRef
+                .limitToLast(1)
+                .get()
+                .await()
+
+            val updates: Map<String, Any> = if (latestSnapshot.hasChildren()) {
+                val latestMsg = latestSnapshot.children.first()
+                    .getValue(ChatMessage::class.java)
+                val preview = when {
+                    latestMsg?.text?.isNotBlank() == true -> latestMsg.text
+                    !latestMsg?.imageUrl.isNullOrBlank() -> "📷 Photo"
+                    else -> ""
+                }
+                mapOf(
+                    "lastMessage" to preview,
+                    "lastMessageTimestamp" to (latestMsg?.timestamp ?: 0L),
+                    "lastMessageSenderName" to (latestMsg?.senderName ?: ""),
+                    "lastMessageSenderId" to (latestMsg?.senderId ?: "")
+                )
+            } else {
+                // No messages left in the chatroom
+                mapOf(
+                    "lastMessage" to "",
+                    "lastMessageTimestamp" to 0L,
+                    "lastMessageSenderName" to "",
+                    "lastMessageSenderId" to ""
+                )
+            }
+
+            chatroomsCollection.document(chatroomId)
+                .set(updates, SetOptions.merge()).await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ChatRepository", "Error deleting message for all", e)
+            Result.failure(e)
+        }
+    }
 }

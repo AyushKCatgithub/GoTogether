@@ -1,9 +1,12 @@
 package com.quantax.gotogether.presentation.auth
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -13,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -23,9 +27,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.LocalTextStyle
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -65,6 +66,7 @@ fun OtpVerificationScreen(
 ) {
     var otpCode by remember { mutableStateOf("") }
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val displayPhoneNumber = remember(phoneNumber) { phoneNumber.toLocalIndianPhoneNumber() }
 
     LaunchedEffect(state.isAuthSuccess) {
         if (state.isAuthSuccess) {
@@ -133,7 +135,7 @@ fun OtpVerificationScreen(
                 )
 
                 Text(
-                    text = phoneNumber,
+                    text = displayPhoneNumber,
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = GoTogetherOrange,
@@ -143,33 +145,16 @@ fun OtpVerificationScreen(
 
                 Spacer(modifier = Modifier.height(48.dp))
 
-                OutlinedTextField(
-                    value = otpCode,
-                    onValueChange = { if (it.length <= 6) otpCode = it },
-                    label = { Text("6-digit OTP") },
-                    singleLine = true,
-                    enabled = !state.isLoading,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(16.dp),
-                    textStyle = LocalTextStyle.current.copy(
-                        textAlign = TextAlign.Center,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        letterSpacing = 8.sp
-                    ),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoTogetherOrange,
-                        unfocusedBorderColor = TextGray.copy(alpha = 0.3f),
-                        focusedLabelColor = GoTogetherOrange,
-                        unfocusedLabelColor = GoTogetherTheme.colors.textSecondary,
-                        cursorColor = GoTogetherOrange,
-                        focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedTextColor = GoTogetherTheme.colors.textPrimary
-                    )
+                OtpInputField(
+                    otpText = otpCode,
+                    otpCount = 6,
+                    onOtpTextChange = {
+                        val digits = it.filter { char -> char.isDigit() }
+                        if (digits.length <= 6) otpCode = digits
+                    }
                 )
 
-                Spacer(modifier = Modifier.height(32.dp))
+                Spacer(modifier = Modifier.height(48.dp))
 
                 Button(
                     onClick = {
@@ -257,5 +242,73 @@ fun OtpVerificationScreen(
                 }
             }
         }
+    }
+}
+
+@Composable
+fun OtpInputField(
+    otpText: String,
+    otpCount: Int,
+    onOtpTextChange: (String) -> Unit
+) {
+    BasicTextField(
+        value = otpText,
+        onValueChange = onOtpTextChange,
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        decorationBox = {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                repeat(otpCount) { index ->
+                    CharView(
+                        index = index,
+                        text = otpText,
+                        modifier = Modifier.weight(1f)
+                    )
+                }
+            }
+        }
+    )
+}
+
+@Composable
+private fun CharView(
+    index: Int,
+    text: String,
+    modifier: Modifier = Modifier
+) {
+    val isFocused = text.length == index
+    val char = when {
+        index >= text.length -> ""
+        else -> text[index].toString()
+    }
+
+    val borderColor = if (isFocused) GoTogetherOrange else TextGray.copy(alpha = 0.3f)
+    val bgColor = if (isFocused) GoTogetherOrange.copy(alpha = 0.05f) else Color.Transparent
+
+    Box(
+        modifier = modifier
+            .height(62.dp)
+            .background(bgColor, RoundedCornerShape(16.dp))
+            .border(2.dp, borderColor, RoundedCornerShape(16.dp)),
+        contentAlignment = Alignment.Center
+    ) {
+        Text(
+            text = char,
+            fontSize = 24.sp,
+            fontWeight = FontWeight.Bold,
+            color = GoTogetherTheme.colors.textPrimary,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+private fun String.toLocalIndianPhoneNumber(): String {
+    val digits = filter { it.isDigit() }
+    return when {
+        digits.length == 12 && digits.startsWith("91") -> digits.drop(2)
+        digits.length > 10 && digits.takeLast(10).firstOrNull() in '6'..'9' -> digits.takeLast(10)
+        else -> this
     }
 }

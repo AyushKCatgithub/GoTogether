@@ -4,6 +4,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.quantax.gotogether.auth.AuthManager
+import com.quantax.gotogether.data.fcm.ActiveChatroomTracker
 import com.quantax.gotogether.data.repository.ChatRepository
 import com.quantax.gotogether.data.repository.StorageService
 import com.quantax.gotogether.data.repository.UserProfileRepository
@@ -31,7 +32,8 @@ class ChatViewModel @Inject constructor(
     private val chatRepository: ChatRepository,
     private val userProfileRepository: UserProfileRepository,
     private val storageService: StorageService,
-    private val authManager: AuthManager
+    private val authManager: AuthManager,
+    private val activeChatroomTracker: ActiveChatroomTracker
 ) : ViewModel() {
 
     private val _state = MutableStateFlow(ChatUIState())
@@ -40,9 +42,12 @@ class ChatViewModel @Inject constructor(
     private var currentUserName: String = ""
     private var currentUserImageUrl: String? = null
     private var chatJob: Job? = null
+    private var activeChatroomId: String? = null
 
     fun loadChatroom(chatroomId: String) {
         if (chatJob?.isActive == true) return
+        activeChatroomId = chatroomId
+        activeChatroomTracker.enter(chatroomId)
         
         chatJob = viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -69,7 +74,14 @@ class ChatViewModel @Inject constructor(
                     _state.update { it.copy(isLoading = false, error = e.message) }
                 }
                 .collect { messageList ->
-                    _state.update { it.copy(messages = messageList, isLoading = false) }
+                    // Filter out messages soft-deleted for the current user
+                    val uid = authManager.currentUser?.uid
+                    val filtered = if (uid != null) {
+                        messageList.filter { !it.deletedFor.contains(uid) }
+                    } else {
+                        messageList
+                    }
+                    _state.update { it.copy(messages = filtered, isLoading = false) }
                 }
         }
     }
@@ -146,9 +158,27 @@ class ChatViewModel @Inject constructor(
 
     fun getCurrentUserId(): String = authManager.currentUser?.uid ?: ""
 
+    fun deleteMessageForMe(chatroomId: String, messageId: String) {
+        val uid = authManager.currentUser?.uid ?: return
+        viewModelScope.launch {
+            chatRepository.deleteMessageForMe(chatroomId, messageId, uid).onFailure { e ->
+                _state.update { it.copy(error = "Failed to delete: ${e.message}") }
+            }
+        }
+    }
+
+    fun deleteMessageForAll(chatroomId: String, messageId: String) {
+        viewModelScope.launch {
+            chatRepository.deleteMessageForAll(chatroomId, messageId).onFailure { e ->
+                _state.update { it.copy(error = "Failed to delete: ${e.message}") }
+            }
+        }
+    }
+
     override fun onCleared() {
         super.onCleared()
         chatJob?.cancel()
+        activeChatroomId?.let { activeChatroomTracker.exit(it) }
     }
 }
 

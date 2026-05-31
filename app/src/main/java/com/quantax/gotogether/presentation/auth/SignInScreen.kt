@@ -3,8 +3,13 @@ package com.quantax.gotogether.presentation.auth
 import android.app.Activity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.slideInVertically
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -61,6 +66,7 @@ import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.TextGray
+import kotlinx.coroutines.delay
 
 @Composable
 fun SignInScreen(
@@ -72,13 +78,16 @@ fun SignInScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
 
     var phoneNumber by remember { mutableStateOf("") }
-    val countryCodes = listOf(
-        "+91" to "India",
-        "+1" to "USA",
-        "+44" to "UK",
-        "+61" to "Australia",
-        "+81" to "Japan"
-    )
+    var phoneError by remember { mutableStateOf<String?>(null) }
+    val countryCodes = remember {
+        listOf(
+            "+91" to "India",
+            "+1" to "USA",
+            "+44" to "UK",
+            "+61" to "Australia",
+            "+81" to "Japan"
+        )
+    }
     var selectedCountryCode by remember { mutableStateOf(countryCodes[0].first) }
 
     LaunchedEffect(state.isAuthSuccess) {
@@ -93,6 +102,12 @@ fun SignInScreen(
         viewModel.handleGoogleSignInResult(result.data)
     }
 
+    var isVisible by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) {
+        delay(100)
+        isVisible = true
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -104,77 +119,109 @@ fun SignInScreen(
                     )
                 )
             ),
-        contentAlignment = Alignment.Center
+        contentAlignment = Alignment.TopCenter
     ) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(horizontal = 28.dp)
-                .padding(top = 100.dp, bottom = 32.dp)
-                .imePadding(),
-            horizontalAlignment = Alignment.CenterHorizontally
+        GlowingBackgroundOrb()
+
+        AnimatedVisibility(
+            visible = isVisible,
+            enter = fadeIn(tween(800)) + slideInVertically(tween(800), initialOffsetY = { 40 }),
+            modifier = Modifier.fillMaxSize()
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 24.dp)
+                    .padding(top = 80.dp, bottom = 32.dp)
+                    .imePadding(),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
             HeaderSection()
 
-            Spacer(modifier = Modifier.height(48.dp))
+            Spacer(modifier = Modifier.height(40.dp))
 
-            PhoneSignInSection(
-                phoneNumber = phoneNumber,
-                selectedCountryCode = selectedCountryCode,
-                countryCodes = countryCodes,
-                isLoading = state.isLoading,
-                onPhoneNumberChange = {
-                    if (it.length <= 10) {
-                        phoneNumber = it
-                    }
-                },
-                onCountryCodeChange = {
-                    selectedCountryCode = it
-                },
-                onSendOtp = {
-                    if (phoneNumber.length < 10) {
-                        // We can handle local validation here or in VM
-                    } else {
-                        val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
-                        viewModel.sendOtp(
-                            phoneNumber = fullPhoneNumber,
-                            activity = context as Activity,
-                            onCodeSent = { vId ->
-                                onNavigateToOtp(vId, fullPhoneNumber)
-                            },
-                            onFailure = {}
-                        )
-                    }
+            // Glassmorphism card for login
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .background(
+                        color = GoTogetherTheme.colors.surface.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(28.dp)
+                    )
+                    .border(
+                        1.dp,
+                        Color.White.copy(alpha = 0.15f),
+                        RoundedCornerShape(28.dp)
+                    )
+                    .padding(24.dp)
+            ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    PhoneSignInSection(
+                        phoneNumber = phoneNumber,
+                        phoneError = phoneError,
+                        selectedCountryCode = selectedCountryCode,
+                        countryCodes = countryCodes,
+                        isLoading = state.isLoading,
+                        onPhoneNumberChange = {
+                            val digits = it.filter { char -> char.isDigit() }
+                            if (digits.length <= 10) {
+                                phoneNumber = digits
+                                if (phoneError != null) phoneError = null
+                            }
+                        },
+                        onCountryCodeChange = {
+                            selectedCountryCode = it
+                        },
+                        onSendOtp = {
+                            if (phoneNumber.length < 10) {
+                                phoneError = "Please enter a valid 10-digit number"
+                            } else {
+                                phoneError = null
+                                val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
+                                viewModel.sendOtp(
+                                    phoneNumber = fullPhoneNumber,
+                                    activity = context as Activity,
+                                    onCodeSent = { vId ->
+                                        onNavigateToOtp(vId, fullPhoneNumber)
+                                    },
+                                    onFailure = {}
+                                )
+                            }
+                        }
+                    )
                 }
-            )
-
-            state.error?.let { msg ->
-                Spacer(modifier = Modifier.height(16.dp))
-                ErrorBanner(message = msg)
             }
 
-            DividerWithText()
-
-            GoogleSignInSection(
-                isLoading = state.isLoading,
-                onGoogleSignIn = {
-                    try {
-                        val intent = viewModel.getGoogleSignInIntent(context)
-                        googleSignInLauncher.launch(intent)
-                    } catch (e: Exception) {
-                        // Handled by VM or locally
-                    }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                state.error?.let { msg ->
+                    Spacer(modifier = Modifier.height(16.dp))
+                    ErrorBanner(message = msg)
                 }
-            )
 
-            if (state.isLoading) {
-                Spacer(modifier = Modifier.height(32.dp))
-                CircularProgressIndicator(
-                    color = GoTogetherOrange,
-                    modifier = Modifier.size(40.dp),
-                    strokeWidth = 3.dp
+                DividerWithText()
+
+                GoogleSignInSection(
+                    isLoading = state.isLoading,
+                    onGoogleSignIn = {
+                        try {
+                            val intent = viewModel.getGoogleSignInIntent(context)
+                            googleSignInLauncher.launch(intent)
+                        } catch (e: Exception) {
+                            // Handled by VM or locally
+                        }
+                    }
                 )
+
+                if (state.isLoading) {
+                    Spacer(modifier = Modifier.height(32.dp))
+                    CircularProgressIndicator(
+                        color = GoTogetherOrange,
+                        modifier = Modifier.size(40.dp),
+                        strokeWidth = 3.dp
+                    )
+                }
+            }
             }
         }
     }
@@ -198,43 +245,46 @@ fun GlowingBackgroundOrb() {
 
 @Composable
 fun HeaderSection() {
-    Box(
-        modifier = Modifier
-            .size(100.dp)
-            .background(Color.White.copy(alpha = 0.05f), CircleShape)
-            .padding(20.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Icon(
-            painter = painterResource(id = R.drawable.ic_launcher_foreground),
-            contentDescription = "App Logo",
-            modifier = Modifier.size(70.dp),
-            tint = GoTogetherOrange
+    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            modifier = Modifier
+                .size(100.dp)
+                .background(Color.White.copy(alpha = 0.05f), CircleShape)
+                .padding(20.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                contentDescription = "App Logo",
+                modifier = Modifier.size(70.dp),
+                tint = GoTogetherOrange
+            )
+        }
+
+        Spacer(modifier = Modifier.height(24.dp))
+
+        Text(
+            text = "Join GoTogether",
+            fontSize = 34.sp,
+            fontWeight = FontWeight.ExtraBold,
+            color = GoTogetherTheme.colors.textPrimary,
+            letterSpacing = (-1.5).sp
+        )
+
+        Text(
+            text = "Discover journeys. Log in or sign up seamlessly.",
+            fontSize = 15.sp,
+            color = GoTogetherTheme.colors.textSecondary,
+            modifier = Modifier.padding(top = 8.dp),
+            textAlign = TextAlign.Center
         )
     }
-
-    Spacer(modifier = Modifier.height(24.dp))
-
-    Text(
-        text = "Join GoTogether",
-        fontSize = 34.sp,
-        fontWeight = FontWeight.ExtraBold,
-        color = GoTogetherTheme.colors.textPrimary,
-        letterSpacing = (-1.5).sp
-    )
-
-    Text(
-        text = "Discover journeys. Log in or sign up seamlessly.",
-        fontSize = 15.sp,
-        color = GoTogetherTheme.colors.textSecondary,
-        modifier = Modifier.padding(top = 8.dp),
-        textAlign = TextAlign.Center
-    )
 }
 
 @Composable
 fun PhoneSignInSection(
     phoneNumber: String,
+    phoneError: String?,
     selectedCountryCode: String,
     countryCodes: List<Pair<String, String>>,
     isLoading: Boolean,
@@ -252,6 +302,8 @@ fun PhoneSignInSection(
             placeholder = { Text("Enter number") },
             singleLine = true,
             enabled = !isLoading,
+            isError = phoneError != null,
+            supportingText = phoneError?.let { { Text(it, color = Color(0xFFFF5252)) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),

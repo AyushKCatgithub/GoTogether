@@ -8,6 +8,7 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -15,25 +16,25 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.only
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
-import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.WindowInsetsSides
-import androidx.compose.foundation.layout.only
-import androidx.compose.foundation.layout.safeDrawing
-import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -41,10 +42,15 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.DoneAll
 import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Mood
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
@@ -57,13 +63,18 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SwipeToDismissBox
+import androidx.compose.material3.SwipeToDismissBoxValue
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.material3.rememberSwipeToDismissBoxState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -71,15 +82,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
-import kotlin.math.absoluteValue
+import androidx.compose.ui.text.TextRange
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
@@ -92,6 +109,7 @@ import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
 import java.util.Locale
+import kotlin.math.absoluteValue
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -103,10 +121,17 @@ fun ChatroomScreen(
     val uiState by viewModel.state.collectAsStateWithLifecycle()
     val currentUserId = viewModel.getCurrentUserId()
     val snackbarHostState = remember { SnackbarHostState() }
-    var messageText by remember { mutableStateOf("") }
+    // Use TextFieldValue for proper cursor control (emoji fix)
+    var messageTextFieldValue by remember { mutableStateOf(TextFieldValue("")) }
     var showEmojiPicker by remember { mutableStateOf(false) }
     val listState = rememberLazyListState()
     val emojiSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    // Full-screen image viewer state
+    var fullScreenImageUrl by remember { mutableStateOf<String?>(null) }
+
+    // Delete dialog state
+    var messageToDelete by remember { mutableStateOf<ChatMessage?>(null) }
 
     val pickImageLauncher = rememberLauncherForActivityResult(
         contract = PickVisualMedia()
@@ -184,13 +209,12 @@ fun ChatroomScreen(
                     ) {
                         groupedMessages.forEach { (dateLabel, messages) ->
                             items(messages, key = { it.id }) { message ->
-                                Column(modifier = Modifier.fillMaxWidth()) {
-                                    MessageItem(
-                                        message = message,
-                                        isCurrentUser = message.senderId == currentUserId
-                                    )
-                                    Spacer(modifier = Modifier.height(6.dp))
-                                }
+                                SwipeableMessageItem(
+                                    message = message,
+                                    isCurrentUser = message.senderId == currentUserId,
+                                    onImageClick = { url -> fullScreenImageUrl = url },
+                                    onDeleteRequested = { messageToDelete = it }
+                                )
                             }
                             item {
                                 DateHeader(dateLabel)
@@ -200,12 +224,12 @@ fun ChatroomScreen(
                 }
 
                 ChatInputBar(
-                    messageText = messageText,
-                    onMessageChange = { messageText = it },
+                    messageFieldValue = messageTextFieldValue,
+                    onMessageChange = { messageTextFieldValue = it },
                     onSendClick = {
-                        if (messageText.isNotBlank()) {
-                            viewModel.sendMessage(chatroomId, messageText)
-                            messageText = ""
+                        if (messageTextFieldValue.text.isNotBlank()) {
+                            viewModel.sendMessage(chatroomId, messageTextFieldValue.text)
+                            messageTextFieldValue = TextFieldValue("")
                         }
                     },
                     onAttachClick = {
@@ -219,6 +243,7 @@ fun ChatroomScreen(
             }
         }
 
+        // ─── Emoji Picker Sheet ───
         if (showEmojiPicker) {
             ModalBottomSheet(
                 onDismissRequest = { showEmojiPicker = false },
@@ -227,15 +252,254 @@ fun ChatroomScreen(
                 dragHandle = { BottomSheetDefaults.DragHandle() }
             ) {
                 EmojiPickerGrid(
+                    currentText = messageTextFieldValue.text,
                     onEmojiSelected = { emoji ->
-                        messageText += emoji
-                        showEmojiPicker = false
+                        // Append emoji and keep cursor at the end
+                        val currentText = messageTextFieldValue.text
+                        val newText = currentText + emoji
+                        messageTextFieldValue = TextFieldValue(
+                            text = newText,
+                            selection = TextRange(newText.length)
+                        )
+                        // Do NOT close the sheet — user can pick more emojis
+                    },
+                    onDone = { showEmojiPicker = false }
+                )
+            }
+        }
+
+        // ─── Full-Screen Image Viewer ───
+        fullScreenImageUrl?.let { imageUrl ->
+            FullScreenImageViewer(
+                imageUrl = imageUrl,
+                onDismiss = { fullScreenImageUrl = null }
+            )
+        }
+
+        // ─── Delete Confirmation Dialog ───
+        messageToDelete?.let { message ->
+            DeleteMessageDialog(
+                message = message,
+                isOwnMessage = message.senderId == currentUserId,
+                onDeleteForMe = {
+                    viewModel.deleteMessageForMe(chatroomId, message.id)
+                    messageToDelete = null
+                },
+                onDeleteForAll = {
+                    viewModel.deleteMessageForAll(chatroomId, message.id)
+                    messageToDelete = null
+                },
+                onDismiss = { messageToDelete = null }
+            )
+        }
+    }
+}
+
+// ─── Swipeable Message Item ───
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun SwipeableMessageItem(
+    message: ChatMessage,
+    isCurrentUser: Boolean,
+    onImageClick: (String) -> Unit,
+    onDeleteRequested: (ChatMessage) -> Unit
+) {
+    val dismissState = rememberSwipeToDismissBoxState(
+        confirmValueChange = { value ->
+            if (value == SwipeToDismissBoxValue.EndToStart) {
+                onDeleteRequested(message)
+            }
+            // Always return false so the item snaps back
+            false
+        }
+    )
+
+    SwipeToDismissBox(
+        state = dismissState,
+        backgroundContent = {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(vertical = 3.dp),
+                contentAlignment = Alignment.CenterEnd
+            ) {
+                Box(
+                    modifier = Modifier
+                        .padding(end = 16.dp)
+                        .size(40.dp)
+                        .background(Color.Red.copy(alpha = 0.15f), CircleShape),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        Icons.Default.Delete,
+                        contentDescription = "Delete",
+                        tint = Color.Red,
+                        modifier = Modifier.size(20.dp)
+                    )
+                }
+            }
+        },
+        enableDismissFromStartToEnd = false,
+        enableDismissFromEndToStart = true
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(GoTogetherTheme.colors.background)
+        ) {
+            MessageItem(
+                message = message,
+                isCurrentUser = isCurrentUser,
+                onImageClick = onImageClick
+            )
+            Spacer(modifier = Modifier.height(6.dp))
+        }
+    }
+}
+
+// ─── Delete Confirmation Dialog ───
+
+@Composable
+private fun DeleteMessageDialog(
+    message: ChatMessage,
+    isOwnMessage: Boolean,
+    onDeleteForMe: () -> Unit,
+    onDeleteForAll: () -> Unit,
+    onDismiss: () -> Unit
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = {
+            Text(
+                "DELETE MESSAGE",
+                style = MaterialTheme.typography.labelLarge,
+                fontWeight = FontWeight.Black,
+                letterSpacing = 1.sp
+            )
+        },
+        text = {
+            Column {
+                val preview = when {
+                    message.text.isNotBlank() -> "\"${message.text.take(50)}${if (message.text.length > 50) "…" else ""}\""
+                    !message.imageUrl.isNullOrBlank() -> "📷 Photo"
+                    else -> "this message"
+                }
+                Text(
+                    "Delete $preview?",
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = GoTogetherTheme.colors.textSecondary
+                )
+            }
+        },
+        confirmButton = {
+            Column(horizontalAlignment = Alignment.End) {
+                if (isOwnMessage) {
+                    Button(
+                        onClick = onDeleteForAll,
+                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.9f)),
+                        shape = RoundedCornerShape(12.dp)
+                    ) {
+                        Text(
+                            "DELETE FOR ALL",
+                            fontWeight = FontWeight.Black,
+                            color = Color.White,
+                            fontSize = 12.sp
+                        )
                     }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+                Button(
+                    onClick = onDeleteForMe,
+                    colors = ButtonDefaults.buttonColors(containerColor = GoTogetherTheme.colors.surfaceVariant),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Text(
+                        "DELETE FOR ME",
+                        fontWeight = FontWeight.Black,
+                        color = GoTogetherTheme.colors.textPrimary,
+                        fontSize = 12.sp
+                    )
+                }
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) {
+                Text("CANCEL", fontWeight = FontWeight.Bold, color = Color.Gray)
+            }
+        },
+        containerColor = GoTogetherTheme.colors.background,
+        shape = RoundedCornerShape(28.dp)
+    )
+}
+
+// ─── Full-Screen Image Viewer ───
+
+@Composable
+private fun FullScreenImageViewer(
+    imageUrl: String,
+    onDismiss: () -> Unit
+) {
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+        ) {
+            var scale by remember { mutableFloatStateOf(1f) }
+            var offset by remember { mutableStateOf(Offset.Zero) }
+
+            AsyncImage(
+                model = imageUrl,
+                contentDescription = "Full-screen image",
+                modifier = Modifier
+                    .fillMaxSize()
+                    .graphicsLayer(
+                        scaleX = scale,
+                        scaleY = scale,
+                        translationX = offset.x,
+                        translationY = offset.y
+                    )
+                    .pointerInput(Unit) {
+                        detectTransformGestures { _, pan, zoom, _ ->
+                            scale = (scale * zoom).coerceIn(1f, 5f)
+                            if (scale > 1f) {
+                                offset = Offset(
+                                    x = offset.x + pan.x,
+                                    y = offset.y + pan.y
+                                )
+                            } else {
+                                offset = Offset.Zero
+                            }
+                        }
+                    },
+                contentScale = ContentScale.Fit
+            )
+
+            // Close button
+            IconButton(
+                onClick = onDismiss,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(16.dp)
+                    .size(44.dp)
+                    .background(Color.Black.copy(alpha = 0.5f), CircleShape)
+            ) {
+                Icon(
+                    Icons.Default.Close,
+                    contentDescription = "Close",
+                    tint = Color.White,
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
     }
 }
+
+// ─── Existing Components (updated) ───
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -328,7 +592,8 @@ private fun ChatTopBar(
 @Composable
 private fun MessageItem(
     message: ChatMessage,
-    isCurrentUser: Boolean
+    isCurrentUser: Boolean,
+    onImageClick: (String) -> Unit = {}
 ) {
     BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
         val maxBubble = maxWidth * 0.82f
@@ -371,7 +636,8 @@ private fun MessageItem(
             MessageBubble(
                 message = message,
                 isCurrentUser = isCurrentUser,
-                maxBubbleWidth = maxBubble
+                maxBubbleWidth = maxBubble,
+                onImageClick = onImageClick
             )
         }
     }
@@ -381,7 +647,8 @@ private fun MessageItem(
 private fun MessageBubble(
     message: ChatMessage,
     isCurrentUser: Boolean,
-    maxBubbleWidth: Dp
+    maxBubbleWidth: Dp,
+    onImageClick: (String) -> Unit = {}
 ) {
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
     val isDark = GoTogetherTheme.colors.isDark
@@ -430,14 +697,15 @@ private fun MessageBubble(
             }
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
-                if (!message.imageUrl.isNullOrBlank()) {
+                message.imageUrl?.takeIf { it.isNotBlank() }?.let { imageUrl ->
                     AsyncImage(
-                        model = message.imageUrl,
+                        model = imageUrl,
                         contentDescription = "Attached image",
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 240.dp)
-                            .clip(RoundedCornerShape(8.dp)),
+                            .clip(RoundedCornerShape(8.dp))
+                            .clickable { onImageClick(imageUrl) },
                         contentScale = ContentScale.Crop
                     )
                     if (message.text.isNotBlank()) {
@@ -482,8 +750,8 @@ private fun MessageBubble(
 
 @Composable
 private fun ChatInputBar(
-    messageText: String,
-    onMessageChange: (String) -> Unit,
+    messageFieldValue: TextFieldValue,
+    onMessageChange: (TextFieldValue) -> Unit,
     onSendClick: () -> Unit,
     onAttachClick: () -> Unit,
     onEmojiClick: () -> Unit,
@@ -542,7 +810,7 @@ private fun ChatInputBar(
                 color = barBg
             ) {
                 OutlinedTextField(
-                    value = messageText,
+                    value = messageFieldValue,
                     onValueChange = onMessageChange,
                     placeholder = {
                         Text(
@@ -569,11 +837,11 @@ private fun ChatInputBar(
             }
             IconButton(
                 onClick = onSendClick,
-                enabled = messageText.isNotBlank() && !isSending,
+                enabled = messageFieldValue.text.isNotBlank() && !isSending,
                 modifier = Modifier
                     .size(48.dp)
                     .background(
-                        if (messageText.isNotBlank()) sendAccent else GoTogetherTheme.colors.surfaceVariant,
+                        if (messageFieldValue.text.isNotBlank()) sendAccent else GoTogetherTheme.colors.surfaceVariant,
                         CircleShape
                     )
             ) {
@@ -587,7 +855,9 @@ private fun ChatInputBar(
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send",
-                        tint = if (messageText.isNotBlank()) Color.White else GoTogetherTheme.colors.textSecondary.copy(alpha = 0.35f),
+                        tint = if (messageFieldValue.text.isNotBlank()) Color.White else GoTogetherTheme.colors.textSecondary.copy(
+                            alpha = 0.35f
+                        ),
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -623,19 +893,64 @@ private fun DateHeader(dateLabel: String) {
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun EmojiPickerGrid(onEmojiSelected: (String) -> Unit) {
+private fun EmojiPickerGrid(
+    currentText: String = "",
+    onEmojiSelected: (String) -> Unit,
+    onDone: () -> Unit
+) {
     Column(
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
     ) {
-        Text(
-            "Pick an emoji",
-            modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp),
-            style = MaterialTheme.typography.titleSmall,
-            fontWeight = FontWeight.Bold,
-            color = GoTogetherTheme.colors.textPrimary
-        )
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 20.dp, vertical = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Pick an emoji",
+                style = MaterialTheme.typography.titleSmall,
+                fontWeight = FontWeight.Bold,
+                color = GoTogetherTheme.colors.textPrimary
+            )
+            Surface(
+                onClick = onDone,
+                shape = RoundedCornerShape(12.dp),
+                color = GoTogetherOrange
+            ) {
+                Text(
+                    "Done",
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                    color = Color.White,
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 14.sp
+                )
+            }
+        }
+
+        // ─── Live text preview ───
+        if (currentText.isNotEmpty()) {
+            Surface(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 4.dp),
+                shape = RoundedCornerShape(16.dp),
+                color = GoTogetherTheme.colors.inputBackground,
+                border = BorderStroke(1.dp, GoTogetherTheme.colors.border)
+            ) {
+                Text(
+                    text = currentText,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
+                    style = MaterialTheme.typography.bodyLarge,
+                    color = GoTogetherTheme.colors.textPrimary,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+        }
         LazyVerticalGrid(
             columns = GridCells.Adaptive(48.dp),
             modifier = Modifier

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -27,6 +28,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -53,6 +55,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.JoinRequest
+import com.quantax.gotogether.data.fcm.NotificationChannels
 import com.quantax.gotogether.domain.model.Notification
 import com.quantax.gotogether.presentation.components.NotificationShimmerItem
 import com.quantax.gotogether.ui.theme.AccentGreen
@@ -88,17 +91,21 @@ fun NotificationsScreen(
 
     Scaffold(
         containerColor = GoTogetherTheme.colors.background,
+        contentWindowInsets = WindowInsets(0, 0, 0, 0),
         snackbarHost = { SnackbarHost(snackbarHostState) },
         topBar = {
             TopAppBar(
                 title = {
                     Text(
-                        "Notifications",
-                        fontWeight = FontWeight.Bold,
-                        color = GoTogetherTheme.colors.textPrimary
+                        "NOTIFICATIONS",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.Black,
+                        color = GoTogetherTheme.colors.textPrimary,
+                        letterSpacing = 2.sp
                     )
                 },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent),
+                windowInsets = WindowInsets(0, 0, 0, 0)
             )
         }
     ) { paddingValues ->
@@ -396,7 +403,7 @@ private fun GeneralNotificationCard(
             Spacer(modifier = Modifier.width(8.dp))
 
             // Action button
-            if (notification.type == Notification.TYPE_REQUEST_APPROVED) {
+            if (notification.type == NotificationChannels.TYPE_REQUEST_APPROVED) {
                 IconButton(
                     onClick = onNavigateToChatroom,
                     modifier = Modifier

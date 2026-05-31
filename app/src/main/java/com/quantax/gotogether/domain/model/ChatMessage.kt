@@ -9,5 +9,7 @@ data class ChatMessage(
     val text: String = "",
     /** Optional image attachment (Firebase Storage URL). */
     val imageUrl: String? = null,
-    val timestamp: Long = System.currentTimeMillis()
+    val timestamp: Long = System.currentTimeMillis(),
+    /** User IDs for whom this message is soft-deleted ("delete for me"). */
+    val deletedFor: List<String> = emptyList()
 )

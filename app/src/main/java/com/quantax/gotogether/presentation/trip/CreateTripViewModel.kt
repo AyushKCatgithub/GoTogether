@@ -88,14 +88,23 @@ class CreateTripViewModel @Inject constructor(
         _state.value = _state.value.copy(selectedImageUri = uri)
     }
     
-    fun setError(message: String) {
+    fun setError(message: String?) {
         _state.value = _state.value.copy(error = message)
+    }
+    
+    fun clearError() {
+        _state.value = _state.value.copy(error = null)
     }
 
     fun publishTrip() {
         val currentState = _state.value
         if (currentState.startingLocation.isBlank() || currentState.destination.isBlank()) {
             _state.value = currentState.copy(error = "Location and destination are required")
+            return
+        }
+
+        if (currentState.startDate.isBlank() || currentState.endDate.isBlank()) {
+            _state.value = currentState.copy(error = "Please select both start and end dates")
             return
         }
 

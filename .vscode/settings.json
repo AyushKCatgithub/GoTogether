@@ -1,4 +1,6 @@
 {
-    "java.configuration.updateBuildConfiguration": "automatic",
-    "git.ignoreLimitWarning": true
+  "java.configuration.updateBuildConfiguration": "automatic",
+  "java.import.gradle.enabled": true,
+  "java.jdt.ls.java.home": "/Users/machinex/Library/Java/JavaVirtualMachines/ms-17.0.18/Contents/Home",
+  "java.import.gradle.java.home": "/Users/machinex/Library/Java/JavaVirtualMachines/ms-17.0.18/Contents/Home"
 }

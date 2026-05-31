@@ -14,9 +14,9 @@ service firebase.storage {
     match /chat_attachments/{userId}/{fileName} {
       allow read, write: if request.auth != null && request.auth.uid == userId;
     }
-    // Catch-all for any other path (e.g. future folders): require auth
+    // Deny any future or unexpected paths by default.
     match /{allPaths=**} {
-      allow read, write: if request.auth != null;
+      allow read, write: if false;
     }
   }
 }

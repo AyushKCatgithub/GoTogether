@@ -1,6 +1,8 @@
 package com.quantax.gotogether.presentation.home
 
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +15,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -26,13 +29,12 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.AttachMoney
+import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.CheckCircle
-import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Groups
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.RemoveCircleOutline
-import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.ChatBubbleOutline
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.Explore
@@ -41,8 +43,6 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -62,12 +62,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -119,13 +119,13 @@ fun HomeTopAppBar(
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
-                    .clickable { onLogoClick() }
+
             ) {
                 Icon(
                     Icons.Default.LocationOn,
                     contentDescription = "Location",
                     tint = GoTogetherOrange,
-                    modifier = Modifier.size(16.dp)
+                    modifier = Modifier.size(16.dp).clickable { onLogoClick() }
                 )
                 Spacer(modifier = Modifier.width(6.dp))
                 Text(
@@ -196,6 +196,7 @@ fun HomeTopAppBar(
             }
 
         },
+        windowInsets = WindowInsets(0, 0, 0, 0),
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
     )
 }
@@ -250,21 +251,21 @@ fun HomeSearchBar(
             modifier = Modifier
                 .size(54.dp)
                 .shadow(
-                    elevation = 12.dp,
+                    elevation = 16.dp,
                     shape = RoundedCornerShape(16.dp),
-                    ambientColor = GoTogetherOrange.copy(alpha = 0.1f),
-                    spotColor = GoTogetherOrange.copy(alpha = 0.2f)
+                    ambientColor = GoTogetherOrange.copy(alpha = 0.2f),
+                    spotColor = GoTogetherOrange.copy(alpha = 0.4f)
                 ),
             shape = RoundedCornerShape(16.dp),
-            color = GoTogetherTheme.colors.card,
-            border = BorderStroke(1.dp, GoTogetherTheme.colors.border.copy(alpha = 0.3f))
+            color = GoTogetherTheme.colors.card.copy(alpha = 0.85f), // Glassy feel
+            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     Icons.Outlined.Tune,
                     contentDescription = "Filter",
                     tint = GoTogetherOrange,
-                    modifier = Modifier.size(22.dp)
+                    modifier = Modifier.size(24.dp)
                 )
             }
         }
@@ -277,29 +278,36 @@ fun CategoryChips(
     selectedCategory: String,
     onCategorySelected: (String) -> Unit
 ) {
+    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
     LazyRow(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp), // Increased spacing
         modifier = Modifier.fillMaxWidth()
     ) {
         items(categories) { category ->
             val isSelected = category == selectedCategory
             Surface(
-                onClick = { onCategorySelected(category) },
+                onClick = { 
+                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
+                    onCategorySelected(category) 
+                },
                 shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.card,
+                color = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.card.copy(alpha = 0.7f),
                 border = if (isSelected) null else BorderStroke(
-                    2.dp,
-                    GoTogetherTheme.colors.border
+                    1.dp,
+                    GoTogetherTheme.colors.border.copy(alpha = 0.5f)
                 ),
-                modifier = Modifier.bounceClick()
+                modifier = Modifier
+                    .bounceClick()
+                    .then(if (isSelected) Modifier.shadow(8.dp, RoundedCornerShape(20.dp), spotColor = GoTogetherOrange) else Modifier)
             ) {
                 Text(
                     text = category,
-                    modifier = Modifier.padding(horizontal = 18.dp, vertical = 10.dp),
-                    color = if (isSelected) MaterialTheme.colorScheme.onPrimary else GoTogetherTheme.colors.textSecondary,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
+                    color = if (isSelected) Color.White else GoTogetherTheme.colors.textSecondary,
                     fontSize = 14.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium
+                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
+                    letterSpacing = 0.5.sp
                 )
             }
         }
@@ -311,6 +319,8 @@ fun TripCard(
     trip: Trip,
     onClick: () -> Unit,
     onHostClick: () -> Unit = {},
+    isBookmarked: Boolean = false,
+    onBookmarkClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
         Surface(
@@ -328,7 +338,9 @@ fun TripCard(
         Column {
             TripCardHero(
                 trip = trip,
-                onHostClick = onHostClick
+                onHostClick = onHostClick,
+                isBookmarked = isBookmarked,
+                onBookmarkClick = onBookmarkClick
             )
             TripCardDetails(trip = trip, onActionClick = onClick)
         }
@@ -338,8 +350,20 @@ fun TripCard(
 @Composable
 private fun TripCardHero(
     trip: Trip,
-    onHostClick: () -> Unit
+    onHostClick: () -> Unit,
+    isBookmarked: Boolean = false,
+    onBookmarkClick: () -> Unit = {}
 ) {
+    // Bounce animation on bookmark toggle
+    val bookmarkScale by animateFloatAsState(
+        targetValue = if (isBookmarked) 1.15f else 1f,
+        animationSpec = spring(
+            dampingRatio = Spring.DampingRatioMediumBouncy,
+            stiffness = Spring.StiffnessLow
+        ),
+        label = "bookmarkScale"
+    )
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -410,25 +434,33 @@ private fun TripCardHero(
                 .align(Alignment.TopStart)
         )
 
-        // Bookmark 
+        // Bookmark
         Surface(
-            onClick = { },
+            onClick = onBookmarkClick,
             modifier = Modifier
                 .align(Alignment.TopEnd)
                 .padding(20.dp)
-                .size(38.dp),
-            color = Color.Black.copy(alpha = 0.3f),
+                .size(38.dp)
+                .graphicsLayer(
+                    scaleX = bookmarkScale,
+                    scaleY = bookmarkScale
+                ),
+            color = if (isBookmarked) GoTogetherOrange.copy(alpha = 0.85f)
+                    else Color.Black.copy(alpha = 0.3f),
             shape = CircleShape
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
-                    Icons.Default.BookmarkBorder,
-                    contentDescription = "Save",
+                    imageVector = if (isBookmarked) Icons.Default.Bookmark
+                                  else Icons.Default.BookmarkBorder,
+                    contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark",
                     tint = Color.White,
                     modifier = Modifier.size(20.dp)
                 )
             }
         }
+
+
     }
 }
 
@@ -893,7 +925,7 @@ fun FilterSection(
 private fun FilterItem(
     value: String,
     placeholder: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     onClick: () -> Unit
 ) {
     Box(

@@ -10,14 +10,34 @@ android {
     namespace = "com.quantax.gotogether"
     compileSdk = 36
 
+    val debugKeystoreFile = file("debug_keystore.jks")
+    val debugStorePassword = providers.gradleProperty("GOTOGETHER_DEBUG_STORE_PASSWORD").orNull
+    val debugKeyPassword = providers.gradleProperty("GOTOGETHER_DEBUG_KEY_PASSWORD").orNull
+    val debugKeyAlias = providers.gradleProperty("GOTOGETHER_DEBUG_KEY_ALIAS").orNull
+
     defaultConfig {
         applicationId = "com.quantax.gotogether"
         minSdk = 29
         targetSdk = 36
         versionCode = 1
         versionName = "1.0"
-
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    signingConfigs {
+        if (
+            debugKeystoreFile.exists() &&
+            !debugStorePassword.isNullOrBlank() &&
+            !debugKeyPassword.isNullOrBlank() &&
+            !debugKeyAlias.isNullOrBlank()
+        ) {
+            getByName("debug") {
+                storeFile = debugKeystoreFile
+                storePassword = debugStorePassword
+                keyPassword = debugKeyPassword
+                keyAlias = debugKeyAlias
+            }
+        }
     }
 
     buildTypes {
@@ -25,13 +45,13 @@ android {
             isMinifyEnabled = true
             isDebuggable = false
             proguardFiles(
-                getDefaultProguardFile("proguard-android-optimize.txt"),
-                "proguard-rules.pro"
+                getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro"
             )
         }
         debug {
             isMinifyEnabled = false
             isDebuggable = true
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {
@@ -51,6 +71,7 @@ kotlin {
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.lifecycle.process)
     implementation(libs.androidx.activity.compose)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.compose.ui)
@@ -59,6 +80,7 @@ dependencies {
     implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.compose.material.icons.extended)
     implementation(libs.androidx.lifecycle.runtime.compose)
+    implementation(libs.google.firebase.messaging)
     testImplementation(libs.junit)
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("io.mockk:mockk:1.13.13")
@@ -93,4 +115,8 @@ dependencies {
     implementation(libs.firebase.firestore)
     implementation(libs.firebase.database)
     implementation(libs.firebase.storage)
+    implementation(libs.firebase.appcheck.playintegrity)
+    debugImplementation(libs.firebase.appcheck.debug)
+
+
 }

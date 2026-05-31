@@ -1,6 +1,5 @@
 package com.quantax.gotogether.navigation
 
-import android.content.Context
 import androidx.compose.runtime.Composable
 import androidx.hilt.navigation.compose.hiltViewModel
 import androidx.navigation.NavHostController
@@ -8,7 +7,6 @@ import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.navArgument
-import java.net.URLDecoder
 import com.quantax.gotogether.presentation.auth.AuthViewModel
 import com.quantax.gotogether.presentation.auth.OtpVerificationScreen
 import com.quantax.gotogether.presentation.auth.SignInScreen
@@ -19,11 +17,11 @@ import com.quantax.gotogether.presentation.profile.EditProfileScreen
 import com.quantax.gotogether.presentation.profile.PublicProfileScreen
 import com.quantax.gotogether.presentation.trip.CreateTripScreen
 import com.quantax.gotogether.presentation.trip.TripDetailScreen
+import java.net.URLDecoder
 
 @Composable
 fun GoTogetherNavGraph(
     navController: NavHostController,
-    context: Context
 ) {
     NavHost(
         navController = navController,

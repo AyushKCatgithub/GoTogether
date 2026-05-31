@@ -8,6 +8,7 @@ import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.auth.GoogleAuthProvider
 import com.google.firebase.auth.PhoneAuthOptions
 import com.google.firebase.auth.PhoneAuthProvider
+import com.quantax.gotogether.data.fcm.FcmTokenRepository
 import com.quantax.gotogether.data.repository.UserProfileRepository
 import com.quantax.gotogether.domain.model.UserProfile
 import kotlinx.coroutines.suspendCancellableCoroutine
@@ -18,14 +19,25 @@ import kotlin.coroutines.resumeWithException
 
 class AuthManager @Inject constructor(
     private val auth: FirebaseAuth,
-    private val profileRepo: UserProfileRepository
+    private val profileRepo: UserProfileRepository,
+    private val fcmTokenRepository: FcmTokenRepository
 ) {
 
     val currentUser get() = auth.currentUser
 
     fun isLoggedIn(): Boolean = auth.currentUser != null
 
-    fun signOut() = auth.signOut()
+    /**
+     * Sign out and best-effort detach this device from FCM pushes. The token clear
+     * runs first so a slow/failed network call cannot leave the user signed in.
+     */
+    suspend fun signOut() {
+        val uid = auth.currentUser?.uid
+        if (uid != null) {
+            runCatching { fcmTokenRepository.clearCurrentToken(uid) }
+        }
+        auth.signOut()
+    }
 
     fun getGoogleSignInIntent(context: Context): android.content.Intent {
         val gso = GoogleSignInOptions.Builder(GoogleSignInOptions.DEFAULT_SIGN_IN)
@@ -73,13 +85,15 @@ class AuthManager @Inject constructor(
                 uid = user.uid,
                 email = user.email ?: "",
                 phone = user.phoneNumber ?: "",
-                name = user.displayName ?: ""
+                name = user.displayName ?: "",
+                profileImageUrl = user.photoUrl?.toString() ?: ""
             )
-            val result = profileRepo.saveProfile(newProfile)
-            if (result.isFailure) {
-                throw Exception("Failed to save user profile: ${result.exceptionOrNull()?.message}")
-            }
+            profileRepo.saveProfile(newProfile)
+        } else if (existingProfile.profileImageUrl.isBlank() && user.photoUrl != null) {
+            // Update existing profile with photo if it's currently missing
+            profileRepo.saveProfile(existingProfile.copy(profileImageUrl = user.photoUrl.toString()))
         }
+        runCatching { fcmTokenRepository.registerCurrentToken(user.uid) }
     }
 
     fun sendOtp(
