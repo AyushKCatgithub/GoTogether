@@ -1,5 +1,6 @@
 package com.quantax.gotogether.presentation.profile
 
+import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
@@ -70,6 +71,7 @@ import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.VerifiedCyan
 import com.quantax.gotogether.ui.theme.WarningYellow
+import kotlin.math.log
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -250,7 +252,7 @@ fun EditProfileScreen(
 
             ProfileSection("VERIFICATION PHOTOS") {
                 Text(
-                    "Upload at least 3 photos to earn your verified badge and build trust.",
+                    "Upload at least 3 photos of your's to earn your verified badge and build trust.",
                     style = MaterialTheme.typography.bodySmall,
                     color = GoTogetherTheme.colors.textSecondary,
                     modifier = Modifier.padding(bottom = 12.dp)
@@ -331,6 +333,8 @@ private fun VerificationPhotoGrid(urls: List<String>, onPick: (Int) -> Unit) {
 
 @Composable
 private fun VerificationStatusCard(isVerified: Boolean, photosNeeded: Int) {
+    Log.i("EditProfileScreen.kt","isVerified -> $isVerified");
+    Log.i("EditProfileScreen.kt", "photosNeeded -> $photosNeeded");
     Surface(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
