@@ -191,6 +191,6 @@ class ProfileViewModel @Inject constructor(
     }
 
     private fun signOut() {
-        authManager.signOut()
+        viewModelScope.launch { authManager.signOut() }
     }
 }

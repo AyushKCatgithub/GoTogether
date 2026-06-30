@@ -1,0 +1,16 @@
+{
+  "name": "gotogether-functions",
+  "description": "Cloud Functions for GoTogether — sends FCM notifications for new chat messages",
+  "scripts": {
+    "serve": "firebase emulators:start --only functions",
+    "deploy": "firebase deploy --only functions"
+  },
+  "engines": {
+    "node": "20"
+  },
+  "dependencies": {
+    "firebase-admin": "^12.0.0",
+    "firebase-functions": "^4.9.0"
+  },
+  "private": true
+}
