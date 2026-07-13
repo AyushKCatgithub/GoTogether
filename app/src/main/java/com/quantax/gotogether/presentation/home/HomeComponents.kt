@@ -1,5 +1,6 @@
 package com.quantax.gotogether.presentation.home
 
+import android.util.Log
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
@@ -85,6 +86,10 @@ import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.VerifiedCyan
+import java.time.LocalDate
+import java.time.format.DateTimeFormatter
+import java.util.Date
+import java.util.Locale
 
 // ─── Senior UI Extensions ───
 
@@ -323,6 +328,14 @@ fun TripCard(
     onBookmarkClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+    //Log.d("Trip's data as recieved in TripCard", "$trip")
+    val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
+    val formattedDate = LocalDate.parse(trip.startDate, dateFormatter)
+    Log.d("FORMATTED TRIP STARTING DATE", "$formattedDate")
+    val currentDate = LocalDate.now()
+    Log.d("CURRENT DATE", "$currentDate")
+    val status: String? = if (formattedDate.isBefore(currentDate)) "Expired" else null
+
         Surface(
         modifier = modifier
             .fillMaxWidth()
@@ -340,7 +353,8 @@ fun TripCard(
                 trip = trip,
                 onHostClick = onHostClick,
                 isBookmarked = isBookmarked,
-                onBookmarkClick = onBookmarkClick
+                onBookmarkClick = onBookmarkClick,
+                status = status
             )
             TripCardDetails(trip = trip, onActionClick = onClick)
         }
@@ -352,7 +366,8 @@ private fun TripCardHero(
     trip: Trip,
     onHostClick: () -> Unit,
     isBookmarked: Boolean = false,
-    onBookmarkClick: () -> Unit = {}
+    onBookmarkClick: () -> Unit = {},
+    status: String? = null
 ) {
     // Bounce animation on bookmark toggle
     val bookmarkScale by animateFloatAsState(
@@ -434,29 +449,67 @@ private fun TripCardHero(
                 .align(Alignment.TopStart)
         )
 
-        // Bookmark
-        Surface(
-            onClick = onBookmarkClick,
-            modifier = Modifier
-                .align(Alignment.TopEnd)
-                .padding(20.dp)
-                .size(38.dp)
-                .graphicsLayer(
-                    scaleX = bookmarkScale,
-                    scaleY = bookmarkScale
-                ),
-            color = if (isBookmarked) GoTogetherOrange.copy(alpha = 0.85f)
-                    else Color.Black.copy(alpha = 0.3f),
-            shape = CircleShape
-        ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    imageVector = if (isBookmarked) Icons.Default.Bookmark
-                                  else Icons.Default.BookmarkBorder,
-                    contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark",
-                    tint = Color.White,
-                    modifier = Modifier.size(20.dp)
-                )
+        if (status == "Expired") {
+            Surface(
+                onClick = onBookmarkClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(20.dp)
+                    .shadow(
+                        8.dp,
+                        RoundedCornerShape(14.dp),
+                        ambientColor = GoTogetherOrange.copy(alpha = 0.15f),
+                        spotColor = GoTogetherOrange.copy(alpha = 0.25f)
+                    ),
+                shape = RoundedCornerShape(14.dp),
+                color = Color(0xFFFFF3E0)
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Icon(
+                        imageVector = Icons.Outlined.ErrorOutline,
+                        contentDescription = null,
+                        tint = GoTogetherOrange,
+                        modifier = Modifier.size(14.dp)
+                    )
+                    Spacer(modifier = Modifier.width(6.dp))
+                    Text(
+                        text = "EXPIRED",
+                        color = GoTogetherOrange,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Black,
+                        letterSpacing = 1.sp
+                    )
+                }
+            }
+        }
+        else {
+            // Bookmark
+            Surface(
+                onClick = onBookmarkClick,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(20.dp)
+                    .size(38.dp)
+                    .graphicsLayer(
+                        scaleX = bookmarkScale,
+                        scaleY = bookmarkScale
+                    ),
+                color = if (isBookmarked) GoTogetherOrange.copy(alpha = 0.85f)
+                else Color.Black.copy(alpha = 0.3f),
+                shape = CircleShape
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                        Icon(
+                            imageVector = if (isBookmarked) Icons.Default.Bookmark
+                            else Icons.Default.BookmarkBorder,
+                            contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark",
+                            tint = Color.White,
+                            modifier = Modifier.size(20.dp)
+                        )
+                }
             }
         }
 
