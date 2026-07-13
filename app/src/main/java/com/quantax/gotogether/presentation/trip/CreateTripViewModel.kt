@@ -23,6 +23,7 @@ data class CreateTripState(
     val startingLocation: String = "",
     val destination: String = "",
     val startDate: String = "",
+    val startDateMillis: Long? = null,
     val endDate: String = "",
     val budgetRange: String = "",
     val groupSize: Int = 1,
@@ -54,14 +55,19 @@ class CreateTripViewModel @Inject constructor(
     fun onStartDateChange(millis: Long?) {
         millis?.let {
             val dateString = dateFormatter.format(Date(it))
-            _state.value = _state.value.copy(startDate = dateString)
+            _state.value = _state.value.copy(startDate = dateString, startDateMillis = it)
         }
     }
 
     fun onEndDateChange(millis: Long?) {
         millis?.let {
+            val startMillis = _state.value.startDateMillis
+            if (startMillis != null && it <= startMillis) {
+                _state.value = _state.value.copy(error = "End date must be after the start date")
+                return
+            }
             val dateString = dateFormatter.format(Date(it))
-            _state.value = _state.value.copy(endDate = dateString)
+            _state.value = _state.value.copy(endDate = dateString, error = null)
         }
     }
 
