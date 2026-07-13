@@ -15,11 +15,16 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.ime
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -46,6 +51,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SelectableDates
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
@@ -57,6 +63,7 @@ import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -64,9 +71,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusDirection
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -80,6 +89,28 @@ import com.quantax.gotogether.presentation.components.LocationSearchDialog
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
+import java.util.Calendar
+import java.util.TimeZone
+
+/**
+ * Allows only today and future dates to be picked; past dates are disabled.
+ * DatePicker supplies each candidate day as UTC midnight, so we compare against
+ * today's UTC midnight.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+private object PresentOrFutureSelectableDates : SelectableDates {
+    private val todayUtcMillis: Long = Calendar.getInstance(TimeZone.getTimeZone("UTC")).apply {
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }.timeInMillis
+
+    override fun isSelectableDate(utcTimeMillis: Long): Boolean = utcTimeMillis >= todayUtcMillis
+
+    override fun isSelectableYear(year: Int): Boolean =
+        year >= Calendar.getInstance().get(Calendar.YEAR)
+}
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -111,8 +142,23 @@ fun CreateTripScreen(
     var showingStartDatePicker by remember { mutableStateOf(false) }
     var showingEndDatePicker by remember { mutableStateOf(false) }
 
-    val startDatePickerState = rememberDatePickerState()
-    val endDatePickerState = rememberDatePickerState()
+    val startDatePickerState = rememberDatePickerState(selectableDates = PresentOrFutureSelectableDates)
+    // End picker is keyed on the chosen start date so it rebuilds — and re-greys days —
+    // whenever the start date changes. Any day on or before the start date is disabled;
+    // if no start date is picked yet, it falls back to blocking only past dates.
+    val endDatePickerState = key(state.startDateMillis) {
+        val startMillis = state.startDateMillis
+        rememberDatePickerState(
+            selectableDates = object : SelectableDates {
+                override fun isSelectableDate(utcTimeMillis: Long): Boolean =
+                    if (startMillis != null) utcTimeMillis > startMillis
+                    else PresentOrFutureSelectableDates.isSelectableDate(utcTimeMillis)
+
+                override fun isSelectableYear(year: Int): Boolean =
+                    PresentOrFutureSelectableDates.isSelectableYear(year)
+            }
+        )
+    }
 
     Scaffold(
         topBar = {
@@ -143,6 +189,7 @@ fun CreateTripScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(bottom = 32.dp)
                 .navigationBarsPadding(),
@@ -329,6 +376,20 @@ private fun PremiumTripField(
     keyboardActions: KeyboardActions = KeyboardActions.Default,
     modifier: Modifier = Modifier
 ) {
+    val bringIntoViewRequester = remember { BringIntoViewRequester() }
+    var isFocused by remember { mutableStateOf(false) }
+    // Keep the focused field fully above the keyboard. Re-requesting on every IME
+    // inset change (the keyboard animates in over several frames) and on every text
+    // change (the cursor moves to new lines) — a one-shot request on focus fires
+    // mid-animation and under-scrolls, so lines past the first couple slip behind
+    // the keyboard.
+    val imeBottom = WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(isFocused, value, imeBottom) {
+        if (isFocused) {
+            bringIntoViewRequester.bringIntoView()
+        }
+    }
+
     Surface(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
@@ -347,7 +408,10 @@ private fun PremiumTripField(
             BasicTextField(
                 value = value,
                 onValueChange = onValueChange,
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(bringIntoViewRequester)
+                    .onFocusEvent { isFocused = it.isFocused },
                 textStyle = MaterialTheme.typography.bodyLarge.copy(color = GoTogetherTheme.colors.textPrimary, fontWeight = FontWeight.Bold),
                 cursorBrush = SolidColor(GoTogetherOrange),
                 singleLine = singleLine,
