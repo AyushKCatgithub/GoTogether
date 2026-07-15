@@ -164,11 +164,8 @@ class CreateTripViewModel @Inject constructor(
                 hostName = hostName,
                 hostImageUrl = hostImageUrl,
                 hostVerified = isVerified,
-                // Use destination as the base title; user can refine via description
-                title = if (currentState.description.isNotBlank())
-                    "${currentState.destination}: ${currentState.description.take(40)}"
-                else
-                    "${currentState.destination} Adventure",
+                // Title reflects the route, e.g. "From New Delhi to Landour Hp"
+                title = "From ${currentState.startingLocation} to ${currentState.destination}",
                 startingLocation = currentState.startingLocation,
                 destination = currentState.destination,
                 startDate = currentState.startDate,

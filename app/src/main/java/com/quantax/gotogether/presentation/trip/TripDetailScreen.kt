@@ -1,7 +1,9 @@
 package com.quantax.gotogether.presentation.trip
 
+import android.util.Log
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -30,6 +32,7 @@ import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.Bookmark
 import androidx.compose.material.icons.filled.BookmarkBorder
 import androidx.compose.material.icons.filled.ChevronRight
+import androidx.compose.material.icons.filled.CurrencyRupee
 import androidx.compose.material.icons.filled.ErrorOutline
 import androidx.compose.material.icons.filled.GroupAdd
 import androidx.compose.material.icons.filled.Groups
@@ -76,6 +79,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.JoinRequest
+import com.quantax.gotogether.domain.model.Trip
+import com.quantax.gotogether.domain.model.UserProfile
 import com.quantax.gotogether.presentation.components.TripDetailShimmer
 import com.quantax.gotogether.ui.theme.AccentBlue
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
@@ -198,12 +203,12 @@ fun TripDetailScreen(
 
 @Composable
 fun TripDetailContent(
-    trip: com.quantax.gotogether.domain.model.Trip,
+    trip: Trip,
     isHost: Boolean,
     requestStatus: String,
     isBookmarked: Boolean,
-    members: List<com.quantax.gotogether.domain.model.UserProfile>,
-    scrollState: androidx.compose.foundation.ScrollState,
+    members: List<UserProfile>,
+    scrollState: ScrollState,
     onBackClick: () -> Unit,
     onShareClick: () -> Unit,
     onBookmarkClick: () -> Unit,
@@ -294,18 +299,41 @@ fun TripDetailContent(
                     letterSpacing = (-1).sp,
                     lineHeight = 32.sp
                 )
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(
-                        text = trip.budgetRange,
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GoTogetherTheme.colors.textPrimary
-                    )
-                    Text(
-                        text = "/Trip",
-                        fontSize = 12.sp,
-                        color = GoTogetherTheme.colors.textSecondary
-                    )
+            }
+            Spacer(modifier = Modifier.height(8.dp))
+            Surface(
+                shape = RoundedCornerShape(16.dp),
+                color = GoTogetherOrange.copy(alpha = 0.12f),
+                border = BorderStroke(1.dp, GoTogetherOrange.copy(alpha = 0.25f))
+            ) {
+                Row(
+                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Surface(
+                        shape = CircleShape,
+                        color = GoTogetherOrange.copy(alpha = 0.18f),
+                        modifier = Modifier.size(30.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                Icons.Default.CurrencyRupee,
+                                contentDescription = null,
+                                tint = GoTogetherOrange,
+                                modifier = Modifier.size(16.dp)
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.width(10.dp))
+                    Row(verticalAlignment = Alignment.Bottom) {
+                        Text(
+                            text = trip.budgetRange.ifBlank { "Flexible" },
+                            fontSize = 20.sp,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = GoTogetherOrange,
+                            letterSpacing = (-0.5).sp
+                        )
+                    }
                 }
             }
 
@@ -352,9 +380,15 @@ fun TripDetailContent(
             Spacer(modifier = Modifier.height(24.dp))
 
             // Host Profile Highlight
+            // Prefer the host's current uploaded photo (from their live profile in the
+            // members list); the trip's stored hostImageUrl is a snapshot that can be
+            // stale/blank if the trip was created before the photo was set.
+            val hostProfile = members.firstOrNull { it.uid == trip.hostId }
+            val hostImageUrl = hostProfile?.profileImageUrl?.takeIf { it.isNotBlank() }
+                ?: trip.hostImageUrl?.takeIf { it.isNotBlank() }
             HostSection(
                 name = trip.hostName,
-                imageUrl = trip.hostImageUrl,
+                imageUrl = hostImageUrl,
                 isVerified = trip.hostVerified,
                 isYou = isHost,
                 onProfileClick = { onProfileClick(trip.hostId) }
@@ -581,7 +615,7 @@ fun TripInfoHub(trip: com.quantax.gotogether.domain.model.Trip) {
         ) {
             InfoItem(Icons.Default.Groups, "${trip.joinedCount}/${trip.groupSize}", "Travelers")
             VerticalDivider()
-            InfoItem(Icons.Default.AttachMoney, trip.budgetRange, "Budget")
+            InfoItem(Icons.Default.CurrencyRupee, trip.budgetRange, "Budget")
             VerticalDivider()
             InfoItem(Icons.Default.Map, trip.startingLocation.ifBlank { "TBA" }.take(8), "From")
         }
@@ -628,7 +662,8 @@ fun HostSection(
         verticalAlignment = Alignment.CenterVertically
     ) {
         SubcomposeAsyncImage(
-            model = imageUrl ?: "https://ui-avatars.com/api/?name=$name&background=random",
+            model = imageUrl?.takeIf { it.isNotBlank() }
+                ?: "https://ui-avatars.com/api/?name=$name&background=random",
             contentDescription = null,
             modifier = Modifier
                 .size(52.dp)
