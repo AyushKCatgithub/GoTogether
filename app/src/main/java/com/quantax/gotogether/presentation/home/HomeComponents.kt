@@ -1,12 +1,9 @@
 package com.quantax.gotogether.presentation.home
 
-import android.util.Log
 import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
@@ -44,7 +41,13 @@ import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ElevatedCard
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.FilledTonalIconButton
+import androidx.compose.material3.FilterChip
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -64,34 +67,29 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import coil.compose.SubcomposeAsyncImage
 import coil.request.CachePolicy
 import coil.request.ImageRequest
 import com.quantax.gotogether.domain.model.Trip
 import com.quantax.gotogether.presentation.components.ShimmerAnimation
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.VerifiedCyan
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
-import java.util.Date
 import java.util.Locale
 
-// ─── Senior UI Extensions ───
+// ─── UI Extensions ───
 
 fun Modifier.bounceClick() = composed {
     var isPressed by remember { mutableStateOf(false) }
@@ -121,85 +119,67 @@ fun HomeTopAppBar(
 ) {
     TopAppBar(
         title = {
-            Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier
-
-            ) {
-                Icon(
-                    Icons.Default.LocationOn,
-                    contentDescription = "Location",
-                    tint = GoTogetherOrange,
-                    modifier = Modifier.size(16.dp).clickable { onLogoClick() }
-                )
-                Spacer(modifier = Modifier.width(6.dp))
+            Column(modifier = Modifier.clickable { onLogoClick() }) {
                 Text(
-                    text = locationText,
-                    color = GoTogetherTheme.colors.textPrimary,
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.SemiBold,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    text = "Current location",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        Icons.Default.LocationOn,
+                        contentDescription = null,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(
+                        text = locationText,
+                        style = MaterialTheme.typography.titleSmall,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
             }
         },
         navigationIcon = {
             Box(
                 modifier = Modifier
-                    .padding(start = 16.dp, end = 8.dp)
+                    .padding(start = 12.dp, end = 4.dp)
                     .size(40.dp)
-                    .background(
-                        Brush.linearGradient(listOf(GoTogetherOrange, GoTogetherOrangeLight)),
-                        RoundedCornerShape(12.dp)
-                    )
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(MaterialTheme.colorScheme.primary)
                     .clickable { onLogoClick() },
                 contentAlignment = Alignment.Center
             ) {
                 Icon(
                     Icons.Outlined.Explore,
-                    contentDescription = "Logo",
-                    tint = Color.White,
+                    contentDescription = "GoTogether",
+                    tint = MaterialTheme.colorScheme.onPrimary,
                     modifier = Modifier.size(22.dp)
                 )
             }
         },
         actions = {
-            Box(
-                modifier = Modifier
-                    .padding(end = 16.dp)
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(40.dp)
-                        .border(
-                            1.dp,
-                            GoTogetherTheme.colors.border.copy(alpha = 0.5f),
-                            RoundedCornerShape(12.dp)
-                        )
-                        .background(GoTogetherTheme.colors.card, RoundedCornerShape(12.dp))
-                        .clickable { onMessagesClick() },
-                    contentAlignment = Alignment.Center
-                ) {
+            Box(modifier = Modifier.padding(end = 8.dp)) {
+                FilledTonalIconButton(onClick = onMessagesClick) {
                     Icon(
                         Icons.Outlined.ChatBubbleOutline,
                         contentDescription = "Messages",
-                        tint = GoTogetherTheme.colors.textPrimary,
                         modifier = Modifier.size(20.dp)
                     )
-
                 }
-                // Activity indicator dot — only visible when there are unread messages
                 if (unreadMessageCount > 0) {
                     Box(
                         modifier = Modifier
-                            .size(8.dp)
-                            .background(Color.Red, CircleShape)
                             .align(Alignment.TopEnd)
-                            .padding(2.dp)
+                            .padding(6.dp)
+                            .size(8.dp)
+                            .background(MaterialTheme.colorScheme.error, CircleShape)
                     )
                 }
             }
-
         },
         windowInsets = WindowInsets(0, 0, 0, 0),
         colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
@@ -216,105 +196,73 @@ fun HomeSearchBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .padding(horizontal = 16.dp, vertical = 12.dp),
+            .padding(horizontal = 16.dp, vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(12.dp)
     ) {
         OutlinedTextField(
             value = query,
             onValueChange = onQueryChange,
-            placeholder = {
-                Text(
-                    "Search trips, destinations...",
-                    color = GoTogetherTheme.colors.textSecondary,
-                    fontSize = 15.sp
-                )
-            },
+            placeholder = { Text("Search trips, destinations…") },
             leadingIcon = {
-                Icon(
-                    Icons.Outlined.Search,
-                    contentDescription = "Search",
-                    tint = GoTogetherTheme.colors.textSecondary,
-                    modifier = Modifier.size(22.dp)
-                )
+                Icon(Icons.Outlined.Search, contentDescription = null)
             },
             modifier = Modifier.weight(1f),
             colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoTogetherOrange.copy(alpha = 0.5f),
+                focusedBorderColor = MaterialTheme.colorScheme.primary,
                 unfocusedBorderColor = Color.Transparent,
-                focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedContainerColor = GoTogetherTheme.colors.card,
-                focusedContainerColor = GoTogetherTheme.colors.card
+                unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
             ),
-            shape = RoundedCornerShape(18.dp),
+            shape = RoundedCornerShape(16.dp),
             singleLine = true
         )
 
-        Surface(
+        FilledTonalIconButton(
             onClick = onFilterClick,
-            modifier = Modifier
-                .size(54.dp)
-                .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(16.dp),
-                    ambientColor = GoTogetherOrange.copy(alpha = 0.2f),
-                    spotColor = GoTogetherOrange.copy(alpha = 0.4f)
-                ),
-            shape = RoundedCornerShape(16.dp),
-            color = GoTogetherTheme.colors.card.copy(alpha = 0.85f), // Glassy feel
-            border = BorderStroke(1.dp, Color.White.copy(alpha = 0.1f))
+            modifier = Modifier.size(56.dp),
+            shape = RoundedCornerShape(16.dp)
         ) {
-            Box(contentAlignment = Alignment.Center) {
-                Icon(
-                    Icons.Outlined.Tune,
-                    contentDescription = "Filter",
-                    tint = GoTogetherOrange,
-                    modifier = Modifier.size(24.dp)
-                )
-            }
+            Icon(
+                Icons.Outlined.Tune,
+                contentDescription = "Filters",
+                modifier = Modifier.size(24.dp)
+            )
         }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CategoryChips(
     categories: List<String>,
     selectedCategory: String,
     onCategorySelected: (String) -> Unit
 ) {
-    val haptic = androidx.compose.ui.platform.LocalHapticFeedback.current
+    val haptic = LocalHapticFeedback.current
     LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        horizontalArrangement = Arrangement.spacedBy(12.dp), // Increased spacing
+        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
         modifier = Modifier.fillMaxWidth()
     ) {
         items(categories) { category ->
             val isSelected = category == selectedCategory
-            Surface(
-                onClick = { 
-                    haptic.performHapticFeedback(androidx.compose.ui.hapticfeedback.HapticFeedbackType.LongPress)
-                    onCategorySelected(category) 
+            FilterChip(
+                selected = isSelected,
+                onClick = {
+                    haptic.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onCategorySelected(category)
                 },
-                shape = RoundedCornerShape(20.dp),
-                color = if (isSelected) GoTogetherOrange else GoTogetherTheme.colors.card.copy(alpha = 0.7f),
-                border = if (isSelected) null else BorderStroke(
-                    1.dp,
-                    GoTogetherTheme.colors.border.copy(alpha = 0.5f)
+                label = { Text(category) },
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary
                 ),
-                modifier = Modifier
-                    .bounceClick()
-                    .then(if (isSelected) Modifier.shadow(8.dp, RoundedCornerShape(20.dp), spotColor = GoTogetherOrange) else Modifier)
-            ) {
-                Text(
-                    text = category,
-                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp),
-                    color = if (isSelected) Color.White else GoTogetherTheme.colors.textSecondary,
-                    fontSize = 14.sp,
-                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold,
-                    letterSpacing = 0.5.sp
+                border = FilterChipDefaults.filterChipBorder(
+                    enabled = true,
+                    selected = isSelected
                 )
-            }
+            )
         }
     }
 }
@@ -328,36 +276,28 @@ fun TripCard(
     onBookmarkClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
-    //Log.d("Trip's data as recieved in TripCard", "$trip")
     val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
     val formattedDate = LocalDate.parse(trip.startDate, dateFormatter)
-    Log.d("FORMATTED TRIP STARTING DATE", "$formattedDate")
     val currentDate = LocalDate.now()
-    Log.d("CURRENT DATE", "$currentDate")
     val status: String? = if (formattedDate.isBefore(currentDate)) "Expired" else null
 
-        Surface(
-        modifier = modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .shadow(
-                elevation = 20.dp,
-                shape = RoundedCornerShape(32.dp),
-                spotColor = GoTogetherTheme.colors.overlay.copy(alpha = 0.35f)
-            ),
-        shape = RoundedCornerShape(32.dp),
-        color = GoTogetherTheme.colors.card,
+    ElevatedCard(
+        onClick = onClick,
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.elevatedCardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow
+        ),
+        elevation = CardDefaults.elevatedCardElevation(defaultElevation = 2.dp)
     ) {
-        Column {
-            TripCardHero(
-                trip = trip,
-                onHostClick = onHostClick,
-                isBookmarked = isBookmarked,
-                onBookmarkClick = onBookmarkClick,
-                status = status
-            )
-            TripCardDetails(trip = trip, onActionClick = onClick)
-        }
+        TripCardHero(
+            trip = trip,
+            onHostClick = onHostClick,
+            isBookmarked = isBookmarked,
+            onBookmarkClick = onBookmarkClick,
+            status = status
+        )
+        TripCardDetails(trip = trip, onActionClick = onClick)
     }
 }
 
@@ -369,7 +309,6 @@ private fun TripCardHero(
     onBookmarkClick: () -> Unit = {},
     status: String? = null
 ) {
-    // Bounce animation on bookmark toggle
     val bookmarkScale by animateFloatAsState(
         targetValue = if (isBookmarked) 1.15f else 1f,
         animationSpec = spring(
@@ -382,7 +321,9 @@ private fun TripCardHero(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .height(280.dp)
+            .height(220.dp)
+            .padding(10.dp)
+            .clip(RoundedCornerShape(16.dp))
     ) {
         SubcomposeAsyncImage(
             model = ImageRequest.Builder(LocalContext.current)
@@ -391,129 +332,107 @@ private fun TripCardHero(
                 .diskCachePolicy(CachePolicy.ENABLED)
                 .memoryCachePolicy(CachePolicy.ENABLED)
                 .build(),
-            contentDescription = "Destination Image",
+            contentDescription = "Photo of ${trip.destination}",
             contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(10.dp)
-                .clip(RoundedCornerShape(20.dp)),
+            modifier = Modifier.fillMaxSize(),
             loading = {
                 ShimmerAnimation(
                     modifier = Modifier.fillMaxSize(),
-                    shape = RoundedCornerShape(20.dp)
+                    shape = RoundedCornerShape(16.dp)
                 )
             },
             error = {
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .background(GoTogetherTheme.colors.surfaceVariant),
+                        .background(MaterialTheme.colorScheme.surfaceVariant),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Outlined.ImageNotSupported,
                         contentDescription = null,
-                        tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(48.dp)
                     )
                 }
             }
         )
 
-        // Subtle gradient just over the image area to make badges visible
+        // Legibility scrim for the overlaid badges
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .padding(10.dp)
-                .clip(RoundedCornerShape(20.dp))
                 .background(
                     Brush.verticalGradient(
                         colors = listOf(
                             Color.Black.copy(alpha = 0.35f),
                             Color.Transparent,
                             Color.Transparent,
-                            Color.Black.copy(alpha = 0.5f)
+                            Color.Black.copy(alpha = 0.35f)
                         )
                     )
                 )
         )
 
-        // Host Badge
         HostBadge(
             name = trip.hostName,
             imageUrl = trip.hostImageUrl,
             isVerified = trip.hostVerified,
             onClick = onHostClick,
             modifier = Modifier
-                .padding(20.dp)
+                .padding(12.dp)
                 .align(Alignment.TopStart)
         )
 
         if (status == "Expired") {
             Surface(
-                onClick = onBookmarkClick,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(20.dp)
-                    .shadow(
-                        8.dp,
-                        RoundedCornerShape(14.dp),
-                        ambientColor = GoTogetherOrange.copy(alpha = 0.15f),
-                        spotColor = GoTogetherOrange.copy(alpha = 0.25f)
-                    ),
-                shape = RoundedCornerShape(14.dp),
-                color = Color(0xFFFFF3E0)
+                    .padding(12.dp),
+                shape = RoundedCornerShape(10.dp),
+                color = MaterialTheme.colorScheme.errorContainer
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp),
+                    modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Icon(
                         imageVector = Icons.Outlined.ErrorOutline,
                         contentDescription = null,
-                        tint = GoTogetherOrange,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
-                        text = "EXPIRED",
-                        color = GoTogetherOrange,
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Black,
-                        letterSpacing = 1.sp
+                        text = "Expired",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onErrorContainer
                     )
                 }
             }
-        }
-        else {
-            // Bookmark
+        } else {
             Surface(
                 onClick = onBookmarkClick,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .padding(20.dp)
-                    .size(38.dp)
-                    .graphicsLayer(
-                        scaleX = bookmarkScale,
-                        scaleY = bookmarkScale
-                    ),
-                color = if (isBookmarked) GoTogetherOrange.copy(alpha = 0.85f)
-                else Color.Black.copy(alpha = 0.3f),
+                    .padding(12.dp)
+                    .size(40.dp)
+                    .graphicsLayer(scaleX = bookmarkScale, scaleY = bookmarkScale),
+                color = if (isBookmarked) MaterialTheme.colorScheme.primary
+                else Color.Black.copy(alpha = 0.35f),
                 shape = CircleShape
             ) {
                 Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = if (isBookmarked) Icons.Default.Bookmark
-                            else Icons.Default.BookmarkBorder,
-                            contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark",
-                            tint = Color.White,
-                            modifier = Modifier.size(20.dp)
-                        )
+                    Icon(
+                        imageVector = if (isBookmarked) Icons.Default.Bookmark
+                        else Icons.Default.BookmarkBorder,
+                        contentDescription = if (isBookmarked) "Remove bookmark" else "Bookmark",
+                        tint = if (isBookmarked) MaterialTheme.colorScheme.onPrimary else Color.White,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
-
-
     }
 }
 
@@ -545,7 +464,7 @@ private fun HostBadge(
                     .diskCachePolicy(CachePolicy.ENABLED)
                     .memoryCachePolicy(CachePolicy.ENABLED)
                     .build(),
-                contentDescription = "Host Avatar",
+                contentDescription = "Host $name",
                 modifier = Modifier
                     .size(26.dp)
                     .clip(CircleShape),
@@ -558,12 +477,16 @@ private fun HostBadge(
                 }
             )
             Spacer(modifier = Modifier.width(8.dp))
-            Text(name, color = Color.White, fontSize = 13.sp, fontWeight = FontWeight.Bold)
+            Text(
+                name,
+                color = Color.White,
+                style = MaterialTheme.typography.labelLarge
+            )
             if (isVerified) {
                 Spacer(modifier = Modifier.width(4.dp))
                 Icon(
                     Icons.Default.CheckCircle,
-                    "Verified",
+                    "Verified host",
                     tint = VerifiedCyan,
                     modifier = Modifier.size(14.dp)
                 )
@@ -577,8 +500,7 @@ private fun TripCardDetails(
     trip: Trip,
     onActionClick: () -> Unit
 ) {
-    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
-        // Destination & Date Header
+    Column(modifier = Modifier.padding(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 16.dp)) {
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -586,13 +508,11 @@ private fun TripCardDetails(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Text(
-                    text = trip.title.uppercase(),
-                    fontSize = 20.sp,
-                    fontWeight = FontWeight.Black,
-                    color = GoTogetherTheme.colors.textPrimary,
+                    text = trip.title,
+                    style = MaterialTheme.typography.titleLarge,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                    letterSpacing = (-0.5).sp
+                    overflow = TextOverflow.Ellipsis
                 )
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -601,15 +521,14 @@ private fun TripCardDetails(
                     Icon(
                         Icons.Default.LocationOn,
                         contentDescription = null,
-                        tint = GoTogetherOrange,
+                        tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(14.dp)
                     )
                     Spacer(modifier = Modifier.width(4.dp))
                     Text(
                         text = trip.destination,
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.SemiBold,
-                        color = GoTogetherTheme.colors.textSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f, fill = false)
@@ -617,15 +536,14 @@ private fun TripCardDetails(
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = "•",
-                        color = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.5f),
-                        fontSize = 12.sp
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        style = MaterialTheme.typography.bodySmall
                     )
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
                         text = trip.startDate,
-                        fontSize = 12.sp,
-                        fontWeight = FontWeight.Medium,
-                        color = GoTogetherTheme.colors.textSecondary,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         maxLines = 1,
                         softWrap = false
                     )
@@ -633,72 +551,65 @@ private fun TripCardDetails(
             }
 
             if (trip.budgetRange.isNotBlank()) {
+                Spacer(modifier = Modifier.width(8.dp))
                 Surface(
-                    color = MaterialTheme.colorScheme.inverseSurface,
+                    color = MaterialTheme.colorScheme.primaryContainer,
                     shape = RoundedCornerShape(12.dp)
                 ) {
                     Text(
                         text = trip.budgetRange,
-                        color = MaterialTheme.colorScheme.inverseOnSurface,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.Black,
-                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        letterSpacing = 0.5.sp
+                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
                     )
                 }
             }
         }
 
         if (trip.description.isNotEmpty()) {
-            Spacer(modifier = Modifier.height(14.dp))
+            Spacer(modifier = Modifier.height(12.dp))
             Text(
                 text = trip.description,
-                fontSize = 14.sp,
-                color = GoTogetherTheme.colors.textSecondary,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-                lineHeight = 20.sp,
-                fontWeight = FontWeight.Normal
+                overflow = TextOverflow.Ellipsis
             )
         }
 
-        // Interests Chips (Limited to 2-3)
         if (trip.interests.isNotEmpty()) {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 12.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 trip.interests.take(2).forEach { interest ->
                     Surface(
-                        color = GoTogetherTheme.colors.surfaceVariant,
-                        shape = RoundedCornerShape(8.dp),
-                        border = BorderStroke(1.dp, GoTogetherTheme.colors.border)
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                        shape = RoundedCornerShape(8.dp)
                     ) {
                         Text(
                             text = interest,
-                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
-                            fontSize = 11.sp,
-                            color = GoTogetherTheme.colors.textSecondary,
-                            fontWeight = FontWeight.Medium
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 4.dp),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
                 if (trip.interests.size > 2) {
                     Text(
                         "+${trip.interests.size - 2}",
-                        fontSize = 11.sp,
-                        color = GoTogetherTheme.colors.textSecondary,
-                        modifier = Modifier.align(Alignment.CenterVertically)
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(20.dp))
+        Spacer(modifier = Modifier.height(16.dp))
 
-        // Actions & Availability Footer
         Row(
             modifier = Modifier.fillMaxWidth(),
             verticalAlignment = Alignment.CenterVertically,
@@ -708,50 +619,37 @@ private fun TripCardDetails(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier
                     .clip(RoundedCornerShape(12.dp))
-                    .background(GoTogetherTheme.colors.surfaceVariant.copy(alpha = 0.5f))
-                    .padding(horizontal = 8.dp, vertical = 6.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh)
+                    .padding(horizontal = 10.dp, vertical = 6.dp)
             ) {
                 Icon(
                     Icons.Default.Groups,
                     contentDescription = null,
-                    tint = GoTogetherOrange,
+                    tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.size(16.dp)
                 )
                 Spacer(modifier = Modifier.width(8.dp))
                 Text(
                     text = "${trip.joinedCount}/${trip.groupSize}",
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = GoTogetherTheme.colors.textPrimary
+                    style = MaterialTheme.typography.titleSmall,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Spacer(modifier = Modifier.width(4.dp))
                 Text(
                     text = "joined",
-                    fontSize = 11.sp,
-                    color = GoTogetherTheme.colors.textSecondary
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Button(
                 onClick = onActionClick,
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = MaterialTheme.colorScheme.primary,
-                    contentColor = MaterialTheme.colorScheme.onPrimary
-                ),
                 shape = RoundedCornerShape(16.dp),
-                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 12.dp),
+                contentPadding = PaddingValues(horizontal = 24.dp, vertical = 10.dp),
                 modifier = Modifier.bounceClick(),
-                elevation = ButtonDefaults.buttonElevation(
-                    defaultElevation = 0.dp,
-                    pressedElevation = 0.dp
-                )
+                elevation = ButtonDefaults.buttonElevation(defaultElevation = 0.dp, pressedElevation = 0.dp)
             ) {
-                Text(
-                    "JOIN THE VIBE",
-                    fontSize = 12.sp,
-                    fontWeight = FontWeight.Black,
-                    letterSpacing = 1.sp
-                )
+                Text("Join trip", style = MaterialTheme.typography.labelLarge)
             }
         }
     }
@@ -767,20 +665,20 @@ fun EmptyTripsView() {
             Icon(
                 Icons.Outlined.Explore,
                 contentDescription = null,
-                tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f),
-                modifier = Modifier.size(100.dp)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.size(88.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             Text(
-                "No expeditions found",
-                color = GoTogetherTheme.colors.textPrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                "No trips found",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
-                "Try adjusting your filters or search query.",
-                color = GoTogetherTheme.colors.textSecondary,
-                fontSize = 15.sp,
+                "Try adjusting your filters or search to discover more journeys.",
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
         }
@@ -797,33 +695,28 @@ fun ErrorHomeView(message: String, onRetry: () -> Unit) {
             Icon(
                 Icons.Outlined.ErrorOutline,
                 contentDescription = null,
-                tint = Color.Red.copy(alpha = 0.6f),
-                modifier = Modifier.size(80.dp)
+                tint = MaterialTheme.colorScheme.error,
+                modifier = Modifier.size(72.dp)
             )
-            Spacer(modifier = Modifier.height(24.dp))
+            Spacer(modifier = Modifier.height(20.dp))
             Text(
-                "Connection Issue",
-                color = GoTogetherTheme.colors.textPrimary,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold
+                "Something went wrong",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Spacer(modifier = Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(6.dp))
             Text(
                 message,
-                color = GoTogetherTheme.colors.textSecondary,
-                fontSize = 14.sp,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
-            Spacer(modifier = Modifier.height(32.dp))
-            Button(
+            Spacer(modifier = Modifier.height(24.dp))
+            FilledTonalButton(
                 onClick = onRetry,
-                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                shape = RoundedCornerShape(16.dp),
-                modifier = Modifier
-                    .fillMaxWidth(0.6f)
-                    .height(54.dp)
+                modifier = Modifier.height(48.dp)
             ) {
-                Text("Retry", fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.onPrimary)
+                Text("Try again")
             }
         }
     }
@@ -845,26 +738,26 @@ fun FilterSection(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(20.dp)
+            .padding(horizontal = 24.dp, vertical = 8.dp)
+            .padding(bottom = 24.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp)
     ) {
         Text(
-            "Filter Journeys",
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = GoTogetherTheme.colors.textPrimary
+            "Filter journeys",
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface
         )
 
         FilterItem(
             value = searchFrom,
-            placeholder = "Leaving from...",
+            placeholder = "Leaving from…",
             icon = Icons.Default.LocationOn,
             onClick = onSearchFromClick
         )
 
         FilterItem(
             value = searchTo,
-            placeholder = "Going to...",
+            placeholder = "Going to…",
             icon = Icons.Default.LocationOn,
             onClick = onSearchToClick
         )
@@ -872,23 +765,10 @@ fun FilterSection(
         OutlinedTextField(
             value = searchBudget,
             onValueChange = onSearchBudgetChange,
-            placeholder = {
-                Text(
-                    "Max Budget (e.g., 5000)",
-                    color = GoTogetherTheme.colors.textSecondary
-                )
-            },
-            leadingIcon = { Icon(Icons.Default.AttachMoney, "Budget", tint = GoTogetherOrange) },
+            placeholder = { Text("Max budget (e.g. 5000)") },
+            leadingIcon = { Icon(Icons.Default.AttachMoney, contentDescription = null) },
             modifier = Modifier.fillMaxWidth(),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoTogetherOrange,
-                unfocusedBorderColor = Color.Transparent,
-                focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedContainerColor = GoTogetherTheme.colors.card,
-                focusedContainerColor = GoTogetherTheme.colors.card
-            ),
-            shape = RoundedCornerShape(20.dp),
+            shape = RoundedCornerShape(16.dp),
             singleLine = true
         )
 
@@ -897,78 +777,61 @@ fun FilterSection(
             horizontalArrangement = Arrangement.SpaceBetween,
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(top = 8.dp)
+                .padding(top = 4.dp)
         ) {
             Column {
                 Text(
-                    "Group Size",
-                    color = GoTogetherTheme.colors.textPrimary,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 16.sp
+                    "Group size",
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface
                 )
                 Text(
                     if (searchGroupSize == 0) "Any size" else "Up to $searchGroupSize people",
-                    color = GoTogetherTheme.colors.textSecondary,
-                    fontSize = 13.sp
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
 
             Row(verticalAlignment = Alignment.CenterVertically) {
                 IconButton(
                     onClick = { if (searchGroupSize > 0) onSearchGroupSizeChange(searchGroupSize - 1) },
-                    modifier = Modifier.size(40.dp)
+                    enabled = searchGroupSize > 0
                 ) {
-                    Icon(
-                        Icons.Default.RemoveCircleOutline,
-                        "Decrease",
-                        tint = if (searchGroupSize > 0) GoTogetherOrange else GoTogetherTheme.colors.textSecondary
-                    )
+                    Icon(Icons.Default.RemoveCircleOutline, contentDescription = "Decrease group size")
                 }
                 Text(
                     "$searchGroupSize",
-                    color = GoTogetherTheme.colors.textPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.padding(horizontal = 12.dp)
                 )
-                IconButton(
-                    onClick = { onSearchGroupSizeChange(searchGroupSize + 1) },
-                    modifier = Modifier.size(40.dp)
-                ) {
-                    Icon(Icons.Default.AddCircleOutline, "Increase", tint = GoTogetherOrange)
+                IconButton(onClick = { onSearchGroupSizeChange(searchGroupSize + 1) }) {
+                    Icon(Icons.Default.AddCircleOutline, contentDescription = "Increase group size")
                 }
             }
         }
 
-        Spacer(modifier = Modifier.height(12.dp))
-
         Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(top = 8.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
         ) {
             TextButton(
                 onClick = onClearFilters,
                 modifier = Modifier
                     .weight(1f)
-                    .height(56.dp),
-                shape = RoundedCornerShape(16.dp)
+                    .height(52.dp)
             ) {
-                Text(
-                    "Reset All",
-                    color = GoTogetherTheme.colors.textSecondary,
-                    fontWeight = FontWeight.Bold
-                )
+                Text("Reset all")
             }
             Button(
                 onClick = onApplyFilters,
                 modifier = Modifier
                     .weight(1.5f)
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                shape = RoundedCornerShape(16.dp),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 8.dp)
+                    .height(52.dp)
             ) {
-                Text("See Results", fontWeight = FontWeight.Bold)
+                Text("See results")
             }
         }
     }
@@ -981,28 +844,30 @@ private fun FilterItem(
     icon: ImageVector,
     onClick: () -> Unit
 ) {
-    Box(
+    Surface(
+        onClick = onClick,
         modifier = Modifier
             .fillMaxWidth()
-            .height(56.dp)
-            .clip(RoundedCornerShape(20.dp))
-            .background(GoTogetherTheme.colors.card)
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp),
-        contentAlignment = Alignment.CenterStart
+            .height(56.dp),
+        shape = RoundedCornerShape(16.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerHigh
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            modifier = Modifier.padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 icon,
                 contentDescription = null,
-                tint = GoTogetherOrange,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(20.dp)
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = value.ifBlank { placeholder },
-                color = if (value.isBlank()) GoTogetherTheme.colors.textSecondary else GoTogetherTheme.colors.textPrimary,
-                fontSize = 15.sp
+                style = MaterialTheme.typography.bodyLarge,
+                color = if (value.isBlank()) MaterialTheme.colorScheme.onSurfaceVariant
+                else MaterialTheme.colorScheme.onSurface
             )
         }
     }

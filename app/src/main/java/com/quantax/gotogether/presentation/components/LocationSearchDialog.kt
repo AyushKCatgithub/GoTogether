@@ -21,11 +21,11 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.outlined.Search
-import androidx.compose.material3.Divider
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
@@ -38,13 +38,9 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
 
 // A mock database of popular travel destinations (India Centric)
 private val popularDestinations = listOf(
@@ -92,8 +88,8 @@ fun LocationSearchDialog(
             modifier = Modifier
                 .fillMaxWidth(0.95f)
                 .fillMaxHeight(0.85f),
-            shape = RoundedCornerShape(24.dp),
-            color = GoTogetherTheme.colors.background
+            shape = RoundedCornerShape(28.dp),
+            color = MaterialTheme.colorScheme.surface
         ) {
             Column(
                 modifier = Modifier
@@ -107,16 +103,15 @@ fun LocationSearchDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        "Select Location",
-                        fontSize = 20.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = GoTogetherTheme.colors.textPrimary
+                        "Select location",
+                        style = MaterialTheme.typography.headlineSmall,
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     IconButton(onClick = onDismissRequest) {
                         Icon(
                             Icons.Default.Close,
                             contentDescription = "Close",
-                            tint = GoTogetherTheme.colors.textPrimary
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                 }
@@ -127,24 +122,18 @@ fun LocationSearchDialog(
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
-                    placeholder = { Text("Search for a city...", color = GoTogetherTheme.colors.textSecondary) },
+                    placeholder = { Text("Search for a city…") },
                     leadingIcon = {
-                        Icon(
-                            Icons.Outlined.Search,
-                            contentDescription = "Search",
-                            tint = GoTogetherTheme.colors.textSecondary
-                        )
+                        Icon(Icons.Outlined.Search, contentDescription = null)
                     },
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = GoTogetherOrange,
+                        focusedBorderColor = MaterialTheme.colorScheme.primary,
                         unfocusedBorderColor = Color.Transparent,
-                        focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedContainerColor = GoTogetherTheme.colors.card,
-                        focusedContainerColor = GoTogetherTheme.colors.card
+                        unfocusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh,
+                        focusedContainerColor = MaterialTheme.colorScheme.surfaceContainerHigh
                     ),
-                    shape = RoundedCornerShape(20.dp),
+                    shape = RoundedCornerShape(16.dp),
                     singleLine = true
                 )
 
@@ -164,18 +153,17 @@ fun LocationSearchDialog(
                         Icon(
                             Icons.Default.LocationOn,
                             contentDescription = null,
-                            tint = GoTogetherOrange,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(20.dp)
                         )
                         Spacer(modifier = Modifier.width(12.dp))
                         Text(
                             text = "Use \"${searchQuery.trim()}\"",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Medium,
-                            color = GoTogetherOrange
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.primary
                         )
                     }
-                    Divider(color = GoTogetherTheme.colors.card, thickness = 1.dp)
+                    HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                 }
 
                 // Results List
@@ -192,8 +180,9 @@ fun LocationSearchDialog(
                                 contentAlignment = Alignment.Center
                             ) {
                                 Text(
-                                    "Start typing to search...",
-                                    color = GoTogetherTheme.colors.textSecondary
+                                    "Start typing to search…",
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -208,7 +197,8 @@ fun LocationSearchDialog(
                             ) {
                                 Text(
                                     "No matching popular destinations.",
-                                    color = GoTogetherTheme.colors.textSecondary
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
                         }
@@ -226,17 +216,17 @@ fun LocationSearchDialog(
                                 Icon(
                                     Icons.Default.LocationOn,
                                     contentDescription = null,
-                                    tint = GoTogetherTheme.colors.textSecondary,
+                                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
                                     modifier = Modifier.size(20.dp)
                                 )
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Text(
                                     text = location,
-                                    fontSize = 16.sp,
-                                    color = GoTogetherTheme.colors.textPrimary
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    color = MaterialTheme.colorScheme.onSurface
                                 )
                             }
-                            HorizontalDivider(color = GoTogetherTheme.colors.card, thickness = 1.dp)
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }

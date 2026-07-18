@@ -49,10 +49,10 @@ import androidx.compose.material.icons.outlined.AttachFile
 import androidx.compose.material.icons.outlined.Mood
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.BottomSheetDefaults
-import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -81,14 +81,12 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.TextRange
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.TextFieldValue
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -102,9 +100,9 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import com.quantax.gotogether.domain.model.ChatMessage
 import com.quantax.gotogether.domain.model.Chatroom
+import com.quantax.gotogether.ui.theme.AccentGreen
 import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
@@ -158,7 +156,7 @@ fun ChatroomScreen(
 
     Box(modifier = Modifier.fillMaxSize()) {
         Scaffold(
-            containerColor = GoTogetherTheme.colors.background,
+            containerColor = MaterialTheme.colorScheme.background,
             contentWindowInsets = WindowInsets.safeDrawing.only(
                 WindowInsetsSides.Horizontal + WindowInsetsSides.Top
             ),
@@ -182,7 +180,7 @@ fun ChatroomScreen(
                             .fillMaxWidth(),
                         contentAlignment = Alignment.Center
                     ) {
-                        CircularProgressIndicator(color = GoTogetherOrange)
+                        CircularProgressIndicator(color = MaterialTheme.colorScheme.primary)
                     }
                 } else if (uiState.messages.isEmpty()) {
                     Box(
@@ -248,7 +246,7 @@ fun ChatroomScreen(
             ModalBottomSheet(
                 onDismissRequest = { showEmojiPicker = false },
                 sheetState = emojiSheetState,
-                containerColor = GoTogetherTheme.colors.background,
+                containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
                 dragHandle = { BottomSheetDefaults.DragHandle() }
             ) {
                 EmojiPickerGrid(
@@ -328,13 +326,13 @@ private fun SwipeableMessageItem(
                     modifier = Modifier
                         .padding(end = 16.dp)
                         .size(40.dp)
-                        .background(Color.Red.copy(alpha = 0.15f), CircleShape),
+                        .background(MaterialTheme.colorScheme.errorContainer, CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         Icons.Default.Delete,
                         contentDescription = "Delete",
-                        tint = Color.Red,
+                        tint = MaterialTheme.colorScheme.onErrorContainer,
                         modifier = Modifier.size(20.dp)
                     )
                 }
@@ -346,7 +344,7 @@ private fun SwipeableMessageItem(
         Column(
             modifier = Modifier
                 .fillMaxWidth()
-                .background(GoTogetherTheme.colors.background)
+                .background(MaterialTheme.colorScheme.background)
         ) {
             MessageItem(
                 message = message,
@@ -370,66 +368,37 @@ private fun DeleteMessageDialog(
 ) {
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = {
-            Text(
-                "DELETE MESSAGE",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.Black,
-                letterSpacing = 1.sp
-            )
-        },
+        title = { Text("Delete message?") },
         text = {
-            Column {
-                val preview = when {
-                    message.text.isNotBlank() -> "\"${message.text.take(50)}${if (message.text.length > 50) "…" else ""}\""
-                    !message.imageUrl.isNullOrBlank() -> "📷 Photo"
-                    else -> "this message"
-                }
-                Text(
-                    "Delete $preview?",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = GoTogetherTheme.colors.textSecondary
-                )
+            val preview = when {
+                message.text.isNotBlank() -> "\"${message.text.take(50)}${if (message.text.length > 50) "…" else ""}\""
+                !message.imageUrl.isNullOrBlank() -> "this photo"
+                else -> "this message"
             }
+            Text("Delete $preview?")
         },
         confirmButton = {
             Column(horizontalAlignment = Alignment.End) {
                 if (isOwnMessage) {
-                    Button(
+                    TextButton(
                         onClick = onDeleteForAll,
-                        colors = ButtonDefaults.buttonColors(containerColor = Color.Red.copy(alpha = 0.9f)),
-                        shape = RoundedCornerShape(12.dp)
-                    ) {
-                        Text(
-                            "DELETE FOR ALL",
-                            fontWeight = FontWeight.Black,
-                            color = Color.White,
-                            fontSize = 12.sp
+                        colors = ButtonDefaults.textButtonColors(
+                            contentColor = MaterialTheme.colorScheme.error
                         )
+                    ) {
+                        Text("Delete for everyone")
                     }
-                    Spacer(modifier = Modifier.height(8.dp))
                 }
-                Button(
-                    onClick = onDeleteForMe,
-                    colors = ButtonDefaults.buttonColors(containerColor = GoTogetherTheme.colors.surfaceVariant),
-                    shape = RoundedCornerShape(12.dp)
-                ) {
-                    Text(
-                        "DELETE FOR ME",
-                        fontWeight = FontWeight.Black,
-                        color = GoTogetherTheme.colors.textPrimary,
-                        fontSize = 12.sp
-                    )
+                TextButton(onClick = onDeleteForMe) {
+                    Text("Delete for me")
                 }
             }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) {
-                Text("CANCEL", fontWeight = FontWeight.Bold, color = Color.Gray)
+                Text("Cancel")
             }
-        },
-        containerColor = GoTogetherTheme.colors.background,
-        shape = RoundedCornerShape(28.dp)
+        }
     )
 }
 
@@ -507,86 +476,69 @@ private fun ChatTopBar(
     chatroom: Chatroom?,
     onBackClick: () -> Unit
 ) {
-    Surface(
-        color = GoTogetherTheme.colors.background,
-        shadowElevation = 0.dp
-    ) {
-        TopAppBar(
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Overlapping avatars for "Vibers"
-                    Box(modifier = Modifier.width(60.dp)) {
-                        Surface(
-                            modifier = Modifier.size(40.dp),
-                            shape = CircleShape,
-                            border = BorderStroke(
-                                2.dp,
-                                GoTogetherTheme.colors.background
-                            ),
-                            color = GoTogetherTheme.colors.surface
-                        ) {
-                            if (chatroom?.tripImageUrl != null) {
-                                AsyncImage(
-                                    model = chatroom.tripImageUrl,
-                                    contentDescription = null,
-                                    contentScale = ContentScale.Crop
-                                )
-                            }
-                        }
-                        Surface(
-                            modifier = Modifier
-                                .size(40.dp)
-                                .offset(x = 20.dp),
-                            shape = CircleShape,
-                            border = BorderStroke(
-                                2.dp,
-                                GoTogetherTheme.colors.background
-                            ),
-                            color = GoTogetherOrange
-                        ) {
-                            Box(contentAlignment = Alignment.Center) {
-                                Text(
-                                    "${chatroom?.memberIds?.size ?: 0}",
-                                    style = MaterialTheme.typography.labelSmall,
-                                    color = Color.White,
-                                    fontWeight = FontWeight.Black
-                                )
-                            }
+    TopAppBar(
+        title = {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                // Overlapping avatars for members
+                Box(modifier = Modifier.width(60.dp)) {
+                    Surface(
+                        modifier = Modifier.size(40.dp),
+                        shape = CircleShape,
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.background),
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest
+                    ) {
+                        if (chatroom?.tripImageUrl != null) {
+                            AsyncImage(
+                                model = chatroom.tripImageUrl,
+                                contentDescription = null,
+                                contentScale = ContentScale.Crop
+                            )
                         }
                     }
-
-                    Column {
-                        Text(
-                            chatroom?.tripTitle?.uppercase() ?: "CHAT",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Black,
-                            color = GoTogetherTheme.colors.textPrimary,
-                            letterSpacing = 1.sp,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        Text(
-                            "ACTIVE NOW",
-                            style = MaterialTheme.typography.labelSmall,
-                            color = Color(0xFF4CAF50), // Vibrant Green for "Active"
-                            fontWeight = FontWeight.Bold,
-                            letterSpacing = 0.5.sp
-                        )
+                    Surface(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .offset(x = 20.dp),
+                        shape = CircleShape,
+                        border = BorderStroke(2.dp, MaterialTheme.colorScheme.background),
+                        color = MaterialTheme.colorScheme.primary
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                "${chatroom?.memberIds?.size ?: 0}",
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onPrimary
+                            )
+                        }
                     }
                 }
-            },
-            navigationIcon = {
-                IconButton(onClick = onBackClick) {
-                    Icon(
-                        Icons.AutoMirrored.Filled.ArrowBack,
-                        contentDescription = "Back",
-                        tint = GoTogetherTheme.colors.textPrimary
+
+                Column {
+                    Text(
+                        chatroom?.tripTitle ?: "Chat",
+                        style = MaterialTheme.typography.titleMedium,
+                        color = MaterialTheme.colorScheme.onSurface,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        "Active now",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = AccentGreen
                     )
                 }
-            },
-            colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
-        )
-    }
+            }
+        },
+        navigationIcon = {
+            IconButton(onClick = onBackClick) {
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = "Back"
+                )
+            }
+        },
+        colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+    )
 }
 
 @Composable
@@ -609,8 +561,7 @@ private fun MessageItem(
                         .size(36.dp)
                         .offset(y = 2.dp),
                     shape = CircleShape,
-                    color = GoTogetherTheme.colors.surface,
-                    border = BorderStroke(1.dp, GoTogetherTheme.colors.border)
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
                 ) {
                     if (message.senderImageUrl != null) {
                         AsyncImage(
@@ -623,8 +574,7 @@ private fun MessageItem(
                         Box(contentAlignment = Alignment.Center) {
                             Text(
                                 message.senderName.take(1).uppercase(),
-                                style = MaterialTheme.typography.labelSmall,
-                                fontWeight = FontWeight.Black,
+                                style = MaterialTheme.typography.labelLarge,
                                 color = nameColor
                             )
                         }
@@ -651,14 +601,12 @@ private fun MessageBubble(
     onImageClick: (String) -> Unit = {}
 ) {
     val timeFormat = remember { SimpleDateFormat("HH:mm", Locale.getDefault()) }
-    val isDark = GoTogetherTheme.colors.isDark
-    val sentBubble = whatsAppSentBubbleColor(isDark)
-    val receivedBubble = whatsAppReceivedBubbleColor(isDark)
-    val sentText = whatsAppSentBubbleText(isDark)
-    val receivedText = whatsAppReceivedBubbleText(isDark)
-    val timeColorSent = if (isDark) Color(0xFFE8C4B0) else Color(0xFF667781)
-    val timeColorReceived = if (isDark) Color(0xFF8696A0) else Color(0xFF667781)
-    val checkTint = if (isDark) GoTogetherOrangeLight else GoTogetherOrange.copy(alpha = 0.88f)
+    val sentBubble = MaterialTheme.colorScheme.primaryContainer
+    val receivedBubble = MaterialTheme.colorScheme.surfaceContainerHigh
+    val sentText = MaterialTheme.colorScheme.onPrimaryContainer
+    val receivedText = MaterialTheme.colorScheme.onSurface
+    val timeColorSent = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
+    val timeColorReceived = MaterialTheme.colorScheme.onSurfaceVariant
 
     Column(
         modifier = Modifier.widthIn(max = maxBubbleWidth),
@@ -666,35 +614,20 @@ private fun MessageBubble(
     ) {
         if (!isCurrentUser) {
             Text(
-                text = message.senderName.uppercase(),
-                style = MaterialTheme.typography.labelSmall,
+                text = message.senderName,
+                style = MaterialTheme.typography.labelMedium,
                 color = senderColorForGroup(message.senderName),
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.padding(start = 12.dp, bottom = 4.dp),
-                letterSpacing = 0.5.sp
+                modifier = Modifier.padding(start = 12.dp, bottom = 4.dp)
             )
         }
         Surface(
             color = if (isCurrentUser) sentBubble else receivedBubble,
             shape = RoundedCornerShape(
-                topStart = 12.dp,
-                topEnd = 12.dp,
-                bottomStart = if (isCurrentUser) 12.dp else 2.dp,
-                bottomEnd = if (isCurrentUser) 2.dp else 12.dp
-            ),
-            modifier = if (isCurrentUser) {
-                Modifier.shadow(
-                    2.dp,
-                    RoundedCornerShape(12.dp),
-                    spotColor = GoTogetherTheme.colors.overlay.copy(alpha = 0.25f)
-                )
-            } else {
-                Modifier.shadow(
-                    1.dp,
-                    RoundedCornerShape(12.dp),
-                    spotColor = GoTogetherTheme.colors.overlay.copy(alpha = 0.15f)
-                )
-            }
+                topStart = 16.dp,
+                topEnd = 16.dp,
+                bottomStart = if (isCurrentUser) 16.dp else 4.dp,
+                bottomEnd = if (isCurrentUser) 4.dp else 16.dp
+            )
         ) {
             Column(modifier = Modifier.padding(horizontal = 12.dp, vertical = 8.dp)) {
                 message.imageUrl?.takeIf { it.isNotBlank() }?.let { imageUrl ->
@@ -704,7 +637,7 @@ private fun MessageBubble(
                         modifier = Modifier
                             .fillMaxWidth()
                             .heightIn(max = 240.dp)
-                            .clip(RoundedCornerShape(8.dp))
+                            .clip(RoundedCornerShape(12.dp))
                             .clickable { onImageClick(imageUrl) },
                         contentScale = ContentScale.Crop
                     )
@@ -716,8 +649,7 @@ private fun MessageBubble(
                     Text(
                         text = message.text,
                         style = MaterialTheme.typography.bodyLarge,
-                        color = if (isCurrentUser) sentText else receivedText,
-                        lineHeight = 22.sp
+                        color = if (isCurrentUser) sentText else receivedText
                     )
                 }
                 Row(
@@ -730,16 +662,14 @@ private fun MessageBubble(
                     Text(
                         text = timeFormat.format(Date(message.timestamp)),
                         style = MaterialTheme.typography.labelSmall,
-                        color = if (isCurrentUser) timeColorSent else timeColorReceived,
-                        fontWeight = FontWeight.Medium,
-                        fontSize = 11.sp
+                        color = if (isCurrentUser) timeColorSent else timeColorReceived
                     )
                     if (isCurrentUser) {
                         Icon(
                             imageVector = Icons.Filled.DoneAll,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
-                            tint = checkTint
+                            tint = timeColorSent
                         )
                     }
                 }
@@ -757,10 +687,6 @@ private fun ChatInputBar(
     onEmojiClick: () -> Unit,
     isSending: Boolean
 ) {
-    val sendAccent = GoTogetherOrange
-    val barBg = GoTogetherTheme.colors.inputBackground
-    val placeholderColor = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.65f)
-
     Surface(
         modifier = Modifier
             .fillMaxWidth()
@@ -768,7 +694,7 @@ private fun ChatInputBar(
             .imePadding()
             .padding(horizontal = 8.dp)
             .padding(bottom = 2.dp),
-        color = GoTogetherTheme.colors.background,
+        color = MaterialTheme.colorScheme.background,
         tonalElevation = 0.dp
     ) {
         Row(
@@ -785,7 +711,7 @@ private fun ChatInputBar(
                 Icon(
                     Icons.Outlined.AttachFile,
                     contentDescription = "Attach photo",
-                    tint = GoTogetherTheme.colors.textSecondary
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             IconButton(
@@ -795,41 +721,25 @@ private fun ChatInputBar(
                 Icon(
                     Icons.Outlined.Mood,
                     contentDescription = "Emoji",
-                    tint = GoTogetherTheme.colors.textSecondary
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
             Surface(
-                modifier = Modifier
-                    .weight(1f)
-                    .border(
-                        width = 1.dp,
-                        color = GoTogetherTheme.colors.border,
-                        shape = RoundedCornerShape(24.dp)
-                    ),
+                modifier = Modifier.weight(1f),
                 shape = RoundedCornerShape(24.dp),
-                color = barBg
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 OutlinedTextField(
                     value = messageFieldValue,
                     onValueChange = onMessageChange,
-                    placeholder = {
-                        Text(
-                            "Message",
-                            style = MaterialTheme.typography.bodyLarge,
-                            color = placeholderColor,
-                            fontWeight = FontWeight.Normal
-                        )
-                    },
+                    placeholder = { Text("Message") },
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(24.dp),
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.Transparent,
                         unfocusedBorderColor = Color.Transparent,
                         focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent,
-                        focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        unfocusedTextColor = GoTogetherTheme.colors.textPrimary,
-                        cursorColor = sendAccent
+                        unfocusedContainerColor = Color.Transparent
                     ),
                     maxLines = 6,
                     singleLine = false
@@ -841,23 +751,21 @@ private fun ChatInputBar(
                 modifier = Modifier
                     .size(48.dp)
                     .background(
-                        if (messageFieldValue.text.isNotBlank()) sendAccent else GoTogetherTheme.colors.surfaceVariant,
+                        if (messageFieldValue.text.isNotBlank()) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant,
                         CircleShape
                     )
             ) {
                 if (isSending) {
                     CircularProgressIndicator(
                         modifier = Modifier.size(22.dp),
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         strokeWidth = 2.dp
                     )
                 } else {
                     Icon(
                         Icons.AutoMirrored.Filled.Send,
                         contentDescription = "Send",
-                        tint = if (messageFieldValue.text.isNotBlank()) Color.White else GoTogetherTheme.colors.textSecondary.copy(
-                            alpha = 0.35f
-                        ),
+                        tint = if (messageFieldValue.text.isNotBlank()) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.size(22.dp)
                     )
                 }
@@ -875,17 +783,14 @@ private fun DateHeader(dateLabel: String) {
         contentAlignment = Alignment.Center
     ) {
         Surface(
-            color = GoTogetherTheme.colors.surfaceVariant.copy(alpha = if (GoTogetherTheme.colors.isDark) 0.85f else 1f),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
             shape = RoundedCornerShape(50)
         ) {
             Text(
-                text = dateLabel.uppercase(),
+                text = dateLabel,
                 modifier = Modifier.padding(horizontal = 14.dp, vertical = 7.dp),
-                style = MaterialTheme.typography.labelSmall,
-                fontWeight = FontWeight.SemiBold,
-                color = GoTogetherTheme.colors.textSecondary,
-                letterSpacing = 0.8.sp,
-                fontSize = 11.sp
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -912,22 +817,11 @@ private fun EmojiPickerGrid(
         ) {
             Text(
                 "Pick an emoji",
-                style = MaterialTheme.typography.titleSmall,
-                fontWeight = FontWeight.Bold,
-                color = GoTogetherTheme.colors.textPrimary
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onSurface
             )
-            Surface(
-                onClick = onDone,
-                shape = RoundedCornerShape(12.dp),
-                color = GoTogetherOrange
-            ) {
-                Text(
-                    "Done",
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    color = Color.White,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
+            FilledTonalButton(onClick = onDone) {
+                Text("Done")
             }
         }
 
@@ -938,14 +832,13 @@ private fun EmojiPickerGrid(
                     .fillMaxWidth()
                     .padding(horizontal = 20.dp, vertical = 4.dp),
                 shape = RoundedCornerShape(16.dp),
-                color = GoTogetherTheme.colors.inputBackground,
-                border = BorderStroke(1.dp, GoTogetherTheme.colors.border)
+                color = MaterialTheme.colorScheme.surfaceContainerHigh
             ) {
                 Text(
                     text = currentText,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
                     style = MaterialTheme.typography.bodyLarge,
-                    color = GoTogetherTheme.colors.textPrimary,
+                    color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 3,
                     overflow = TextOverflow.Ellipsis
                 )
@@ -984,17 +877,16 @@ private fun EmptyChatState() {
             .padding(horizontal = 32.dp)
     ) {
         Text(
-            text = "NO MESSAGES YET",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Black,
-            color = GoTogetherTheme.colors.textPrimary,
+            text = "No messages yet",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center,
             modifier = Modifier.fillMaxWidth()
         )
         Text(
-            text = "Be the first to drop a vibe! 👋",
+            text = "Be the first to say hello 👋",
             style = MaterialTheme.typography.bodyLarge,
-            color = GoTogetherTheme.colors.textSecondary,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1002,19 +894,6 @@ private fun EmptyChatState() {
         )
     }
 }
-
-/** Sent message bubble — orangish, aligned with GoTogether brand. */
-private fun whatsAppSentBubbleColor(isDark: Boolean): Color =
-    if (isDark) Color(0xFF6B2A0F) else Color(0xFFFFEDE3)
-
-private fun whatsAppReceivedBubbleColor(isDark: Boolean): Color =
-    if (isDark) Color(0xFF1F2C34) else Color(0xFFFFFFFF)
-
-private fun whatsAppSentBubbleText(isDark: Boolean): Color =
-    if (isDark) Color(0xFFFFF8F5) else Color(0xFF111B21)
-
-private fun whatsAppReceivedBubbleText(isDark: Boolean): Color =
-    if (isDark) Color(0xFFE9EDEF) else Color(0xFF111B21)
 
 private fun senderColorForGroup(name: String): Color {
     val palette = listOf(
