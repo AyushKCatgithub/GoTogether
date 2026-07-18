@@ -1,12 +1,10 @@
 package com.quantax.gotogether.presentation.main
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.FormatListBulleted
 import androidx.compose.material.icons.automirrored.outlined.FormatListBulleted
@@ -19,8 +17,8 @@ import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Person
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
@@ -30,11 +28,8 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
@@ -50,8 +45,6 @@ import com.quantax.gotogether.presentation.mytrips.MyTripsScreen
 import com.quantax.gotogether.presentation.notifications.NotificationsScreen
 import com.quantax.gotogether.presentation.notifications.NotificationsViewModel
 import com.quantax.gotogether.presentation.profile.ProfileScreen
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
 
 data class BottomNavItem(
     val label: String,
@@ -99,105 +92,81 @@ fun MainScreen(
     val unreadCount = notificationsState.unreadCount
 
     Scaffold(
-        containerColor = GoTogetherTheme.colors.background, bottomBar = {
-            Surface(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .navigationBarsPadding(),
-                color = GoTogetherTheme.colors.background.copy(alpha = 0.98f),
+        containerColor = MaterialTheme.colorScheme.background, bottomBar = {
+            NavigationBar(
+                containerColor = MaterialTheme.colorScheme.surfaceContainer,
+                tonalElevation = 0.dp
             ) {
-                Column {
-                    HorizontalDivider(
-                        thickness = 0.5.dp,
-                        color = GoTogetherTheme.colors.divider.copy(alpha = 0.2f)
-                    )
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 12.dp, vertical = 2.dp)
-                    ) {
-                        NavigationBar(
-                            containerColor = Color.Transparent,
-                            contentColor = GoTogetherTheme.colors.textPrimary,
-                        ) {
-                            bottomNavItems.forEach { item ->
-                                val isSelected =
-                                    currentDestination?.hierarchy?.any { it.route == item.route } == true
+                bottomNavItems.forEach { item ->
+                    val isSelected =
+                        currentDestination?.hierarchy?.any { it.route == item.route } == true
 
-                                NavigationBarItem(
-                                    selected = isSelected,
-                                    onClick = {
-                                        if (item.isAction) {
-                                            onNavigateToCreateTrip()
-                                        } else {
-                                            if (!isSelected) {
-                                                navController.navigate(item.route) {
-                                                    popUpTo(navController.graph.findStartDestination().id) {
-                                                        saveState = true
-                                                    }
-                                                    launchSingleTop = true
-                                                    restoreState = true
-                                                }
-                                            }
+                    NavigationBarItem(
+                        selected = isSelected,
+                        onClick = {
+                            if (item.isAction) {
+                                onNavigateToCreateTrip()
+                            } else {
+                                if (!isSelected) {
+                                    navController.navigate(item.route) {
+                                        popUpTo(navController.graph.findStartDestination().id) {
+                                            saveState = true
                                         }
-                                    },
-                                    icon = {
-                                        val icon =
-                                            if (isSelected) item.selectedIcon else item.unselectedIcon
-                                        if (item.isAction) {
-                                            Surface(
-                                                modifier = Modifier.size(52.dp),
-                                                shape = androidx.compose.foundation.shape.CircleShape,
-                                                color = GoTogetherOrange,
-                                                shadowElevation = 8.dp
-                                            ) {
-                                                Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
-                                                    Icon(
-                                                        item.selectedIcon,
-                                                        contentDescription = item.label,
-                                                        tint = Color.White,
-                                                        modifier = Modifier.size(28.dp)
-                                                    )
-                                                }
-                                            }
-                                        } else if (item.route == Routes.Notifications.route && unreadCount > 0) {
-                                            BadgedBox(
-                                                badge = {
-                                                    Badge(containerColor = GoTogetherOrange) {
-                                                        Text(
-                                                            unreadCount.toString(),
-                                                            color = Color.White,
-                                                            fontSize = 10.sp
-                                                        )
-                                                    }
-                                                }
-                                            ) {
-                                                Icon(icon, contentDescription = item.label)
-                                            }
-                                        } else {
-                                            Icon(icon, contentDescription = item.label)
+                                        launchSingleTop = true
+                                        restoreState = true
+                                    }
+                                }
+                            }
+                        },
+                        icon = {
+                            val icon =
+                                if (isSelected) item.selectedIcon else item.unselectedIcon
+                            if (item.isAction) {
+                                Surface(
+                                    modifier = Modifier.size(48.dp),
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = MaterialTheme.colorScheme.primary
+                                ) {
+                                    Box(contentAlignment = androidx.compose.ui.Alignment.Center) {
+                                        Icon(
+                                            item.selectedIcon,
+                                            contentDescription = item.label,
+                                            tint = MaterialTheme.colorScheme.onPrimary,
+                                            modifier = Modifier.size(26.dp)
+                                        )
+                                    }
+                                }
+                            } else if (item.route == Routes.Notifications.route && unreadCount > 0) {
+                                BadgedBox(
+                                    badge = {
+                                        Badge {
+                                            Text(unreadCount.toString())
                                         }
-                                    },
-                                    label = {
-                                        if (!item.isAction) {
-                                            Text(
-                                                text = item.label,
-                                                fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                                fontSize = 11.sp
-                                            )
-                                        }
-                                    },
-                                    colors = NavigationBarItemDefaults.colors(
-                                        selectedIconColor = GoTogetherOrange,
-                                        selectedTextColor = GoTogetherOrange,
-                                        unselectedIconColor = GoTogetherTheme.colors.textSecondary,
-                                        unselectedTextColor = GoTogetherTheme.colors.textSecondary,
-                                        indicatorColor = Color.Transparent
-                                    )
+                                    }
+                                ) {
+                                    Icon(icon, contentDescription = item.label)
+                                }
+                            } else {
+                                Icon(icon, contentDescription = item.label)
+                            }
+                        },
+                        label = {
+                            if (!item.isAction) {
+                                Text(
+                                    text = item.label,
+                                    style = MaterialTheme.typography.labelMedium
                                 )
                             }
-                        }
-                    }
+                        },
+                        alwaysShowLabel = !item.isAction,
+                        colors = NavigationBarItemDefaults.colors(
+                            selectedIconColor = MaterialTheme.colorScheme.onSecondaryContainer,
+                            selectedTextColor = MaterialTheme.colorScheme.onSurface,
+                            unselectedIconColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            unselectedTextColor = MaterialTheme.colorScheme.onSurfaceVariant,
+                            indicatorColor = MaterialTheme.colorScheme.secondaryContainer
+                        )
+                    )
                 }
             }
         }) { innerPadding ->

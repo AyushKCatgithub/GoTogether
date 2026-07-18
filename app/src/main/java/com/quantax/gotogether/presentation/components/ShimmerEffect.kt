@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -28,7 +29,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
 
 @Composable
 fun ShimmerAnimation(
@@ -37,10 +37,11 @@ fun ShimmerAnimation(
     baseColor: Color? = null,
     highlightColor: Color? = null
 ) {
+    val fallback = MaterialTheme.colorScheme.surfaceVariant
     val shimmerColors = listOf(
-        (baseColor ?: GoTogetherTheme.colors.surfaceVariant).copy(alpha = 0.6f),
-        (highlightColor ?: GoTogetherTheme.colors.surfaceVariant).copy(alpha = 0.2f),
-        (baseColor ?: GoTogetherTheme.colors.surfaceVariant).copy(alpha = 0.6f),
+        (baseColor ?: fallback).copy(alpha = 0.6f),
+        (highlightColor ?: MaterialTheme.colorScheme.surfaceContainerHighest).copy(alpha = 0.4f),
+        (baseColor ?: fallback).copy(alpha = 0.6f),
     )
 
     val transition = rememberInfiniteTransition(label = "shimmer")
@@ -73,19 +74,19 @@ fun TripCardShimmer() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(24.dp))
-            .background(GoTogetherTheme.colors.card)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(bottom = 12.dp)
     ) {
         // Hero Image Shimmer
         Box(
             modifier = Modifier
                 .fillMaxWidth()
-                .height(280.dp)
+                .height(220.dp)
                 .padding(10.dp)
         ) {
             ShimmerAnimation(
                 modifier = Modifier.fillMaxSize(),
-                shape = RoundedCornerShape(20.dp)
+                shape = RoundedCornerShape(16.dp)
             )
             
             // Host Badge Shimmer
@@ -187,7 +188,7 @@ fun NotificationShimmerItem() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(GoTogetherTheme.colors.card)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -218,7 +219,7 @@ fun MessageShimmerItem() {
         modifier = Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(16.dp))
-            .background(GoTogetherTheme.colors.card)
+            .background(MaterialTheme.colorScheme.surfaceContainerLow)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -248,7 +249,7 @@ fun TripDetailShimmer() {
     Column(
         modifier = Modifier
             .fillMaxSize()
-            .background(GoTogetherTheme.colors.background)
+            .background(MaterialTheme.colorScheme.background)
             .padding(16.dp)
     ) {
         // Hero Image Card Shimmer

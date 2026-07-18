@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -35,7 +36,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -44,8 +44,6 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quantax.gotogether.presentation.components.LocationSearchDialog
 import com.quantax.gotogether.presentation.components.TripCardShimmer
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.utils.PermissionUtils
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -109,7 +107,7 @@ fun HomeScreen(
     val connectivityStatus by viewModel.isConnected.collectAsStateWithLifecycle()
 
     Scaffold(
-        containerColor = GoTogetherTheme.colors.background,
+        containerColor = MaterialTheme.colorScheme.background,
         contentWindowInsets = WindowInsets(0, 0, 0, 0),
         topBar = {
             val locationText = when (val s = state) {
@@ -131,15 +129,14 @@ fun HomeScreen(
                     Box(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .background(com.quantax.gotogether.ui.theme.WarningYellow)
-                            .padding(horizontal = 16.dp, vertical = 6.dp),
+                            .background(MaterialTheme.colorScheme.secondaryContainer)
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            "No Internet Connection — Showing Cached Data",
-                            color = Color.Black,
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold
+                            "No internet connection — showing cached data",
+                            color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            style = MaterialTheme.typography.labelLarge
                         )
                     }
                 }
@@ -157,21 +154,19 @@ fun HomeScreen(
             ) {
                 // 1. Premium Greeting & Search
                 item {
-                    Column(modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp)) {
+                    Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                         Text(
                             "DISCOVER YOUR",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Black,
-                            color = GoTogetherOrange,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.primary,
                             letterSpacing = 2.sp
                         )
+                        Spacer(modifier = Modifier.height(2.dp))
                         Text(
-                            "NEXT VIBE",
-                            fontSize = 42.sp,
-                            fontWeight = FontWeight.Black,
-                            color = MaterialTheme.colorScheme.onBackground,
-                            lineHeight = 46.sp,
-                            letterSpacing = (-1).sp
+                            "Next vibe",
+                            style = MaterialTheme.typography.displaySmall,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onBackground
                         )
                     }
                 }
@@ -194,7 +189,7 @@ fun HomeScreen(
 
                 item {
                     SectionHeader(
-                        title = if (selectedCategory == "All") "UPCOMING EXPEDITIONS" else "${selectedCategory.uppercase()} TRIPS",
+                        title = if (selectedCategory == "All") "Upcoming trips" else "$selectedCategory trips",
                         hideSeeAll = true
                     )
                 }
@@ -281,7 +276,7 @@ fun HomeScreen(
         ModalBottomSheet(
             onDismissRequest = { showFilterSheet = false },
             sheetState = sheetState,
-            containerColor = GoTogetherTheme.colors.background,
+            containerColor = MaterialTheme.colorScheme.surfaceContainerLow,
             dragHandle = { BottomSheetDefaults.DragHandle() }) {
             FilterSection(
                 searchFrom = searchFrom,
@@ -318,26 +313,20 @@ private fun SectionHeader(
             Icon(
                 Icons.Default.AutoAwesome,
                 contentDescription = null,
-                tint = GoTogetherOrange,
+                tint = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.size(18.dp)
             )
             Spacer(modifier = Modifier.width(8.dp))
             Text(
                 text = title,
-                fontSize = 20.sp,
-                fontWeight = FontWeight.Bold,
-                color = GoTogetherTheme.colors.textPrimary
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
 
         if (!hideSeeAll && onSeeAllClick != null) {
             TextButton(onClick = onSeeAllClick) {
-                Text(
-                    "See All",
-                    color = GoTogetherOrange,
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 14.sp
-                )
+                Text("See all")
             }
         }
     }

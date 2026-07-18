@@ -29,22 +29,28 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Logout
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Email
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.VerifiedUser
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
@@ -59,12 +65,12 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
@@ -72,10 +78,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
+import com.quantax.gotogether.domain.model.UserProfile
 import com.quantax.gotogether.ui.theme.VerifiedCyan
-import com.quantax.gotogether.ui.theme.WarningYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -97,7 +101,7 @@ fun ProfileScreen(
     val bannerHeight = 240.dp
     val photoSize = 88.dp
     val overscrollFactory = rememberPlatformOverscrollFactory(
-        glowColor = GoTogetherOrange.copy(alpha = 0.22f)
+        glowColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
     )
 
     // Derived state to prevent whole-screen recomposition on scroll
@@ -110,9 +114,11 @@ fun ProfileScreen(
         }
     }
 
-    Box(modifier = Modifier
-        .fillMaxSize()
-        .background(GoTogetherTheme.colors.background)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         when {
             state.isLoading -> LoadingState()
             state.error != null -> state.error?.let { error ->
@@ -228,7 +234,7 @@ private fun ProfileCover(
             if (photos.isNotEmpty()) {
                 SubcomposeAsyncImage(
                     model = photos[page],
-                    contentDescription = null,
+                    contentDescription = "Profile photo ${page + 1}",
                     modifier = Modifier
                         .fillMaxSize()
                         .clickable { onPhotoClick(page) },
@@ -241,9 +247,9 @@ private fun ProfileCover(
                         .background(
                             Brush.verticalGradient(
                                 listOf(
-                                    GoTogetherOrange.copy(alpha = 0.16f),
-                                    GoTogetherTheme.colors.surface,
-                                    GoTogetherTheme.colors.background
+                                    MaterialTheme.colorScheme.primaryContainer,
+                                    MaterialTheme.colorScheme.surface,
+                                    MaterialTheme.colorScheme.background
                                 )
                             )
                         )
@@ -290,19 +296,14 @@ private fun ProfileCover(
 
 @Composable
 private fun ProfileSummaryCard(
-    profile: com.quantax.gotogether.domain.model.UserProfile?,
-    photoSize: androidx.compose.ui.unit.Dp,
+    profile: UserProfile?,
+    photoSize: Dp,
     onPhotoLongPress: () -> Unit
 ) {
     Surface(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(8.dp),
-        color = GoTogetherTheme.colors.surface,
-        shadowElevation = 1.dp,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            GoTogetherTheme.colors.textSecondary.copy(alpha = 0.08f)
-        )
+        shape = RoundedCornerShape(20.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow
     ) {
         Column(
             modifier = Modifier.padding(20.dp),
@@ -322,12 +323,7 @@ private fun ProfileSummaryCard(
                             onLongClick = onPhotoLongPress
                         ),
                     shape = CircleShape,
-                    color = GoTogetherTheme.colors.background,
-                    border = androidx.compose.foundation.BorderStroke(
-                        3.dp,
-                        GoTogetherTheme.colors.background
-                    ),
-                    shadowElevation = 3.dp
+                    color = MaterialTheme.colorScheme.surfaceContainerHighest
                 ) {
                     ProfileImage(
                         url = profile?.profileImageUrl,
@@ -342,14 +338,13 @@ private fun ProfileSummaryCard(
                         Text(
                             text = profile?.name ?: "Traveller",
                             style = MaterialTheme.typography.titleLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = GoTogetherTheme.colors.textPrimary
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         if (profile?.isVerified == true) {
                             Spacer(modifier = Modifier.width(6.dp))
                             Icon(
                                 Icons.Default.CheckCircle,
-                                null,
+                                contentDescription = "Verified",
                                 tint = VerifiedCyan,
                                 modifier = Modifier.size(20.dp)
                             )
@@ -358,7 +353,7 @@ private fun ProfileSummaryCard(
                     Text(
                         text = if (profile?.username != null) "@${profile.username}" else "GoTogether profile",
                         style = MaterialTheme.typography.bodyMedium,
-                        color = GoTogetherTheme.colors.textSecondary
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
@@ -367,8 +362,7 @@ private fun ProfileSummaryCard(
                 Text(
                     text = profile.bio,
                     style = MaterialTheme.typography.bodyMedium,
-                    color = GoTogetherTheme.colors.textPrimary.copy(alpha = 0.78f),
-                    lineHeight = 20.sp
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
         }
@@ -377,7 +371,7 @@ private fun ProfileSummaryCard(
 
 @Composable
 private fun ProfileContent(
-    profile: com.quantax.gotogether.domain.model.UserProfile?,
+    profile: UserProfile?,
     onEdit: () -> Unit,
     onSignOut: () -> Unit
 ) {
@@ -385,29 +379,25 @@ private fun ProfileContent(
         // Info Card
         Surface(
             modifier = Modifier.fillMaxWidth(),
-            shape = RoundedCornerShape(8.dp),
-            color = GoTogetherTheme.colors.surface,
-            border = androidx.compose.foundation.BorderStroke(
-                1.dp,
-                GoTogetherTheme.colors.textSecondary.copy(alpha = 0.05f)
-            )
+            shape = RoundedCornerShape(20.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerLow
         ) {
             Column(
                 modifier = Modifier.padding(20.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
                 ProfileInfoItem(
-                    Icons.Default.Person,
-                    "Account Type",
-                    if (profile?.isVerified == true) "Verified Member" else "Standard Member"
+                    Icons.Default.VerifiedUser,
+                    "Account type",
+                    if (profile?.isVerified == true) "Verified member" else "Standard member"
                 )
                 if (profile?.email?.isNotBlank() == true) ProfileInfoItem(
-                    Icons.Default.Person,
+                    Icons.Default.Email,
                     "Email",
                     profile.email
                 )
                 if (profile?.address?.isNotBlank() == true) ProfileInfoItem(
-                    Icons.Default.Person,
+                    Icons.Default.LocationOn,
                     "Location",
                     profile.address
                 )
@@ -420,14 +410,12 @@ private fun ProfileContent(
                 onClick = onEdit,
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(56.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                shape = RoundedCornerShape(8.dp),
-                elevation = ButtonDefaults.buttonElevation(defaultElevation = 1.dp)
+                    .height(52.dp),
+                shape = RoundedCornerShape(16.dp)
             ) {
                 Icon(Icons.Default.Edit, null, modifier = Modifier.size(18.dp))
                 Spacer(modifier = Modifier.width(10.dp))
-                Text("Edit Profile", fontWeight = FontWeight.Bold)
+                Text("Edit profile", style = MaterialTheme.typography.titleSmall)
             }
 
             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -449,8 +437,7 @@ private fun ProfileContent(
                 SecondaryActionButton(
                     modifier = Modifier.weight(1f),
                     icon = Icons.Default.Star,
-                    label = "Rate Us",
-                    iconTint = GoTogetherOrange
+                    label = "Rate us"
                 ) {
                     try {
                         context.startActivity(
@@ -472,16 +459,13 @@ private fun ProfileContent(
         }
 
         // Sign Out
-        Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-            Text(
-                "SIGN OUT",
-                color = Color.Red,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier
-                    .clickable(onClick = onSignOut)
-                    .padding(16.dp)
-            )
-        }
+        SecondaryActionButton(
+            modifier = Modifier.fillMaxWidth(),
+            icon = Icons.AutoMirrored.Filled.Logout,
+            label = "Sign out",
+            contentColor = MaterialTheme.colorScheme.error,
+            onClick = onSignOut
+        )
     }
 }
 
@@ -496,7 +480,7 @@ private fun ProfileTopBar(
         modifier = Modifier
             .fillMaxWidth()
             .height(100.dp),
-        color = GoTogetherTheme.colors.background.copy(alpha = headerAlpha),
+        color = MaterialTheme.colorScheme.background.copy(alpha = headerAlpha),
         tonalElevation = if (headerAlpha > 0.9f) 4.dp else 0.dp
     ) {
         Box(
@@ -511,7 +495,7 @@ private fun ProfileTopBar(
                     Surface(
                         modifier = Modifier.size(36.dp),
                         shape = CircleShape,
-                        color = GoTogetherTheme.colors.surface
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest
                     ) {
                         ProfileImage(profileImage)
                     }
@@ -519,7 +503,7 @@ private fun ProfileTopBar(
                     Text(
                         profileName ?: "Profile",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                 }
             }
@@ -529,7 +513,7 @@ private fun ProfileTopBar(
                     .align(Alignment.CenterEnd)
                     .offset(y = (-16).dp)
             ) {
-                Icon(Icons.Default.Edit, null, tint = GoTogetherOrange)
+                Icon(Icons.Default.Edit, contentDescription = "Edit profile", tint = MaterialTheme.colorScheme.primary)
             }
         }
     }
@@ -543,7 +527,7 @@ private fun ProfileImage(
     if (url?.isNotBlank() == true) {
         AsyncImage(
             model = url,
-            contentDescription = null,
+            contentDescription = "Profile picture",
             modifier = Modifier
                 .fillMaxSize()
                 .clip(CircleShape),
@@ -555,7 +539,7 @@ private fun ProfileImage(
                 Icons.Default.Person,
                 null,
                 modifier = Modifier.size(48.dp),
-                tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f)
+                tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
     }
@@ -563,22 +547,22 @@ private fun ProfileImage(
 
 @Composable
 private fun ProfileInfoItem(
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
     value: String
 ) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
         Surface(
-            modifier = Modifier.size(36.dp),
-            shape = RoundedCornerShape(8.dp),
-            color = GoTogetherTheme.colors.background
+            modifier = Modifier.size(40.dp),
+            shape = RoundedCornerShape(12.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHighest
         ) {
             Box(contentAlignment = Alignment.Center) {
                 Icon(
                     icon,
                     null,
-                    modifier = Modifier.size(16.dp),
-                    tint = GoTogetherOrange
+                    modifier = Modifier.size(18.dp),
+                    tint = MaterialTheme.colorScheme.primary
                 )
             }
         }
@@ -586,14 +570,13 @@ private fun ProfileInfoItem(
         Column {
             Text(
                 label,
-                style = MaterialTheme.typography.labelSmall,
-                color = GoTogetherTheme.colors.textSecondary
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Text(
                 value,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = GoTogetherTheme.colors.textPrimary
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurface
             )
         }
     }
@@ -602,40 +585,20 @@ private fun ProfileInfoItem(
 @Composable
 private fun SecondaryActionButton(
     modifier: Modifier = Modifier,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     label: String,
-    iconTint: Color? = null,
+    contentColor: Color = MaterialTheme.colorScheme.primary,
     onClick: () -> Unit
 ) {
-    Surface(
+    OutlinedButton(
         onClick = onClick,
         modifier = modifier.height(52.dp),
-        shape = RoundedCornerShape(8.dp),
-        color = GoTogetherTheme.colors.surface,
-        border = androidx.compose.foundation.BorderStroke(
-            1.dp,
-            GoTogetherTheme.colors.textSecondary.copy(alpha = 0.05f)
-        )
+        shape = RoundedCornerShape(16.dp),
+        colors = ButtonDefaults.outlinedButtonColors(contentColor = contentColor)
     ) {
-        Row(
-            modifier = Modifier.fillMaxSize(),
-            horizontalArrangement = Arrangement.Center,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Icon(
-                icon,
-                null,
-                modifier = Modifier.size(16.dp),
-                tint = iconTint ?: GoTogetherTheme.colors.textPrimary
-            )
-            Spacer(modifier = Modifier.width(10.dp))
-            Text(
-                label,
-                style = MaterialTheme.typography.bodyMedium,
-                fontWeight = FontWeight.Bold,
-                color = GoTogetherTheme.colors.textPrimary
-            )
-        }
+        Icon(icon, null, modifier = Modifier.size(18.dp))
+        Spacer(modifier = Modifier.width(8.dp))
+        Text(label, style = MaterialTheme.typography.labelLarge)
     }
 }
 
@@ -649,9 +612,11 @@ private fun FullScreenImageViewer(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Box(modifier = Modifier
-            .fillMaxSize()
-            .background(Color.Black.copy(alpha = 0.95f))) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black.copy(alpha = 0.95f))
+        ) {
             val pagerState = rememberPagerState(
                 pageCount = { photoUrls.size },
                 initialPage = initialIndex.coerceIn(0, (photoUrls.size - 1).coerceAtLeast(0))
@@ -669,7 +634,7 @@ private fun FullScreenImageViewer(
                             contentAlignment = Alignment.Center
                         ) {
                             CircularProgressIndicator(
-                                color = GoTogetherOrange,
+                                color = MaterialTheme.colorScheme.primary,
                                 strokeWidth = 2.dp
                             )
                         }
@@ -718,7 +683,7 @@ private fun FullScreenImageViewer(
                     .align(Alignment.TopEnd)
                     .padding(16.dp)
             ) {
-                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(28.dp))
             }
         }
     }
@@ -743,12 +708,8 @@ private fun ProfilePhotoPreviewDialog(
             Surface(
                 modifier = Modifier.size(230.dp),
                 shape = CircleShape,
-                color = GoTogetherTheme.colors.surface,
-                shadowElevation = 12.dp,
-                border = androidx.compose.foundation.BorderStroke(
-                    4.dp,
-                    GoTogetherTheme.colors.surface
-                )
+                color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                shadowElevation = 12.dp
             ) {
                 ProfileImage(
                     url = photoUrl,
@@ -764,7 +725,7 @@ private fun LoadingState() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
-    ) { CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 3.dp) }
+    ) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp) }
 }
 
 @Composable
@@ -776,28 +737,23 @@ private fun ErrorState(error: String, onRetry: () -> Unit) {
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center
     ) {
-        Icon(Icons.Default.Warning, null, tint = WarningYellow, modifier = Modifier.size(64.dp))
+        Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(64.dp))
         Spacer(modifier = Modifier.height(16.dp))
         Text(
-            "Profile Unavailable",
-            color = GoTogetherTheme.colors.textPrimary,
-            fontSize = 20.sp,
-            fontWeight = FontWeight.Bold
+            "Profile unavailable",
+            style = MaterialTheme.typography.titleLarge,
+            color = MaterialTheme.colorScheme.onSurface
         )
+        Spacer(modifier = Modifier.height(6.dp))
         Text(
             error,
             textAlign = TextAlign.Center,
-            color = GoTogetherTheme.colors.textSecondary,
-            fontSize = 14.sp
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         Spacer(modifier = Modifier.height(24.dp))
-        Button(
-            onClick = onRetry,
-            colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-            shape = RoundedCornerShape(16.dp),
-            modifier = Modifier.height(54.dp)
-        ) {
-            Text("Try Again", color = Color.White, fontWeight = FontWeight.Bold)
+        FilledTonalButton(onClick = onRetry) {
+            Text("Try again")
         }
     }
 }

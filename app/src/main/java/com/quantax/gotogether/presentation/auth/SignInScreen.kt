@@ -7,14 +7,11 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.slideInVertically
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
-import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -32,14 +29,17 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.OutlinedTextFieldDefaults
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -49,8 +49,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
@@ -58,14 +56,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.quantax.gotogether.R
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
-import com.quantax.gotogether.ui.theme.TextGray
 import kotlinx.coroutines.delay
 
 @Composable
@@ -111,18 +104,9 @@ fun SignInScreen(
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(
-                Brush.verticalGradient(
-                    colors = listOf(
-                        GoTogetherTheme.colors.background,
-                        GoTogetherTheme.colors.surfaceVariant
-                    )
-                )
-            ),
+            .background(MaterialTheme.colorScheme.background),
         contentAlignment = Alignment.TopCenter
     ) {
-        GlowingBackgroundOrb()
-
         AnimatedVisibility(
             visible = isVisible,
             enter = fadeIn(tween(800)) + slideInVertically(tween(800), initialOffsetY = { 40 }),
@@ -137,144 +121,121 @@ fun SignInScreen(
                     .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
-            HeaderSection()
+                HeaderSection()
 
-            Spacer(modifier = Modifier.height(40.dp))
+                Spacer(modifier = Modifier.height(40.dp))
 
-            // Glassmorphism card for login
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .background(
-                        color = GoTogetherTheme.colors.surface.copy(alpha = 0.6f),
-                        shape = RoundedCornerShape(28.dp)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(28.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.surfaceContainerLow
                     )
-                    .border(
-                        1.dp,
-                        Color.White.copy(alpha = 0.15f),
-                        RoundedCornerShape(28.dp)
-                    )
-                    .padding(24.dp)
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    PhoneSignInSection(
-                        phoneNumber = phoneNumber,
-                        phoneError = phoneError,
-                        selectedCountryCode = selectedCountryCode,
-                        countryCodes = countryCodes,
-                        isLoading = state.isLoading,
-                        onPhoneNumberChange = {
-                            val digits = it.filter { char -> char.isDigit() }
-                            if (digits.length <= 10) {
-                                phoneNumber = digits
-                                if (phoneError != null) phoneError = null
+                ) {
+                    Column(
+                        modifier = Modifier.padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        PhoneSignInSection(
+                            phoneNumber = phoneNumber,
+                            phoneError = phoneError,
+                            selectedCountryCode = selectedCountryCode,
+                            countryCodes = countryCodes,
+                            isLoading = state.isLoading,
+                            onPhoneNumberChange = {
+                                val digits = it.filter { char -> char.isDigit() }
+                                if (digits.length <= 10) {
+                                    phoneNumber = digits
+                                    if (phoneError != null) phoneError = null
+                                }
+                            },
+                            onCountryCodeChange = {
+                                selectedCountryCode = it
+                            },
+                            onSendOtp = {
+                                if (phoneNumber.length < 10) {
+                                    phoneError = "Please enter a valid 10-digit number"
+                                } else {
+                                    phoneError = null
+                                    val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
+                                    viewModel.sendOtp(
+                                        phoneNumber = fullPhoneNumber,
+                                        activity = context as Activity,
+                                        onCodeSent = { vId ->
+                                            onNavigateToOtp(vId, fullPhoneNumber)
+                                        },
+                                        onFailure = {}
+                                    )
+                                }
                             }
-                        },
-                        onCountryCodeChange = {
-                            selectedCountryCode = it
-                        },
-                        onSendOtp = {
-                            if (phoneNumber.length < 10) {
-                                phoneError = "Please enter a valid 10-digit number"
-                            } else {
-                                phoneError = null
-                                val fullPhoneNumber = "$selectedCountryCode${phoneNumber.trim()}"
-                                viewModel.sendOtp(
-                                    phoneNumber = fullPhoneNumber,
-                                    activity = context as Activity,
-                                    onCodeSent = { vId ->
-                                        onNavigateToOtp(vId, fullPhoneNumber)
-                                    },
-                                    onFailure = {}
-                                )
-                            }
-                        }
-                    )
-                }
-            }
-
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                state.error?.let { msg ->
-                    Spacer(modifier = Modifier.height(16.dp))
-                    ErrorBanner(message = msg)
-                }
-
-                DividerWithText()
-
-                GoogleSignInSection(
-                    isLoading = state.isLoading,
-                    onGoogleSignIn = {
-                        try {
-                            val intent = viewModel.getGoogleSignInIntent(context)
-                            googleSignInLauncher.launch(intent)
-                        } catch (e: Exception) {
-                            // Handled by VM or locally
-                        }
+                        )
                     }
-                )
-
-                if (state.isLoading) {
-                    Spacer(modifier = Modifier.height(32.dp))
-                    CircularProgressIndicator(
-                        color = GoTogetherOrange,
-                        modifier = Modifier.size(40.dp),
-                        strokeWidth = 3.dp
-                    )
                 }
-            }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    state.error?.let { msg ->
+                        Spacer(modifier = Modifier.height(16.dp))
+                        ErrorBanner(message = msg)
+                    }
+
+                    DividerWithText()
+
+                    GoogleSignInSection(
+                        isLoading = state.isLoading,
+                        onGoogleSignIn = {
+                            try {
+                                val intent = viewModel.getGoogleSignInIntent(context)
+                                googleSignInLauncher.launch(intent)
+                            } catch (e: Exception) {
+                                // Handled by VM or locally
+                            }
+                        }
+                    )
+
+                    if (state.isLoading) {
+                        Spacer(modifier = Modifier.height(32.dp))
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(40.dp),
+                            strokeWidth = 3.dp
+                        )
+                    }
+                }
             }
         }
     }
 }
 
 @Composable
-fun GlowingBackgroundOrb() {
-    Box(
-        modifier = Modifier
-            .padding(top = 40.dp)
-            .size(300.dp)
-            .background(
-                Brush.radialGradient(
-                    colors = listOf(GoTogetherOrange.copy(alpha = 0.2f), Color.Transparent),
-                    radius = 400f
-                ),
-                shape = CircleShape
-            )
-    )
-}
-
-@Composable
 fun HeaderSection() {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            modifier = Modifier
-                .size(100.dp)
-                .background(Color.White.copy(alpha = 0.05f), CircleShape)
-                .padding(20.dp),
-            contentAlignment = Alignment.Center
+        Surface(
+            modifier = Modifier.size(100.dp),
+            shape = CircleShape,
+            color = MaterialTheme.colorScheme.primaryContainer
         ) {
-            Icon(
-                painter = painterResource(id = R.drawable.ic_launcher_foreground),
-                contentDescription = "App Logo",
-                modifier = Modifier.size(70.dp),
-                tint = GoTogetherOrange
-            )
+            Box(contentAlignment = Alignment.Center) {
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_launcher_foreground),
+                    contentDescription = "App logo",
+                    modifier = Modifier.size(64.dp),
+                    tint = MaterialTheme.colorScheme.onPrimaryContainer
+                )
+            }
         }
 
         Spacer(modifier = Modifier.height(24.dp))
 
         Text(
             text = "Join GoTogether",
-            fontSize = 34.sp,
-            fontWeight = FontWeight.ExtraBold,
-            color = GoTogetherTheme.colors.textPrimary,
-            letterSpacing = (-1.5).sp
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.onBackground
         )
 
         Text(
             text = "Discover journeys. Log in or sign up seamlessly.",
-            fontSize = 15.sp,
-            color = GoTogetherTheme.colors.textSecondary,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
             modifier = Modifier.padding(top = 8.dp),
             textAlign = TextAlign.Center
         )
@@ -298,12 +259,12 @@ fun PhoneSignInSection(
         OutlinedTextField(
             value = phoneNumber,
             onValueChange = onPhoneNumberChange,
-            label = { Text("Phone Number") },
+            label = { Text("Phone number") },
             placeholder = { Text("Enter number") },
             singleLine = true,
             enabled = !isLoading,
             isError = phoneError != null,
-            supportingText = phoneError?.let { { Text(it, color = Color(0xFFFF5252)) } },
+            supportingText = phoneError?.let { { Text(it) } },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
             modifier = Modifier.fillMaxWidth(),
             shape = RoundedCornerShape(16.dp),
@@ -317,28 +278,22 @@ fun PhoneSignInSection(
                     ) {
                         Text(
                             text = selectedCountryCode,
-                            fontWeight = FontWeight.Bold,
-                            color = GoTogetherTheme.colors.textPrimary
+                            style = MaterialTheme.typography.bodyLarge,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                         Icon(
                             imageVector = Icons.Default.ArrowDropDown,
-                            contentDescription = "Select Country Code",
-                            tint = GoTogetherTheme.colors.textSecondary
+                            contentDescription = "Select country code",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                     }
                     DropdownMenu(
                         expanded = expandedCountryMenu,
-                        onDismissRequest = { expandedCountryMenu = false },
-                        modifier = Modifier.background(GoTogetherTheme.colors.surface)
+                        onDismissRequest = { expandedCountryMenu = false }
                     ) {
                         countryCodes.forEach { (code, country) ->
                             DropdownMenuItem(
-                                text = {
-                                    Text(
-                                        "$code ($country)",
-                                        color = GoTogetherTheme.colors.textPrimary
-                                    )
-                                },
+                                text = { Text("$code ($country)") },
                                 onClick = {
                                     onCountryCodeChange(code)
                                     expandedCountryMenu = false
@@ -347,16 +302,7 @@ fun PhoneSignInSection(
                         }
                     }
                 }
-            },
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = GoTogetherOrange,
-                unfocusedBorderColor = TextGray.copy(alpha = 0.4f),
-                focusedLabelColor = GoTogetherOrange,
-                unfocusedLabelColor = GoTogetherTheme.colors.textSecondary,
-                cursorColor = GoTogetherOrange,
-                focusedTextColor = GoTogetherTheme.colors.textPrimary,
-                unfocusedTextColor = GoTogetherTheme.colors.textPrimary
-            )
+            }
         )
 
         Spacer(modifier = Modifier.height(24.dp))
@@ -365,33 +311,11 @@ fun PhoneSignInSection(
             onClick = onSendOtp,
             modifier = Modifier
                 .fillMaxWidth()
-                .height(58.dp)
-                .shadow(
-                    elevation = 16.dp,
-                    shape = RoundedCornerShape(30.dp),
-                    ambientColor = GoTogetherOrange.copy(alpha = 0.4f),
-                    spotColor = GoTogetherOrange.copy(alpha = 0.8f)
-                ),
-            shape = RoundedCornerShape(30.dp),
-            enabled = !isLoading,
-            colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-            contentPadding = PaddingValues()
+                .height(56.dp),
+            shape = RoundedCornerShape(16.dp),
+            enabled = !isLoading
         ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.linearGradient(listOf(GoTogetherOrange, GoTogetherOrangeLight))
-                    ),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    text = "Send OTP",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color.White
-                )
-            }
+            Text(text = "Send OTP", style = MaterialTheme.typography.titleMedium)
         }
     }
 }
@@ -404,25 +328,14 @@ fun DividerWithText() {
             .padding(vertical = 32.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(1.dp)
-                .background(GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f))
-        )
+        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
         Text(
-            text = "OR",
+            text = "or",
             modifier = Modifier.padding(horizontal = 16.dp),
-            color = GoTogetherTheme.colors.textSecondary,
-            fontSize = 14.sp,
-            fontWeight = FontWeight.SemiBold
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.labelLarge
         )
-        Box(
-            modifier = Modifier
-                .weight(1f)
-                .height(1.dp)
-                .background(GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f))
-        )
+        HorizontalDivider(modifier = Modifier.weight(1f), color = MaterialTheme.colorScheme.outlineVariant)
     }
 }
 
@@ -435,13 +348,8 @@ fun GoogleSignInSection(
         onClick = onGoogleSignIn,
         modifier = Modifier
             .fillMaxWidth()
-            .height(58.dp),
-        shape = RoundedCornerShape(30.dp),
-        border = BorderStroke(1.2.dp, GoTogetherTheme.colors.border),
-        colors = ButtonDefaults.outlinedButtonColors(
-            containerColor = Color.Transparent,
-            contentColor = GoTogetherTheme.colors.textPrimary
-        ),
+            .height(56.dp),
+        shape = RoundedCornerShape(16.dp),
         enabled = !isLoading
     ) {
         Row(
@@ -450,15 +358,14 @@ fun GoogleSignInSection(
         ) {
             Icon(
                 painter = painterResource(id = R.drawable.ic_google_logo),
-                contentDescription = "Google",
+                contentDescription = null,
                 modifier = Modifier.size(24.dp),
                 tint = Color.Unspecified
             )
             Spacer(modifier = Modifier.width(12.dp))
             Text(
                 text = "Continue with Google",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold
+                style = MaterialTheme.typography.titleMedium
             )
         }
     }
@@ -466,18 +373,19 @@ fun GoogleSignInSection(
 
 @Composable
 fun ErrorBanner(message: String) {
-    Box(
-        modifier = Modifier
-            .fillMaxWidth()
-            .background(Color(0xFFFF5252).copy(alpha = 0.1f), RoundedCornerShape(12.dp))
-            .padding(16.dp)
+    Surface(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer
     ) {
         Text(
             text = message,
-            color = GoTogetherTheme.colors.textPrimary,
-            fontSize = 13.sp,
+            color = MaterialTheme.colorScheme.onErrorContainer,
+            style = MaterialTheme.typography.bodyMedium,
             textAlign = TextAlign.Center,
-            modifier = Modifier.fillMaxWidth()
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(16.dp)
         )
     }
 }

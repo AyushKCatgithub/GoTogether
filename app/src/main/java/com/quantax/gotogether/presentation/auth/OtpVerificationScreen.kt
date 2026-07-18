@@ -5,7 +5,6 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -22,12 +21,13 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -40,20 +40,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.shadow
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
-import com.quantax.gotogether.ui.theme.TextGray
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -82,8 +74,7 @@ fun OtpVerificationScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = "Back",
-                            tint = GoTogetherTheme.colors.textPrimary
+                            contentDescription = "Back"
                         )
                     }
                 },
@@ -92,19 +83,11 @@ fun OtpVerificationScreen(
                 )
             )
         },
-        containerColor = Color.Transparent
+        containerColor = MaterialTheme.colorScheme.background
     ) { paddingValues ->
         Box(
             modifier = Modifier
                 .fillMaxSize()
-                .background(
-                    Brush.verticalGradient(
-                        colors = listOf(
-                            GoTogetherTheme.colors.background,
-                            GoTogetherTheme.colors.surfaceVariant
-                        )
-                    )
-                )
                 .padding(paddingValues),
             contentAlignment = Alignment.TopCenter
         ) {
@@ -113,32 +96,29 @@ fun OtpVerificationScreen(
                     .fillMaxSize()
                     .verticalScroll(rememberScrollState())
                     .padding(horizontal = 28.dp)
-                    .padding(top = 40.dp, bottom = 32.dp)
+                    .padding(top = 24.dp, bottom = 32.dp)
                     .imePadding(),
                 horizontalAlignment = Alignment.CenterHorizontally
             ) {
                 Text(
-                    text = "Verify Phone",
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = GoTogetherTheme.colors.textPrimary,
-                    letterSpacing = (-1).sp
+                    text = "Verify phone",
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onBackground
                 )
 
                 Spacer(modifier = Modifier.height(12.dp))
 
                 Text(
                     text = "Enter the 6-digit code sent to",
-                    fontSize = 15.sp,
-                    color = GoTogetherTheme.colors.textSecondary,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     textAlign = TextAlign.Center
                 )
 
                 Text(
                     text = displayPhoneNumber,
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = GoTogetherOrange,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = MaterialTheme.colorScheme.primary,
                     textAlign = TextAlign.Center,
                     modifier = Modifier.padding(top = 4.dp)
                 )
@@ -164,79 +144,48 @@ fun OtpVerificationScreen(
                     },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(58.dp)
-                        .shadow(
-                            elevation = 20.dp,
-                            shape = RoundedCornerShape(30.dp),
-                            ambientColor = GoTogetherOrange.copy(alpha = 0.5f),
-                            spotColor = GoTogetherOrange.copy(alpha = 0.8f)
-                        ),
-                    shape = RoundedCornerShape(30.dp),
-                    enabled = !state.isLoading && otpCode.length == 6,
-                    colors = ButtonDefaults.buttonColors(containerColor = Color.Transparent),
-                    contentPadding = PaddingValues()
+                        .height(56.dp),
+                    shape = RoundedCornerShape(16.dp),
+                    enabled = !state.isLoading && otpCode.length == 6
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxSize()
-                            .background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        GoTogetherOrange,
-                                        GoTogetherOrangeLight
-                                    )
-                                )
-                            ),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(
-                                color = Color.White,
-                                modifier = Modifier.size(24.dp),
-                                strokeWidth = 2.5.dp
-                            )
-                        } else {
-                            Text(
-                                text = "Verify & Continue",
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color.White
-                            )
-                        }
+                    if (state.isLoading) {
+                        CircularProgressIndicator(
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier.size(24.dp),
+                            strokeWidth = 2.5.dp
+                        )
+                    } else {
+                        Text(
+                            text = "Verify & continue",
+                            style = MaterialTheme.typography.titleMedium
+                        )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
                 TextButton(
                     onClick = { /* Implement resend logic if needed */ },
                     enabled = !state.isLoading
                 ) {
-                    Text(
-                        text = "Didn't receive the code? Resend",
-                        color = GoTogetherOrange,
-                        fontSize = 14.sp,
-                        fontWeight = FontWeight.SemiBold
-                    )
+                    Text(text = "Didn't receive the code? Resend")
                 }
 
                 state.error?.let { msg ->
                     Spacer(modifier = Modifier.height(24.dp))
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .background(
-                                Color(0xFFFF5252).copy(alpha = 0.1f),
-                                RoundedCornerShape(12.dp)
-                            )
-                            .padding(16.dp)
+                    Surface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(12.dp),
+                        color = MaterialTheme.colorScheme.errorContainer
                     ) {
                         Text(
                             text = msg,
-                            color = GoTogetherTheme.colors.textPrimary,
-                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            style = MaterialTheme.typography.bodyMedium,
                             textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth()
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(16.dp)
                         )
                     }
                 }
@@ -284,21 +233,20 @@ private fun CharView(
         else -> text[index].toString()
     }
 
-    val borderColor = if (isFocused) GoTogetherOrange else TextGray.copy(alpha = 0.3f)
-    val bgColor = if (isFocused) GoTogetherOrange.copy(alpha = 0.05f) else Color.Transparent
+    val borderColor = if (isFocused) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant
+    val bgColor = if (isFocused) MaterialTheme.colorScheme.surfaceContainerHighest else MaterialTheme.colorScheme.surfaceContainerHigh
 
     Box(
         modifier = modifier
             .height(62.dp)
             .background(bgColor, RoundedCornerShape(16.dp))
-            .border(2.dp, borderColor, RoundedCornerShape(16.dp)),
+            .border(if (isFocused) 2.dp else 1.dp, borderColor, RoundedCornerShape(16.dp)),
         contentAlignment = Alignment.Center
     ) {
         Text(
             text = char,
-            fontSize = 24.sp,
-            fontWeight = FontWeight.Bold,
-            color = GoTogetherTheme.colors.textPrimary,
+            style = MaterialTheme.typography.headlineSmall,
+            color = MaterialTheme.colorScheme.onSurface,
             textAlign = TextAlign.Center
         )
     }

@@ -29,9 +29,9 @@ import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.Button
-import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -50,12 +50,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -63,10 +62,8 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
 import coil.compose.SubcomposeAsyncImage
 import coil.request.ImageRequest
-import com.quantax.gotogether.ui.theme.GoTogetherOrange
-import com.quantax.gotogether.ui.theme.GoTogetherTheme
+import com.quantax.gotogether.domain.model.UserProfile
 import com.quantax.gotogether.ui.theme.VerifiedCyan
-import com.quantax.gotogether.ui.theme.WarningYellow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -86,8 +83,8 @@ fun PublicProfileScreen(
     val scrollState = rememberScrollState()
     val bannerHeight = 320.dp
     val photoSize = 110.dp
-    
-    // 🔥 Optimized: Derived state for fade effects
+
+    // Derived state for fade effects
     val headerAlpha by remember {
         derivedStateOf {
             val scrollValue = scrollState.value.toFloat()
@@ -96,7 +93,11 @@ fun PublicProfileScreen(
         }
     }
 
-    Box(modifier = Modifier.fillMaxSize().background(GoTogetherTheme.colors.background)) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+    ) {
         when {
             state.isLoading -> LoadingState()
             state.error != null -> state.error?.let { error ->
@@ -124,20 +125,35 @@ fun PublicProfileScreen(
                         if (backgroundPhotos.isNotEmpty()) {
                             SubcomposeAsyncImage(
                                 model = backgroundPhotos[page],
-                                contentDescription = null,
-                                modifier = Modifier.fillMaxSize().clickable {
-                                    fullScreenInitialIndex = page
-                                    showFullScreenViewer = true
-                                },
+                                contentDescription = "Photo ${page + 1}",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clickable {
+                                        fullScreenInitialIndex = page
+                                        showFullScreenViewer = true
+                                    },
                                 contentScale = ContentScale.Crop
                             )
                         } else {
-                            Box(modifier = Modifier.fillMaxSize().background(
-                                Brush.verticalGradient(listOf(GoTogetherOrange.copy(alpha = 0.2f), GoTogetherTheme.colors.background))
-                            ))
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(
+                                        Brush.verticalGradient(
+                                            listOf(
+                                                MaterialTheme.colorScheme.primaryContainer,
+                                                MaterialTheme.colorScheme.background
+                                            )
+                                        )
+                                    )
+                            )
                         }
                     }
-                    Box(modifier = Modifier.fillMaxSize().background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f)))))
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.4f))))
+                    )
                 }
 
                 // ─── 2. Scrollable Content ───────────────────────────────────
@@ -151,7 +167,7 @@ fun PublicProfileScreen(
 
                     Surface(
                         modifier = Modifier.fillMaxWidth(),
-                        color = GoTogetherTheme.colors.background,
+                        color = MaterialTheme.colorScheme.background,
                         shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
                     ) {
                         Column(
@@ -169,12 +185,11 @@ fun PublicProfileScreen(
                             Surface(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(24.dp),
-                                color = GoTogetherTheme.colors.surface,
-                                border = androidx.compose.foundation.BorderStroke(1.dp, GoTogetherTheme.colors.textSecondary.copy(alpha = 0.05f))
+                                color = MaterialTheme.colorScheme.surfaceContainerLow
                             ) {
                                 Column(modifier = Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
                                     ProfileInfoItem(Icons.Default.LocationOn, "From", profile?.address?.ifBlank { "Unspecified" } ?: "Unspecified")
-                                    ProfileInfoItem(Icons.Default.CheckCircle, "Status", if (profile?.isVerified == true) "Verified Member" else "Exploring")
+                                    ProfileInfoItem(Icons.Default.CheckCircle, "Status", if (profile?.isVerified == true) "Verified member" else "Exploring")
                                 }
                             }
 
@@ -183,14 +198,14 @@ fun PublicProfileScreen(
                             // Primary Action
                             Button(
                                 onClick = { /* Future: Message feature */ },
-                                modifier = Modifier.fillMaxWidth().height(60.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange),
-                                shape = RoundedCornerShape(20.dp),
-                                elevation = ButtonDefaults.buttonElevation(defaultElevation = 4.dp)
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(56.dp),
+                                shape = RoundedCornerShape(16.dp)
                             ) {
-                                Text("Say Hello", color = Color.White, fontWeight = FontWeight.Bold)
+                                Text("Say hello", style = MaterialTheme.typography.titleMedium)
                             }
-                            
+
                             Spacer(modifier = Modifier.height(100.dp))
                         }
                     }
@@ -212,9 +227,9 @@ fun PublicProfileScreen(
                     Surface(
                         modifier = Modifier.size(photoSize),
                         shape = CircleShape,
-                        color = GoTogetherTheme.colors.background,
+                        color = MaterialTheme.colorScheme.surfaceContainerHighest,
                         shadowElevation = 8.dp,
-                        border = androidx.compose.foundation.BorderStroke(4.dp, GoTogetherTheme.colors.background)
+                        border = androidx.compose.foundation.BorderStroke(4.dp, MaterialTheme.colorScheme.background)
                     ) {
                         ProfileImage(profile?.profileImageUrl)
                     }
@@ -222,35 +237,43 @@ fun PublicProfileScreen(
 
                 // ─── 4. Top Bar with Back ────────────────────────────────────
                 Surface(
-                    modifier = Modifier.fillMaxWidth().height(100.dp),
-                    color = GoTogetherTheme.colors.background.copy(alpha = headerAlpha),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(100.dp),
+                    color = MaterialTheme.colorScheme.background.copy(alpha = headerAlpha),
                     tonalElevation = if (headerAlpha > 0.9f) 4.dp else 0.dp
                 ) {
-                    Box(modifier = Modifier.fillMaxSize().statusBarsPadding().padding(horizontal = 8.dp), contentAlignment = Alignment.CenterStart) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .statusBarsPadding()
+                            .padding(horizontal = 8.dp),
+                        contentAlignment = Alignment.CenterStart
+                    ) {
                         IconButton(onClick = onNavigateBack) {
                             Surface(
-                                modifier = Modifier.size(36.dp), 
-                                shape = CircleShape, 
-                                color = if (headerAlpha > 0.2f) GoTogetherTheme.colors.surface else Color.Black.copy(alpha = 0.2f)
+                                modifier = Modifier.size(36.dp),
+                                shape = CircleShape,
+                                color = if (headerAlpha > 0.2f) MaterialTheme.colorScheme.surfaceContainerHighest else Color.Black.copy(alpha = 0.3f)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
-                                        Icons.AutoMirrored.Filled.ArrowBack, 
-                                        null, 
-                                        modifier = Modifier.size(18.dp), 
-                                        tint = GoTogetherTheme.colors.textPrimary.copy(alpha = (headerAlpha + 0.4f).coerceIn(0.4f, 1f))
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Back",
+                                        modifier = Modifier.size(18.dp),
+                                        tint = if (headerAlpha > 0.2f) MaterialTheme.colorScheme.onSurface else Color.White
                                     )
                                 }
                             }
                         }
-                        
+
                         if (headerAlpha > 0.8f) {
                             Row(modifier = Modifier.align(Alignment.Center), verticalAlignment = Alignment.CenterVertically) {
-                                Surface(modifier = Modifier.size(32.dp), shape = CircleShape, color = GoTogetherTheme.colors.surface) {
+                                Surface(modifier = Modifier.size(32.dp), shape = CircleShape, color = MaterialTheme.colorScheme.surfaceContainerHighest) {
                                     ProfileImage(profile?.profileImageUrl)
                                 }
                                 Spacer(modifier = Modifier.width(8.dp))
-                                Text(profile?.name ?: "Profile", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(profile?.name ?: "Profile", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurface)
                             }
                         }
                     }
@@ -268,31 +291,30 @@ fun PublicProfileScreen(
 }
 
 @Composable
-private fun PublicProfileHeadline(profile: com.quantax.gotogether.domain.model.UserProfile?) {
+private fun PublicProfileHeadline(profile: UserProfile?) {
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Text(
                 text = profile?.name ?: "Traveller",
                 style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-                color = GoTogetherTheme.colors.textPrimary
+                color = MaterialTheme.colorScheme.onSurface
             )
             if (profile?.isVerified == true) {
                 Spacer(modifier = Modifier.width(6.dp))
-                Icon(Icons.Default.CheckCircle, null, tint = VerifiedCyan, modifier = Modifier.size(20.dp))
+                Icon(Icons.Default.CheckCircle, "Verified", tint = VerifiedCyan, modifier = Modifier.size(20.dp))
             }
         }
         Text(
             text = if (profile?.username != null) "@${profile.username}" else "Exploring the world",
             style = MaterialTheme.typography.bodyMedium,
-            color = GoTogetherTheme.colors.textSecondary
+            color = MaterialTheme.colorScheme.onSurfaceVariant
         )
         if (profile?.bio?.isNotBlank() == true) {
             Spacer(modifier = Modifier.height(16.dp))
             Text(
                 text = profile.bio,
                 style = MaterialTheme.typography.bodyLarge,
-                color = GoTogetherTheme.colors.textPrimary.copy(alpha = 0.8f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 textAlign = TextAlign.Center
             )
         }
@@ -302,24 +324,24 @@ private fun PublicProfileHeadline(profile: com.quantax.gotogether.domain.model.U
 @Composable
 private fun ProfileImage(url: String?) {
     if (url?.isNotBlank() == true) {
-        AsyncImage(model = url, contentDescription = null, modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
+        AsyncImage(model = url, contentDescription = "Profile picture", modifier = Modifier.fillMaxSize().clip(CircleShape), contentScale = ContentScale.Crop)
     } else {
         Box(contentAlignment = Alignment.Center) {
-            Icon(Icons.Default.Person, null, modifier = Modifier.size(48.dp), tint = GoTogetherTheme.colors.textSecondary.copy(alpha = 0.3f))
+            Icon(Icons.Default.Person, null, modifier = Modifier.size(48.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
 
 @Composable
-private fun ProfileInfoItem(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, value: String) {
+private fun ProfileInfoItem(icon: ImageVector, label: String, value: String) {
     Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-        Surface(modifier = Modifier.size(36.dp), shape = RoundedCornerShape(10.dp), color = GoTogetherTheme.colors.background) {
-            Box(contentAlignment = Alignment.Center) { Icon(icon, null, modifier = Modifier.size(16.dp), tint = GoTogetherOrange) }
+        Surface(modifier = Modifier.size(40.dp), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surfaceContainerHighest) {
+            Box(contentAlignment = Alignment.Center) { Icon(icon, null, modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary) }
         }
         Spacer(modifier = Modifier.width(16.dp))
         Column {
-            Text(label, style = MaterialTheme.typography.labelSmall, color = GoTogetherTheme.colors.textSecondary)
-            Text(value, style = MaterialTheme.typography.bodyMedium, fontWeight = FontWeight.SemiBold, color = GoTogetherTheme.colors.textPrimary)
+            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(value, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurface)
         }
     }
 }
@@ -335,12 +357,12 @@ private fun FullScreenImageViewer(photoUrls: List<String>, initialIndex: Int, on
                     contentDescription = null,
                     modifier = Modifier.fillMaxSize(),
                     contentScale = ContentScale.Fit,
-                    loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 2.dp) } },
+                    loading = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 2.dp) } },
                     error = { Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { Icon(Icons.Default.Person, null, tint = Color.White, modifier = Modifier.size(64.dp)) } }
                 )
             }
             IconButton(onClick = onDismiss, modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)) {
-                Icon(Icons.Default.Close, null, tint = Color.White, modifier = Modifier.size(28.dp))
+                Icon(Icons.Default.Close, "Close", tint = Color.White, modifier = Modifier.size(28.dp))
             }
         }
     }
@@ -348,19 +370,20 @@ private fun FullScreenImageViewer(photoUrls: List<String>, initialIndex: Int, on
 
 @Composable
 private fun LoadingState() {
-    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = GoTogetherOrange, strokeWidth = 3.dp) }
+    Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator(color = MaterialTheme.colorScheme.primary, strokeWidth = 3.dp) }
 }
 
 @Composable
 private fun ErrorState(error: String, onRetry: () -> Unit) {
     Column(modifier = Modifier.fillMaxSize().padding(32.dp), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-        Icon(Icons.Default.Warning, null, tint = WarningYellow, modifier = Modifier.size(64.dp))
+        Icon(Icons.Default.Warning, null, tint = MaterialTheme.colorScheme.error, modifier = Modifier.size(64.dp))
         Spacer(modifier = Modifier.height(16.dp))
-        Text("Profile Unavailable", color = GoTogetherTheme.colors.textPrimary, fontSize = 20.sp, fontWeight = FontWeight.Bold)
-        Text(error, textAlign = TextAlign.Center, color = GoTogetherTheme.colors.textSecondary, fontSize = 14.sp)
+        Text("Profile unavailable", style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onSurface)
+        Spacer(modifier = Modifier.height(6.dp))
+        Text(error, textAlign = TextAlign.Center, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(modifier = Modifier.height(24.dp))
-        Button(onClick = onRetry, colors = ButtonDefaults.buttonColors(containerColor = GoTogetherOrange), shape = RoundedCornerShape(16.dp), modifier = Modifier.height(54.dp)) {
-            Text("Try Again", color = Color.White, fontWeight = FontWeight.Bold)
+        FilledTonalButton(onClick = onRetry) {
+            Text("Try again")
         }
     }
 }
