@@ -101,6 +101,25 @@ class JoinRequestRepository @Inject constructor(
         awaitClose { listener.remove() }
     }
 
+    /**
+     * Deletes every join request tied to a trip. Used when a trip is removed
+     * (manually or because it expired) so no orphaned requests are left behind.
+     */
+    suspend fun deleteRequestsForTrip(tripId: String): Result<Unit> {
+        if (tripId.isBlank()) return Result.failure(IllegalArgumentException("Trip ID cannot be blank"))
+        return try {
+            val snapshot = requestsCollection.whereEqualTo("tripId", tripId).get().await()
+            if (!snapshot.isEmpty) {
+                val batch = firestore.batch()
+                snapshot.documents.forEach { batch.delete(it.reference) }
+                batch.commit().await()
+            }
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun getUserRequestStatus(tripId: String, userId: String): String? {
         return try {
             val snapshot = requestsCollection

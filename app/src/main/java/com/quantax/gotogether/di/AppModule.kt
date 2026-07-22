@@ -57,8 +57,12 @@ object AppModule {
 
     @Provides
     @Singleton
-    fun provideTripRepository(firestore: FirebaseFirestore): TripRepository {
-        return TripRepository(firestore)
+    fun provideTripRepository(
+        firestore: FirebaseFirestore,
+        joinRequestRepository: JoinRequestRepository,
+        chatRepository: ChatRepository
+    ): TripRepository {
+        return TripRepository(firestore, joinRequestRepository, chatRepository)
     }
 
     @Provides

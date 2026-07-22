@@ -36,6 +36,28 @@ class ChatRepository @Inject constructor(
         }
     }
 
+    /**
+     * Permanently deletes a chatroom and all of its messages. The Firestore document
+     * holds the chatroom summary/membership; the message history lives in the Realtime
+     * Database under chatrooms/{id}/messages. Both are removed. Used when the underlying
+     * trip is deleted (manually or on expiry) so no orphaned chat data remains.
+     */
+    suspend fun deleteChatroom(chatroomId: String): Result<Unit> = withContext(Dispatchers.IO) {
+        if (chatroomId.isBlank()) {
+            return@withContext Result.failure(IllegalArgumentException("Chatroom ID cannot be blank"))
+        }
+        try {
+            // Remove all messages from Realtime Database.
+            database.getReference("chatrooms").child(chatroomId).removeValue().await()
+            // Remove the chatroom summary document from Firestore.
+            chatroomsCollection.document(chatroomId).delete().await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Log.e("ChatRepository", "Error deleting chatroom $chatroomId", e)
+            Result.failure(e)
+        }
+    }
+
     suspend fun getChatroom(chatroomId: String): Result<Chatroom?> = withContext(Dispatchers.IO) {
         try {
             val snapshot = chatroomsCollection.document(chatroomId).get().await()

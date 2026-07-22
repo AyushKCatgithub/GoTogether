@@ -86,10 +86,14 @@ import com.quantax.gotogether.ui.theme.GoTogetherOrange
 import com.quantax.gotogether.ui.theme.GoTogetherOrangeLight
 import com.quantax.gotogether.ui.theme.GoTogetherTheme
 import com.quantax.gotogether.ui.theme.VerifiedCyan
+<<<<<<< Updated upstream
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import java.util.Date
 import java.util.Locale
+=======
+import com.quantax.gotogether.utils.isExpired
+>>>>>>> Stashed changes
 
 // ─── Senior UI Extensions ───
 
@@ -328,6 +332,7 @@ fun TripCard(
     onBookmarkClick: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
+<<<<<<< Updated upstream
     //Log.d("Trip's data as recieved in TripCard", "$trip")
     val dateFormatter = DateTimeFormatter.ofPattern("dd MMM yyyy", Locale.ENGLISH)
     val formattedDate = LocalDate.parse(trip.startDate, dateFormatter)
@@ -335,6 +340,9 @@ fun TripCard(
     val currentDate = LocalDate.now()
     Log.d("CURRENT DATE", "$currentDate")
     val status: String? = if (formattedDate.isBefore(currentDate)) "Expired" else null
+=======
+    val status: String? = if (trip.isExpired()) "Expired" else null
+>>>>>>> Stashed changes
 
         Surface(
         modifier = modifier
